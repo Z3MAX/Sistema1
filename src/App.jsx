@@ -40,6 +40,7 @@ const AssetControlSystem = () => {
   const [showPhotoPreview, setShowPhotoPreview] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [photoError, setPhotoError] = useState('');
+  const [showCameraCapture, setShowCameraCapture] = useState(false);
   
   // Estados para etiquetas
   const [selectedAssets, setSelectedAssets] = useState([]);
@@ -59,6 +60,8 @@ const AssetControlSystem = () => {
   const galleryInputRef = useRef(null);
   const excelInputRef = useRef(null);
   const printRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   // Configurações
   const STORAGE_KEYS = {
@@ -214,30 +217,80 @@ const AssetControlSystem = () => {
     setShowCameraOptions(false);
     setPhotoError('');
     
-    // Criar input para câmera
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment'; // Usa câmera traseira
-    
-    input.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        await processImageFile(file);
+    // Verificar se o dispositivo suporta câmera
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      // Fallback para input file com capture
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.capture = 'environment';
+      input.setAttribute('capture', 'camera');
+      
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          await processImageFile(file);
+        }
+      };
+      
+      // Forçar o clique
+      document.body.appendChild(input);
+      input.click();
+      document.body.removeChild(input);
+      return;
+    }
+
+    // Tentar usar a API de câmera nativa
+    navigator.mediaDevices.getUserMedia({ 
+      video: { 
+        facingMode: 'environment',
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      } 
+    })
+    .then(stream => {
+      // Se conseguir acesso à câmera, mostrar interface de captura
+      setShowCameraCapture(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
       }
-    };
-    
-    input.click();
+    })
+    .catch(err => {
+      console.log('Erro ao acessar câmera, usando fallback:', err);
+      // Fallback para input file
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.capture = 'environment';
+      
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          await processImageFile(file);
+        }
+      };
+      
+      // Adicionar temporariamente ao DOM e clicar
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      input.click();
+      setTimeout(() => {
+        if (document.body.contains(input)) {
+          document.body.removeChild(input);
+        }
+      }, 1000);
+    });
   };
 
   const handleSelectFromGallery = () => {
     setShowCameraOptions(false);
     setPhotoError('');
     
-    // Criar input para galeria
+    // Criar input para galeria (sem capture)
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
+    input.multiple = false;
     
     input.onchange = async (e) => {
       const file = e.target.files[0];
@@ -246,7 +299,17 @@ const AssetControlSystem = () => {
       }
     };
     
+    // Adicionar ao DOM temporariamente
+    input.style.display = 'none';
+    document.body.appendChild(input);
     input.click();
+    
+    // Remover após um tempo
+    setTimeout(() => {
+      if (document.body.contains(input)) {
+        document.body.removeChild(input);
+      }
+    }, 1000);
   };
 
   const processImageFile = async (file) => {
@@ -350,6 +413,42 @@ const AssetControlSystem = () => {
 
   const handleRemovePhoto = () => {
     setAssetForm(prev => ({ ...prev, photo: null }));
+  };
+
+  const capturePhotoFromVideo = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      
+      // Definir dimensões do canvas
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      // Desenhar o frame atual do vídeo no canvas
+      context.drawImage(video, 0, 0);
+      
+      // Converter para base64
+      const photoData = canvas.toDataURL('image/jpeg', 0.8);
+      
+      // Parar o stream da câmera
+      const stream = video.srcObject;
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      
+      setCapturedPhoto(photoData);
+      setShowCameraCapture(false);
+      setShowPhotoPreview(true);
+    }
+  };
+
+  const cancelCameraCapture = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject;
+      stream.getTracks().forEach(track => track.stop());
+    }
+    setShowCameraCapture(false);
   };
 
   // Funções para etiquetas
@@ -1525,6 +1624,47 @@ const AssetControlSystem = () => {
         )}
       </div>
 
+      {/* Modal de captura de câmera nativa */}
+      {showCameraCapture && (
+        <div className="fixed inset-0 bg-black bg-opacity-95 flex flex-col items-center justify-center z-50">
+          <div className="w-full max-w-md mx-4">
+            <div className="bg-white rounded-t-xl p-4 text-center">
+              <h3 className="text-lg font-semibold text-gray-900">Tirar Foto</h3>
+              <p className="text-sm text-gray-600">Posicione o ativo na câmera e toque em capturar</p>
+            </div>
+            
+            <div className="relative bg-black">
+              <video 
+                ref={videoRef}
+                autoPlay 
+                playsInline 
+                muted
+                className="w-full h-80 object-cover"
+              />
+              <canvas ref={canvasRef} className="hidden" />
+            </div>
+            
+            <div className="bg-white rounded-b-xl p-4 flex justify-center space-x-4">
+              <button
+                onClick={cancelCameraCapture}
+                className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg flex items-center space-x-2"
+              >
+                <X className="w-5 h-5" />
+                <span>Cancelar</span>
+              </button>
+              
+              <button
+                onClick={capturePhotoFromVideo}
+                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center space-x-2"
+              >
+                <Camera className="w-5 h-5" />
+                <span>Capturar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de captura de foto - Preview */}
       {showPhotoPreview && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
@@ -1577,32 +1717,52 @@ const AssetControlSystem = () => {
         </div>
       )}
 
-      {/* Modal para opções de câmera */}
+      {/* Modal para opções de câmera - ATUALIZADO */}
       {showCameraOptions && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
-            <h4 className="text-lg font-semibold mb-4">Como deseja adicionar a foto?</h4>
+            <h4 className="text-lg font-semibold mb-4 text-center">Adicionar Foto do Ativo</h4>
+            <p className="text-sm text-gray-600 mb-6 text-center">Como você gostaria de adicionar a foto?</p>
+            
             <div className="space-y-3">
               <button
                 onClick={handleTakePhoto}
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2"
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-4 px-4 rounded-lg flex items-center justify-center space-x-3 transition-colors"
               >
-                <Camera className="w-5 h-5" />
-                <span>Tirar Foto (Câmera)</span>
+                <Camera className="w-6 h-6" />
+                <div className="text-left">
+                  <div className="font-medium">Abrir Câmera</div>
+                  <div className="text-sm opacity-90">Tirar nova foto</div>
+                </div>
               </button>
+              
               <button
                 onClick={handleSelectFromGallery}
-                className="w-full bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2"
+                className="w-full bg-green-500 hover:bg-green-600 text-white py-4 px-4 rounded-lg flex items-center justify-center space-x-3 transition-colors"
               >
-                <Image className="w-5 h-5" />
-                <span>Escolher da Galeria</span>
+                <Image className="w-6 h-6" />
+                <div className="text-left">
+                  <div className="font-medium">Galeria</div>
+                  <div className="text-sm opacity-90">Escolher foto existente</div>
+                </div>
               </button>
+              
               <button
                 onClick={() => setShowCameraOptions(false)}
-                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg"
+                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg transition-colors"
               >
                 Cancelar
               </button>
+            </div>
+            
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <div className="flex items-start space-x-2">
+                <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-blue-800">
+                  <p className="font-medium">Dica:</p>
+                  <p>Para melhor qualidade, tire a foto em boa iluminação e mantenha o celular estável.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
