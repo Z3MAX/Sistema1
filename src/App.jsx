@@ -1,710 +1,10 @@
-{/* Modal de configuração de etiquetas */}
-      {showLabelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 md:p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
-            <div className="p-4 md:p-6">
-              <div className="flex justify-between items-center mb-4 md:mb-6">
-                <h3 className="text-lg md:text-xl font-semibold">Configurar Etiquetas</h3>
-                <button
-                  onClick={() => setShowLabelModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                <div className="space-y-4 md:space-y-6">
-                  <div>
-                    <h4 className="font-semibold mb-3">Ativos Selecionados ({selectedAssets.length})</h4>
-                    <div className="max-h-24 md:max-h-32 overflow-y-auto border rounded-lg p-3">
-                      {assets.filter(a => selectedAssets.includes(a.id)).map(asset => (
-                        <div key={asset.id} className="flex items-center justify-between py-1">
-                          <span className="text-sm truncate">{asset.code} - {asset.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Template da Etiqueta</label>
-                    <select
-                      value={labelSettings.template}
-                      onChange={(e) => setLabelSettings({...labelSettings, template: e.target.value})}
-                      className="w-full px-3 py-2 md:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    >
-                      {Object.entries(labelTemplates).map(([key, template]) => (
-                        <option key={key} value={key}>
-                          {template.name} ({template.width} x {template.height})
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {labelTemplates[labelSettings.template]?.description}
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <h4 className="font-semibold">Opções</h4>
-                    
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={labelSettings.includeQR}
-                        onChange={(e) => setLabelSettings({...labelSettings, includeQR: e.target.checked})}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm">Incluir QR Code</span>
-                    </label>
-                    
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={labelSettings.includeLocation}
-                        onChange={(e) => setLabelSettings({...labelSettings, includeLocation: e.target.checked})}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm">Incluir Localização</span>
-                    </label>
-                    
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={labelSettings.includeDate}
-                        onChange={(e) => setLabelSettings({...labelSettings, includeDate: e.target.checked})}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm">Incluir Data</span>
-                    </label>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <h4 className="font-semibold">Preview da Etiqueta</h4>
-                  <div className="border-2 border-dashed border-gray-300 p-4 md:p-6 rounded-lg bg-gray-50 flex items-center justify-center min-h-[200px]">
-                    {selectedAssets.length > 0 && (
-                      <LabelComponent
-                        label={{
-                          code: assets.find(a => a.id === selectedAssets[0])?.code || 'SAMPLE',
-                          name: assets.find(a => a.id === selectedAssets[0])?.name || 'Sample Asset',
-                          location: 'Sample Location',
-                          qrCode: generateQRCode('SAMPLE'),
-                          date: new Date().toLocaleDateString('pt-BR')
-                        }}
-                        template={labelSettings.template}
-                      />
-                    )}
-                  </div>
-                  
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <p><strong>Dimensões:</strong> {labelTemplates[labelSettings.template]?.width} x {labelTemplates[labelSettings.template]?.height}</p>
-                    <p><strong>Recomendação:</strong> Use papel adesivo ou etiquetas próprias para impressão</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6 md:mt-8">
-                <button
-                  onClick={() => setShowLabelModal(false)}
-                  className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => {
-                    generateLabels();
-                    setShowLabelModal(false);
-                  }}
-                  className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-                >
-                  Gerar Etiquetas
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de preview das etiquetas - Mobile optimized */}
-      {showLabelPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 md:p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-6xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
-            <div className="p-4 md:p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-4">
-                <h3 className="text-lg md:text-xl font-semibold">Preview das Etiquetas ({generatedLabels.length})</h3>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
-                  <button
-                    onClick={downloadLabelsAsPDF}
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 text-sm"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Salvar PDF</span>
-                  </button>
-                  <button
-                    onClick={printLabels}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 text-sm"
-                  >
-                    <Printer className="w-4 h-4" />
-                    <span>Imprimir</span>
-                  </button>
-                  <button
-                    onClick={() => setShowLabelPreview(false)}
-                    className="p-2 hover:bg-gray-100 rounded-lg self-end sm:self-auto"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-              
-              <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <QrCode className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-medium text-blue-900">Instruções para Impressão</h4>
-                    <ul className="text-sm text-blue-800 mt-2 space-y-1">
-                      <li>• Configure sua impressora para papel A4 ou papel de etiquetas</li>
-                      <li>• Ajuste as margens para "Mínima" ou "Sem margem"</li>
-                      <li>• Use qualidade de impressão "Alta" para melhor legibilidade do QR Code</li>
-                      <li>• Teste com uma página antes de imprimir todas as etiquetas</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              
-              <div 
-                ref={printRef}
-                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4 p-4 bg-gray-50 rounded-lg"
-              >
-                {generatedLabels.map((label, index) => (
-                  <div key={index} className="flex justify-center">
-                    <LabelComponent label={label} template={label.template} />
-                  </div>
-                ))}
-              </div>
-              
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-6 gap-4">
-                <div className="text-sm text-gray-600">
-                  Total: {generatedLabels.length} etiqueta(s) • Template: {labelTemplates[labelSettings.template]?.name}
-                </div>
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
-                  <button
-                    onClick={() => {
-                      setShowLabelPreview(false);
-                      setShowLabelModal(true);
-                    }}
-                    className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                  >
-                    Voltar
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowLabelPreview(false);
-                      setSelectedAssets([]);
-                      setGeneratedLabels([]);
-                    }}
-                    className="w-full sm:w-auto px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
-                  >
-                    Fechar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de importação Excel - Mobile optimized */}
-      {showExcelImport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 md:p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
-            <div className="p-4 md:p-6">
-              <div className="flex justify-between items-center mb-4 md:mb-6">
-                <h3 className="text-lg md:text-xl font-semibold">Importar Ativos via Excel</h3>
-                <button
-                  onClick={() => setShowExcelImport(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              {!isImporting ? (
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <FileText className="w-12 h-12 md:w-16 md:h-16 text-red-600 mx-auto mb-4" />
-                    <h4 className="text-base md:text-lg font-semibold mb-2">Importar seus ativos em massa</h4>
-                    <p className="text-sm md:text-base text-gray-600">
-                      Faça upload de um arquivo Excel (.xlsx ou .csv) com os dados dos seus ativos
-                    </p>
-                  </div>
-                  
-                  <div className="flex flex-col space-y-3">
-                    <button
-                      onClick={downloadExcelTemplate}
-                      className="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2"
-                    >
-                      <Download className="w-5 h-5" />
-                      <span>Baixar Template</span>
-                    </button>
-                    
-                    <label className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 cursor-pointer">
-                      <Upload className="w-5 h-5" />
-                      <span>Selecionar Arquivo</span>
-                      <input
-                        type="file"
-                        accept=".xlsx,.xls,.csv"
-                        onChange={handleExcelImport}
-                        ref={excelInputRef}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="w-12 h-12 md:w-16 md:h-16 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
-                  <h4 className="text-base md:text-lg font-semibold mb-2">Processando arquivo...</h4>
-                  <p className="text-sm md:text-base text-gray-600 mb-4">Importando seus ativos, aguarde...</p>
-                  
-                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                    <div
-                      className="bg-red-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${importProgress}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-sm text-gray-500">{importProgress}% concluído</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de cadastro de ativo - Mobile optimized */}
-      {showAssetForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 md:p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
-            <div className="p-4 md:p-6">
-              <div className="flex justify-between items-center mb-4 md:mb-6">
-                <h3 className="text-lg md:text-xl font-semibold">
-                  {editingAsset ? 'Editar Ativo' : 'Novo Ativo'}
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowAssetForm(false);
-                    setEditingAsset(null);
-                    resetAssetForm();
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Ativo *</label>
-                    <input
-                      type="text"
-                      value={assetForm.name}
-                      onChange={(e) => setAssetForm({...assetForm, name: e.target.value})}
-                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                      placeholder="Ex: Notebook Dell Inspiron"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Código *</label>
-                    <input
-                      type="text"
-                      value={assetForm.code}
-                      onChange={(e) => setAssetForm({...assetForm, code: e.target.value})}
-                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                      placeholder="Ex: NB001"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
-                    <select
-                      value={assetForm.category}
-                      onChange={(e) => setAssetForm({...assetForm, category: e.target.value})}
-                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                    >
-                      <option value="">Selecione uma categoria</option>
-                      {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select
-                      value={assetForm.status}
-                      onChange={(e) => setAssetForm({...assetForm, status: e.target.value})}
-                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                    >
-                      {statuses.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Andar *</label>
-                    <select
-                      value={assetForm.floorId}
-                      onChange={(e) => setAssetForm({...assetForm, floorId: e.target.value, roomId: ''})}
-                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                    >
-                      <option value="">Selecione um andar</option>
-                      {floors.map(floor => (
-                        <option key={floor.id} value={floor.id}>{floor.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Sala *</label>
-                    <select
-                      value={assetForm.roomId}
-                      onChange={(e) => setAssetForm({...assetForm, roomId: e.target.value})}
-                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                      disabled={!assetForm.floorId}
-                    >
-                      <option value="">Selecione uma sala</option>
-                      {getRoomsForFloor(assetForm.floorId).map(room => (
-                        <option key={room.id} value={room.id}>{room.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Valor (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={assetForm.value}
-                      onChange={(e) => setAssetForm({...assetForm, value: e.target.value})}
-                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                      placeholder="Ex: 2500.00"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fornecedor</label>
-                    <input
-                      type="text"
-                      value={assetForm.supplier}
-                      onChange={(e) => setAssetForm({...assetForm, supplier: e.target.value})}
-                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                      placeholder="Ex: Dell Brasil"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-                <textarea
-                  value={assetForm.description}
-                  onChange={(e) => setAssetForm({...assetForm, description: e.target.value})}
-                  rows={3}
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                  placeholder="Descrição detalhada do ativo..."
-                />
-              </div>
-              
-              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6 md:mt-8">
-                <button
-                  onClick={() => {
-                    setShowAssetForm(false);
-                    setEditingAsset(null);
-                    resetAssetForm();
-                  }}
-                  className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSaveAsset}
-                  className="w-full sm:w-auto px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg"
-                >
-                  {editingAsset ? 'Atualizar' : 'Salvar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de cadastro de sala - Mobile optimized */}
-      {showRoomForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 md:p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-md max-h-[95vh] overflow-y-auto">
-            <div className="p-4 md:p-6">
-              <div className="flex justify-between items-center mb-4 md:mb-6">
-                <h3 className="text-lg md:text-xl font-semibold">
-                  {editingRoom ? 'Editar Sala' : 'Nova Sala'}
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowRoomForm(false);
-                    setEditingRoom(null);
-                    setRoomForm({ name: '', description: '', floorId: '', capacity: '', area: '' });
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nome da Sala *</label>
-                  <input
-                    type="text"
-                    value={roomForm.name}
-                    onChange={(e) => setRoomForm({...roomForm, name: e.target.value})}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                    placeholder="Ex: Sala de Reuniões A"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Andar *</label>
-                  <select
-                    value={roomForm.floorId}
-                    onChange={(e) => setRoomForm({...roomForm, floorId: e.target.value})}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                  >
-                    <option value="">Selecione um andar</option>
-                    {floors.map(floor => (
-                      <option key={floor.id} value={floor.id}>{floor.name}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-                  <textarea
-                    value={roomForm.description}
-                    onChange={(e) => setRoomForm({...roomForm, description: e.target.value})}
-                    rows={3}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                    placeholder="Descrição da sala..."
-                  />
-                </div>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
-                <button
-                  onClick={() => {
-                    setShowRoomForm(false);
-                    setEditingRoom(null);
-                    setRoomForm({ name: '', description: '', floorId: '', capacity: '', area: '' });
-                  }}
-                  className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSaveRoom}
-                  className="w-full sm:w-auto px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg"
-                >
-                  {editingRoom ? 'Atualizar' : 'Salvar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Outros modais mantidos com otimizações similares... */}
-      {/* Modal para opções de câmera */}
-      {showCameraOptions && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-4 md:p-6 max-w-sm w-full mx-4">
-            <h4 className="text-base md:text-lg font-semibold mb-4">Como deseja adicionar a foto?</h4>
-            <div className="space-y-3">
-              <button
-                onClick={handleCameraCapture}
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2"
-              >
-                <Camera className="w-5 h-5" />
-                <span>Tirar Foto (Câmera)</span>
-              </button>
-              <button
-                onClick={handleGallerySelect}
-                className="w-full bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2"
-              >
-                <Upload className="w-5 h-5" />
-                <span>Escolher da Galeria</span>
-              </button>
-              <button
-                onClick={() => setShowCameraOptions(false)}
-                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de detalhes do ativo - Mobile optimized */}
-      {showAssetDetail && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 md:p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
-            <div className="p-4 md:p-6">
-              <div className="flex justify-between items-center mb-4 md:mb-6">
-                <h3 className="text-lg md:text-xl font-semibold">Detalhes do Ativo</h3>
-                <button
-                  onClick={() => setShowAssetDetail(null)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                    <p className="text-sm md:text-base text-gray-900">{showAssetDetail.name}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Código</label>
-                    <p className="text-sm md:text-base text-gray-900 font-mono">{showAssetDetail.code}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-                    <span className="inline-block px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
-                      {showAssetDetail.category || 'Sem categoria'}
-                    </span>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <StatusBadge status={showAssetDetail.status} />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Localização</label>
-                    <p className="text-sm md:text-base text-gray-900">
-                      {getFloorName(showAssetDetail.floorId)} - {getRoomName(showAssetDetail.roomId)}
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
-                    <p className="text-sm md:text-base text-gray-900 font-semibold">
-                      {showAssetDetail.value ? 
-                        `R$ ${parseFloat(showAssetDetail.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 
-                        'Não informado'
-                      }
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Foto</label>
-                    <div className="w-full h-48 md:h-64 bg-gray-100 rounded-lg overflow-hidden border">
-                      {showAssetDetail.photo ? (
-                        <img 
-                          src={showAssetDetail.photo} 
-                          alt={showAssetDetail.name} 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="text-center">
-                            <Camera className="w-12 h-12 md:w-16 md:h-16 text-gray-400 mx-auto mb-2" />
-                            <span className="text-gray-500 text-sm">Nenhuma foto disponível</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {showAssetDetail.description && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-sm md:text-base text-gray-900">{showAssetDetail.description}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6 md:mt-8">
-                <button
-                  onClick={() => {
-                    setSelectedAssets([showAssetDetail.id]);
-                    setShowAssetDetail(null);
-                    setShowLabelModal(true);
-                  }}
-                  className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center space-x-2"
-                >
-                  <Tag className="w-4 h-4" />
-                  <span>Gerar Etiqueta</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setShowAssetDetail(null);
-                    handleEditAsset(showAssetDetail);
-                  }}
-                  className="w-full sm:w-auto px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => setShowAssetDetail(null)}
-                  className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Input hidden para arquivo */}
-      <input
-        type="file"
-        accept="image/*"
-        onChange={handlePhotoCapture}
-        ref={fileInputRef}
-        className="hidden"
-      />
-
-      {/* CSS adicional para scroll suave */}
-      <style jsx>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
-    </div>
-  );import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Camera, Plus, Edit, Trash2, Building, Package, Search, Eye, Save, Database,
   BarChart3, MapPin, Calendar, DollarSign, Filter, X, Home, Settings,
   TrendingUp, AlertCircle, CheckCircle, Clock, XCircle, Download, Upload,
   Grid, List, SortAsc, SortDesc, RefreshCw, Users, Shield, Bell, FileText,
-  Printer, Tag, QrCode, Copy, Check
+  Printer, Tag, QrCode, Copy, Check, Image, RotateCcw
 } from 'lucide-react';
 
 const AssetControlSystem = () => {
@@ -736,6 +36,11 @@ const AssetControlSystem = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   
+  // Estados para captura de foto
+  const [showPhotoPreview, setShowPhotoPreview] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [photoError, setPhotoError] = useState('');
+  
   // Estados para etiquetas
   const [selectedAssets, setSelectedAssets] = useState([]);
   const [labelSettings, setLabelSettings] = useState({
@@ -744,12 +49,14 @@ const AssetControlSystem = () => {
     includeLocation: true,
     includeDate: false,
     fontSize: 'medium',
-    labelSize: '50x30' // mm
+    labelSize: '50x30'
   });
   const [generatedLabels, setGeneratedLabels] = useState([]);
   
   // Refs
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
   const excelInputRef = useRef(null);
   const printRef = useRef(null);
 
@@ -839,21 +146,30 @@ const AssetControlSystem = () => {
             id: 1, 
             number: 5, 
             name: '5º Andar - Administrativo', 
-            rooms: [],
+            rooms: [
+              { id: 1, name: 'Sala 501', description: 'Recepção', floorId: 1 },
+              { id: 2, name: 'Sala 502', description: 'Financeiro', floorId: 1 }
+            ],
             description: 'Setor administrativo e financeiro'
           },
           { 
             id: 2, 
             number: 11, 
             name: '11º Andar - Tecnologia', 
-            rooms: [],
+            rooms: [
+              { id: 3, name: 'Sala 1101', description: 'Desenvolvimento', floorId: 2 },
+              { id: 4, name: 'Sala 1102', description: 'TI', floorId: 2 }
+            ],
             description: 'Departamento de TI e desenvolvimento'
           },
           { 
             id: 3, 
             number: 15, 
             name: '15º Andar - Direção', 
-            rooms: [],
+            rooms: [
+              { id: 5, name: 'Sala 1501', description: 'Diretoria', floorId: 3 },
+              { id: 6, name: 'Sala 1502', description: 'Reuniões', floorId: 3 }
+            ],
             description: 'Diretoria e salas de reunião'
           }
         ];
@@ -893,9 +209,151 @@ const AssetControlSystem = () => {
     saveToDatabase(STORAGE_KEYS.ASSETS, newAssets);
   };
 
+  // Funções para captura de foto
+  const handleTakePhoto = () => {
+    setShowCameraOptions(false);
+    setPhotoError('');
+    
+    // Criar input para câmera
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment'; // Usa câmera traseira
+    
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        await processImageFile(file);
+      }
+    };
+    
+    input.click();
+  };
+
+  const handleSelectFromGallery = () => {
+    setShowCameraOptions(false);
+    setPhotoError('');
+    
+    // Criar input para galeria
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        await processImageFile(file);
+      }
+    };
+    
+    input.click();
+  };
+
+  const processImageFile = async (file) => {
+    try {
+      setIsCapturingPhoto(true);
+      setPhotoError('');
+
+      // Validar arquivo
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Por favor, selecione apenas arquivos de imagem.');
+      }
+
+      // Verificar tamanho (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('A imagem deve ter no máximo 5MB.');
+      }
+
+      // Ler arquivo
+      const reader = new FileReader();
+      
+      reader.onload = async (event) => {
+        try {
+          const imageDataUrl = event.target.result;
+          
+          // Redimensionar imagem se necessário
+          const resizedImage = await resizeImage(imageDataUrl, 800, 600);
+          
+          setCapturedPhoto(resizedImage);
+          setShowPhotoPreview(true);
+          
+        } catch (error) {
+          setPhotoError(error.message || 'Erro ao processar imagem.');
+        } finally {
+          setIsCapturingPhoto(false);
+        }
+      };
+
+      reader.onerror = () => {
+        setPhotoError('Erro ao ler arquivo de imagem.');
+        setIsCapturingPhoto(false);
+      };
+
+      reader.readAsDataURL(file);
+
+    } catch (error) {
+      setPhotoError(error.message || 'Erro ao processar imagem.');
+      setIsCapturingPhoto(false);
+    }
+  };
+
+  const resizeImage = (dataUrl, maxWidth, maxHeight) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calcular novas dimensões mantendo proporção
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+        
+        // Redimensionar
+        canvas.width = width;
+        canvas.height = height;
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Converter para data URL com qualidade otimizada
+        const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(resizedDataUrl);
+      };
+      
+      img.src = dataUrl;
+    });
+  };
+
+  const handleSavePhoto = () => {
+    if (capturedPhoto) {
+      setAssetForm(prev => ({ ...prev, photo: capturedPhoto }));
+      setCapturedPhoto(null);
+      setShowPhotoPreview(false);
+    }
+  };
+
+  const handleRetakePhoto = () => {
+    setCapturedPhoto(null);
+    setShowPhotoPreview(false);
+    setShowCameraOptions(true);
+  };
+
+  const handleRemovePhoto = () => {
+    setAssetForm(prev => ({ ...prev, photo: null }));
+  };
+
   // Funções para etiquetas
   const generateQRCode = (text) => {
-    // Simulação de QR Code usando um placeholder
     const encodedText = encodeURIComponent(text);
     return `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodedText}`;
   };
@@ -1022,7 +480,6 @@ const AssetControlSystem = () => {
   };
 
   const downloadLabelsAsPDF = () => {
-    // Função para download como PDF (usando window.print com CSS específico)
     const printContent = printRef.current.innerHTML;
     const printWindow = window.open('', '_blank');
     
@@ -1248,60 +705,6 @@ const AssetControlSystem = () => {
         }
       };
       reader.readAsText(file);
-    }
-  };
-
-  // Funções para foto
-  const handleCameraCapture = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment';
-    
-    input.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        setIsCapturingPhoto(true);
-        await processImageFile(file);
-        setIsCapturingPhoto(false);
-      }
-    };
-    
-    input.click();
-    setShowCameraOptions(false);
-  };
-
-  const handleGallerySelect = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    
-    input.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        setIsCapturingPhoto(true);
-        await processImageFile(file);
-        setIsCapturingPhoto(false);
-      }
-    };
-    
-    input.click();
-    setShowCameraOptions(false);
-  };
-
-  const processImageFile = async (file) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const imageData = event.target.result;
-      setAssetForm(prev => ({ ...prev, photo: imageData }));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handlePhotoCapture = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      await processImageFile(file);
     }
   };
 
@@ -1617,35 +1020,6 @@ const AssetControlSystem = () => {
             </div>
             
             <div className="flex items-center space-x-2">
-              {/* Stats mobile - dropdown */}
-              <div className="sm:hidden relative">
-                <button
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
-                >
-                  <Bell className="w-4 h-4 text-gray-600" />
-                </button>
-                
-                {showNotifications && (
-                  <div className="absolute right-0 top-12 bg-white rounded-lg shadow-lg border p-4 w-64 z-50">
-                    <div className="space-y-3 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Total de Ativos</span>
-                        <span className="font-semibold">{stats.total}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Salas</span>
-                        <span className="font-semibold">{stats.totalRooms}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Valor Total</span>
-                        <span className="font-semibold">R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
               {/* Stats desktop */}
               <div className="hidden md:flex items-center space-x-4 text-sm text-gray-600">
                 <div className="flex items-center space-x-1">
@@ -1678,16 +1052,6 @@ const AssetControlSystem = () => {
                   <input type="file" accept=".json" onChange={importDatabase} className="hidden" />
                 </label>
               </div>
-              
-              {/* Mobile menu button */}
-              <div className="sm:hidden">
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="p-2 rounded-lg bg-red-600 text-white"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           </div>
           
@@ -1714,28 +1078,6 @@ const AssetControlSystem = () => {
               </button>
             ))}
           </div>
-          
-          {/* Mobile action menu */}
-          {showFilters && (
-            <div className="sm:hidden mt-4 p-4 bg-gray-50 rounded-lg space-y-2">
-              <button
-                onClick={() => {
-                  exportDatabase();
-                  setShowFilters(false);
-                }}
-                className="w-full flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg text-sm"
-              >
-                <Download className="w-4 h-4" />
-                <span>Fazer Backup</span>
-              </button>
-              
-              <label className="w-full flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg text-sm cursor-pointer">
-                <Upload className="w-4 h-4" />
-                <span>Importar Dados</span>
-                <input type="file" accept=".json" onChange={importDatabase} className="hidden" />
-              </label>
-            </div>
-          )}
         </div>
       </div>
 
@@ -1852,7 +1194,6 @@ const AssetControlSystem = () => {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-2">
                 <h2 className="text-xl md:text-2xl font-bold text-gray-900">Gestão de Ativos</h2>
                 
-                {/* Mobile action buttons */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
                   {selectedAssets.length > 0 && (
                     <button
@@ -2184,6 +1525,339 @@ const AssetControlSystem = () => {
         )}
       </div>
 
+      {/* Modal de captura de foto - Preview */}
+      {showPhotoPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Preview da Foto</h3>
+                <button
+                  onClick={() => {
+                    setShowPhotoPreview(false);
+                    setCapturedPhoto(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {capturedPhoto && (
+                <div className="space-y-4">
+                  <div className="w-full bg-gray-100 rounded-lg overflow-hidden">
+                    <img 
+                      src={capturedPhoto} 
+                      alt="Foto capturada" 
+                      className="w-full h-auto max-h-80 object-contain"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col space-y-2">
+                    <button
+                      onClick={handleSavePhoto}
+                      className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2"
+                    >
+                      <Check className="w-5 h-5" />
+                      <span>Usar Esta Foto</span>
+                    </button>
+                    
+                    <button
+                      onClick={handleRetakePhoto}
+                      className="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2"
+                    >
+                      <RotateCcw className="w-5 h-5" />
+                      <span>Tirar Outra Foto</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para opções de câmera */}
+      {showCameraOptions && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
+            <h4 className="text-lg font-semibold mb-4">Como deseja adicionar a foto?</h4>
+            <div className="space-y-3">
+              <button
+                onClick={handleTakePhoto}
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2"
+              >
+                <Camera className="w-5 h-5" />
+                <span>Tirar Foto (Câmera)</span>
+              </button>
+              <button
+                onClick={handleSelectFromGallery}
+                className="w-full bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2"
+              >
+                <Image className="w-5 h-5" />
+                <span>Escolher da Galeria</span>
+              </button>
+              <button
+                onClick={() => setShowCameraOptions(false)}
+                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading para captura de foto */}
+      {isCapturingPhoto && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 text-center">
+            <div className="w-12 h-12 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Processando foto...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error message for photo */}
+      {photoError && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm">
+          <div className="flex items-start space-x-2">
+            <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Erro na foto</p>
+              <p className="text-sm">{photoError}</p>
+            </div>
+            <button
+              onClick={() => setPhotoError('')}
+              className="ml-auto"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de cadastro de ativo - ATUALIZADO COM FOTO */}
+      {showAssetForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">
+                  {editingAsset ? 'Editar Ativo' : 'Novo Ativo'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowAssetForm(false);
+                    setEditingAsset(null);
+                    resetAssetForm();
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Ativo *</label>
+                    <input
+                      type="text"
+                      value={assetForm.name}
+                      onChange={(e) => setAssetForm({...assetForm, name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      placeholder="Ex: Notebook Dell Inspiron"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Código *</label>
+                    <input
+                      type="text"
+                      value={assetForm.code}
+                      onChange={(e) => setAssetForm({...assetForm, code: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      placeholder="Ex: NB001"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+                    <select
+                      value={assetForm.category}
+                      onChange={(e) => setAssetForm({...assetForm, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value="">Selecione uma categoria</option>
+                      {categories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select
+                      value={assetForm.status}
+                      onChange={(e) => setAssetForm({...assetForm, status: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    >
+                      {statuses.map(status => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Andar *</label>
+                    <select
+                      value={assetForm.floorId}
+                      onChange={(e) => setAssetForm({...assetForm, floorId: e.target.value, roomId: ''})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value="">Selecione um andar</option>
+                      {floors.map(floor => (
+                        <option key={floor.id} value={floor.id}>{floor.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Sala *</label>
+                    <select
+                      value={assetForm.roomId}
+                      onChange={(e) => setAssetForm({...assetForm, roomId: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      disabled={!assetForm.floorId}
+                    >
+                      <option value="">Selecione uma sala</option>
+                      {getRoomsForFloor(assetForm.floorId).map(room => (
+                        <option key={room.id} value={room.id}>{room.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  {/* Seção de Foto - NOVA */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Foto do Ativo</label>
+                    <div className="space-y-3">
+                      {assetForm.photo ? (
+                        <div className="relative">
+                          <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden border">
+                            <img 
+                              src={assetForm.photo} 
+                              alt="Foto do ativo" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex space-x-2 mt-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowCameraOptions(true)}
+                              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center justify-center space-x-2 text-sm"
+                            >
+                              <Camera className="w-4 h-4" />
+                              <span>Alterar Foto</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleRemovePhoto}
+                              className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div 
+                          onClick={() => setShowCameraOptions(true)}
+                          className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-red-400 hover:bg-red-50 transition-colors"
+                        >
+                          <Camera className="w-12 h-12 text-gray-400 mb-2" />
+                          <p className="text-gray-500 text-center">
+                            <span className="font-medium">Clique para adicionar foto</span>
+                            <br />
+                            <span className="text-sm">Tire uma foto ou selecione da galeria</span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Valor (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={assetForm.value}
+                      onChange={(e) => setAssetForm({...assetForm, value: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      placeholder="Ex: 2500.00"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Fornecedor</label>
+                    <input
+                      type="text"
+                      value={assetForm.supplier}
+                      onChange={(e) => setAssetForm({...assetForm, supplier: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      placeholder="Ex: Dell Brasil"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Número de Série</label>
+                    <input
+                      type="text"
+                      value={assetForm.serialNumber}
+                      onChange={(e) => setAssetForm({...assetForm, serialNumber: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      placeholder="Ex: DL24001"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                <textarea
+                  value={assetForm.description}
+                  onChange={(e) => setAssetForm({...assetForm, description: e.target.value})}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Descrição detalhada do ativo..."
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-8">
+                <button
+                  onClick={() => {
+                    setShowAssetForm(false);
+                    setEditingAsset(null);
+                    resetAssetForm();
+                  }}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveAsset}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                >
+                  {editingAsset ? 'Atualizar' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Outros modais permanecem iguais... */}
       {/* Modal de configuração de etiquetas */}
       {showLabelModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -2399,6 +2073,7 @@ const AssetControlSystem = () => {
         </div>
       )}
 
+      {/* Restante dos modais... */}
       {/* Modal de importação Excel */}
       {showExcelImport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -2461,168 +2136,6 @@ const AssetControlSystem = () => {
                   <p className="text-sm text-gray-500">{importProgress}% concluído</p>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de cadastro de ativo */}
-      {showAssetForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold">
-                  {editingAsset ? 'Editar Ativo' : 'Novo Ativo'}
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowAssetForm(false);
-                    setEditingAsset(null);
-                    resetAssetForm();
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Ativo *</label>
-                    <input
-                      type="text"
-                      value={assetForm.name}
-                      onChange={(e) => setAssetForm({...assetForm, name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                      placeholder="Ex: Notebook Dell Inspiron"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Código *</label>
-                    <input
-                      type="text"
-                      value={assetForm.code}
-                      onChange={(e) => setAssetForm({...assetForm, code: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                      placeholder="Ex: NB001"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
-                    <select
-                      value={assetForm.category}
-                      onChange={(e) => setAssetForm({...assetForm, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                      <option value="">Selecione uma categoria</option>
-                      {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select
-                      value={assetForm.status}
-                      onChange={(e) => setAssetForm({...assetForm, status: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                      {statuses.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Andar *</label>
-                    <select
-                      value={assetForm.floorId}
-                      onChange={(e) => setAssetForm({...assetForm, floorId: e.target.value, roomId: ''})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                      <option value="">Selecione um andar</option>
-                      {floors.map(floor => (
-                        <option key={floor.id} value={floor.id}>{floor.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Sala *</label>
-                    <select
-                      value={assetForm.roomId}
-                      onChange={(e) => setAssetForm({...assetForm, roomId: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                      disabled={!assetForm.floorId}
-                    >
-                      <option value="">Selecione uma sala</option>
-                      {getRoomsForFloor(assetForm.floorId).map(room => (
-                        <option key={room.id} value={room.id}>{room.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Valor (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={assetForm.value}
-                      onChange={(e) => setAssetForm({...assetForm, value: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                      placeholder="Ex: 2500.00"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fornecedor</label>
-                    <input
-                      type="text"
-                      value={assetForm.supplier}
-                      onChange={(e) => setAssetForm({...assetForm, supplier: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                      placeholder="Ex: Dell Brasil"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-                <textarea
-                  value={assetForm.description}
-                  onChange={(e) => setAssetForm({...assetForm, description: e.target.value})}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                  placeholder="Descrição detalhada do ativo..."
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-3 mt-8">
-                <button
-                  onClick={() => {
-                    setShowAssetForm(false);
-                    setEditingAsset(null);
-                    resetAssetForm();
-                  }}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSaveAsset}
-                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
-                >
-                  {editingAsset ? 'Atualizar' : 'Salvar'}
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -2705,37 +2218,6 @@ const AssetControlSystem = () => {
                   {editingRoom ? 'Atualizar' : 'Salvar'}
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal para opções de câmera */}
-      {showCameraOptions && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
-            <h4 className="text-lg font-semibold mb-4">Como deseja adicionar a foto?</h4>
-            <div className="space-y-3">
-              <button
-                onClick={handleCameraCapture}
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2"
-              >
-                <Camera className="w-5 h-5" />
-                <span>Tirar Foto (Câmera)</span>
-              </button>
-              <button
-                onClick={handleGallerySelect}
-                className="w-full bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2"
-              >
-                <Upload className="w-5 h-5" />
-                <span>Escolher da Galeria</span>
-              </button>
-              <button
-                onClick={() => setShowCameraOptions(false)}
-                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg"
-              >
-                Cancelar
-              </button>
             </div>
           </div>
         </div>
@@ -2863,14 +2345,16 @@ const AssetControlSystem = () => {
         </div>
       )}
 
-      {/* Input hidden para arquivo */}
-      <input
-        type="file"
-        accept="image/*"
-        onChange={handlePhotoCapture}
-        ref={fileInputRef}
-        className="hidden"
-      />
+      {/* CSS adicional para scroll suave */}
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 };
