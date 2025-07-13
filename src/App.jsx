@@ -212,79 +212,68 @@ const AssetControlSystem = () => {
     saveToDatabase(STORAGE_KEYS.ASSETS, newAssets);
   };
 
-  // Funções para captura de foto
+  // Funções para captura de foto - VERSÃO MELHORADA
   const handleTakePhoto = () => {
     setShowCameraOptions(false);
     setPhotoError('');
     
-    // Verificar se o dispositivo suporta câmera
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      // Fallback para input file com capture
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.capture = 'environment';
-      input.setAttribute('capture', 'camera');
-      
-      input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          await processImageFile(file);
-        }
-      };
-      
-      // Forçar o clique
-      document.body.appendChild(input);
-      input.click();
-      document.body.removeChild(input);
-      return;
-    }
-
-    // Tentar usar a API de câmera nativa
-    navigator.mediaDevices.getUserMedia({ 
-      video: { 
-        facingMode: 'environment',
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      } 
-    })
-    .then(stream => {
-      // Se conseguir acesso à câmera, mostrar interface de captura
-      setShowCameraCapture(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+    console.log('🔥 Tentando abrir câmera...');
+    
+    // Método 1: Tentar input com capture primeiro (mais compatível)
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.setAttribute('capture', 'camera');
+    
+    // Aplicar estilos para garantir que funcione
+    input.style.position = 'absolute';
+    input.style.top = '-9999px';
+    input.style.left = '-9999px';
+    input.style.visibility = 'hidden';
+    
+    input.onchange = async (e) => {
+      console.log('📸 Arquivo selecionado da câmera:', e.target.files[0]);
+      const file = e.target.files[0];
+      if (file) {
+        await processImageFile(file);
       }
-    })
-    .catch(err => {
-      console.log('Erro ao acessar câmera, usando fallback:', err);
-      // Fallback para input file
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.capture = 'environment';
-      
-      input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          await processImageFile(file);
-        }
-      };
-      
-      // Adicionar temporariamente ao DOM e clicar
-      input.style.display = 'none';
-      document.body.appendChild(input);
+      // Limpar
+      if (document.body.contains(input)) {
+        document.body.removeChild(input);
+      }
+    };
+    
+    input.onerror = (e) => {
+      console.error('❌ Erro no input de câmera:', e);
+      setPhotoError('Erro ao acessar câmera. Tente novamente.');
+      if (document.body.contains(input)) {
+        document.body.removeChild(input);
+      }
+    };
+    
+    // Adicionar ao DOM e clicar
+    document.body.appendChild(input);
+    
+    // Forçar foco e clique
+    setTimeout(() => {
+      input.focus();
       input.click();
-      setTimeout(() => {
-        if (document.body.contains(input)) {
-          document.body.removeChild(input);
-        }
-      }, 1000);
-    });
+    }, 100);
+    
+    // Remover após timeout se não usado
+    setTimeout(() => {
+      if (document.body.contains(input)) {
+        document.body.removeChild(input);
+      }
+    }, 30000); // 30 segundos
   };
 
   const handleSelectFromGallery = () => {
     setShowCameraOptions(false);
     setPhotoError('');
+    
+    console.log('🖼️ Abrindo galeria...');
     
     // Criar input para galeria (sem capture)
     const input = document.createElement('input');
@@ -292,24 +281,38 @@ const AssetControlSystem = () => {
     input.accept = 'image/*';
     input.multiple = false;
     
+    // Aplicar estilos
+    input.style.position = 'absolute';
+    input.style.top = '-9999px';
+    input.style.left = '-9999px';
+    input.style.visibility = 'hidden';
+    
     input.onchange = async (e) => {
+      console.log('🖼️ Arquivo selecionado da galeria:', e.target.files[0]);
       const file = e.target.files[0];
       if (file) {
         await processImageFile(file);
       }
+      // Limpar
+      if (document.body.contains(input)) {
+        document.body.removeChild(input);
+      }
     };
     
-    // Adicionar ao DOM temporariamente
-    input.style.display = 'none';
+    // Adicionar ao DOM e clicar
     document.body.appendChild(input);
-    input.click();
     
-    // Remover após um tempo
+    setTimeout(() => {
+      input.focus();
+      input.click();
+    }, 100);
+    
+    // Remover após timeout
     setTimeout(() => {
       if (document.body.contains(input)) {
         document.body.removeChild(input);
       }
-    }, 1000);
+    }, 30000);
   };
 
   const processImageFile = async (file) => {
