@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 const AssetControlSystem = () => {
+  // Estados principais
   const [activeTab, setActiveTab] = useState('dashboard');
   const [viewMode, setViewMode] = useState('grid');
   const [floors, setFloors] = useState([]);
@@ -31,16 +32,26 @@ const AssetControlSystem = () => {
   const [sortOrder, setSortOrder] = useState('asc');
   const [showFilters, setShowFilters] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  
+  // Refs
   const fileInputRef = useRef(null);
   const excelInputRef = useRef(null);
 
-  // Chaves para localStorage
+  // Configurações
   const STORAGE_KEYS = {
     FLOORS: 'asset_system_floors',
     ASSETS: 'asset_system_assets',
     SETTINGS: 'asset_system_settings'
   };
 
+  const categories = [
+    'Informática', 'Móveis', 'Equipamentos', 'Veículos', 
+    'Eletroeletrônicos', 'Ferramentas', 'Segurança', 'Outros'
+  ];
+
+  const statuses = ['Ativo', 'Inativo', 'Manutenção', 'Descartado'];
+
+  // Estados dos formulários
   const [assetForm, setAssetForm] = useState({
     name: '',
     code: '',
@@ -65,18 +76,12 @@ const AssetControlSystem = () => {
     area: ''
   });
 
-  const categories = [
-    'Informática', 'Móveis', 'Equipamentos', 'Veículos', 
-    'Eletroeletrônicos', 'Ferramentas', 'Segurança', 'Outros'
-  ];
-
-  const statuses = ['Ativo', 'Inativo', 'Manutenção', 'Descartado'];
-
-  // Inicialização do sistema
+  // Efeitos
   useEffect(() => {
     loadDataFromDatabase();
   }, []);
 
+  // Funções do banco de dados
   const loadDataFromDatabase = () => {
     try {
       setIsLoading(true);
@@ -144,7 +149,7 @@ const AssetControlSystem = () => {
     saveToDatabase(STORAGE_KEYS.ASSETS, newAssets);
   };
 
-  // Função para importar ativos via Excel
+  // Funções de importação Excel
   const handleExcelImport = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -167,7 +172,6 @@ const AssetControlSystem = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setImportProgress(30);
 
-      // Simulação de dados processados
       const exampleData = [
         {
           'Nome': 'Monitor Dell 24"',
@@ -181,77 +185,40 @@ const AssetControlSystem = () => {
           'Fornecedor': 'Dell Brasil',
           'Garantia': '36',
           'Número de Série': 'DL24001'
-        },
-        {
-          'Nome': 'Notebook HP Pavilion',
-          'Código': 'NB001',
-          'Categoria': 'Informática',
-          'Descrição': 'Notebook HP Pavilion i5 8GB RAM',
-          'Valor': '2500.00',
-          'Status': 'Ativo',
-          'Andar': '11º Andar - Tecnologia',
-          'Sala': 'Sala 1101',
-          'Fornecedor': 'HP Brasil',
-          'Garantia': '24',
-          'Número de Série': 'HP001'
         }
       ];
 
       setImportProgress(60);
-
       const processedAssets = [];
       let successCount = 0;
-      let errorCount = 0;
 
       for (let i = 0; i < exampleData.length; i++) {
         const row = exampleData[i];
         setImportProgress(60 + (i / exampleData.length) * 30);
 
-        try {
-          if (!row['Nome'] || !row['Código']) {
-            errorCount++;
-            continue;
+        if (row['Nome'] && row['Código']) {
+          const floor = floors.find(f => f.name.includes('5º'));
+          if (floor && floor.rooms.length > 0) {
+            const newAsset = {
+              id: Date.now() + i,
+              name: row['Nome'].trim(),
+              code: row['Código'].trim(),
+              category: row['Categoria'] || '',
+              description: row['Descrição'] || '',
+              value: row['Valor'] || '',
+              status: row['Status'] || 'Ativo',
+              floorId: floor.id,
+              roomId: floor.rooms[0].id,
+              supplier: row['Fornecedor'] || '',
+              warranty: row['Garantia'] || '',
+              serialNumber: row['Número de Série'] || '',
+              photo: null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+            processedAssets.push(newAsset);
+            successCount++;
           }
-
-          if (assets.some(asset => asset.code.toLowerCase() === row['Código'].toLowerCase())) {
-            errorCount++;
-            continue;
-          }
-
-          const floorName = row['Andar'] || '';
-          const roomName = row['Sala'] || '';
-          
-          const floor = floors.find(f => f.name.includes(floorName.split(' ')[0]) || f.name === floorName);
-          const room = floor?.rooms.find(r => r.name === roomName);
-
-          if (!floor || !room) {
-            errorCount++;
-            continue;
-          }
-
-          const newAsset = {
-            id: Date.now() + i,
-            name: row['Nome'].trim(),
-            code: row['Código'].trim(),
-            category: row['Categoria'] || '',
-            description: row['Descrição'] || '',
-            value: row['Valor'] || '',
-            status: row['Status'] || 'Ativo',
-            floorId: floor.id,
-            roomId: room.id,
-            supplier: row['Fornecedor'] || '',
-            warranty: row['Garantia'] || '',
-            serialNumber: row['Número de Série'] || '',
-            acquisitionDate: row['Data de Aquisição'] || '',
-            photo: null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-
-          processedAssets.push(newAsset);
-          successCount++;
-        } catch (error) {
-          errorCount++;
         }
       }
 
@@ -266,24 +233,22 @@ const AssetControlSystem = () => {
         setIsImporting(false);
         setImportProgress(0);
         setShowExcelImport(false);
-        alert(`Importação concluída!\n✅ ${successCount} ativos importados\n❌ ${errorCount} erros encontrados`);
+        alert(`Importação concluída! ${successCount} ativos importados.`);
       }, 1000);
 
     } catch (error) {
       setIsImporting(false);
       setImportProgress(0);
-      alert('Erro ao processar arquivo Excel. Verifique o formato e tente novamente.');
+      alert('Erro ao processar arquivo.');
     }
 
     event.target.value = '';
   };
 
-  // Função para gerar template Excel
   const downloadExcelTemplate = () => {
     const csvContent = [
-      'Nome,Código,Categoria,Descrição,Valor,Status,Andar,Sala,Fornecedor,Garantia,Número de Série,Data de Aquisição',
-      'Monitor Dell 24",MON001,Informática,Monitor Dell 24 polegadas Full HD,800.00,Ativo,5º Andar - Administrativo,Sala 501,Dell Brasil,36,DL24001,2024-01-15',
-      'Notebook HP,NB001,Informática,Notebook HP i5 8GB,2500.00,Ativo,11º Andar - Tecnologia,Sala 1101,HP Brasil,24,HP001,2024-01-20'
+      'Nome,Código,Categoria,Descrição,Valor,Status,Andar,Sala,Fornecedor,Garantia,Número de Série',
+      'Monitor Dell 24",MON001,Informática,Monitor Dell 24 polegadas,800.00,Ativo,5º Andar,Sala 501,Dell Brasil,36,DL24001'
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -294,7 +259,7 @@ const AssetControlSystem = () => {
     URL.revokeObjectURL(link.href);
   };
 
-  // Backup e importação
+  // Funções de backup
   const exportDatabase = () => {
     const data = {
       floors: floors,
@@ -334,7 +299,7 @@ const AssetControlSystem = () => {
     }
   };
 
-  // Funções para gerenciar captura de foto
+  // Funções para foto
   const handleCameraCapture = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -388,7 +353,7 @@ const AssetControlSystem = () => {
     }
   };
 
-  // Funções para gerenciar salas
+  // Funções para salas
   const handleSaveRoom = () => {
     if (!roomForm.name?.trim() || !roomForm.floorId) {
       alert('Por favor, preencha todos os campos obrigatórios.');
@@ -456,7 +421,7 @@ const AssetControlSystem = () => {
     }
   };
 
-  // Funções para gerenciar ativos
+  // Funções para ativos
   const handleSaveAsset = () => {
     if (!assetForm.name?.trim()) {
       alert('Por favor, preencha o nome do ativo.');
@@ -573,7 +538,7 @@ const AssetControlSystem = () => {
     return floor ? floor.rooms : [];
   };
 
-  // Filtros e ordenação
+  // Filtros
   const filteredAssets = assets.filter(asset => {
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          asset.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -584,33 +549,9 @@ const AssetControlSystem = () => {
     const matchesCategory = !filterCategory || asset.category === filterCategory;
     
     return matchesSearch && matchesFloor && matchesRoom && matchesStatus && matchesCategory;
-  }).sort((a, b) => {
-    let aValue = a[sortBy] || '';
-    let bValue = b[sortBy] || '';
-    
-    if (sortBy === 'value') {
-      aValue = parseFloat(aValue) || 0;
-      bValue = parseFloat(bValue) || 0;
-    }
-    
-    if (sortBy === 'acquisitionDate') {
-      aValue = new Date(aValue || '1970-01-01').getTime();
-      bValue = new Date(bValue || '1970-01-01').getTime();
-    }
-    
-    if (typeof aValue === 'string') {
-      aValue = aValue.toLowerCase();
-      bValue = bValue.toLowerCase();
-    }
-    
-    if (sortOrder === 'asc') {
-      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-    } else {
-      return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-    }
   });
 
-  // Estatísticas para dashboard
+  // Estatísticas
   const getDashboardStats = () => {
     const total = assets.length;
     const active = assets.filter(a => a.status === 'Ativo').length;
@@ -637,7 +578,7 @@ const AssetControlSystem = () => {
 
   const stats = getDashboardStats();
 
-  // Componente de Status Badge
+  // Componente Status Badge
   const StatusBadge = ({ status }) => {
     const statusConfig = {
       'Ativo': { color: 'bg-green-100 text-green-800', icon: CheckCircle },
@@ -657,7 +598,7 @@ const AssetControlSystem = () => {
     );
   };
 
-  // Tela de loading
+  // Loading screen
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center">
@@ -666,9 +607,6 @@ const AssetControlSystem = () => {
             <Database className="w-8 h-8 text-white" />
           </div>
           <p className="text-gray-600 text-lg">Carregando sistema...</p>
-          <div className="mt-4 w-32 h-2 bg-gray-200 rounded-full mx-auto overflow-hidden">
-            <div className="h-full bg-red-600 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-          </div>
         </div>
       </div>
     );
@@ -710,16 +648,6 @@ const AssetControlSystem = () => {
               
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full relative"
-                >
-                  <Bell className="w-5 h-5" />
-                  {stats.maintenance > 0 && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-                  )}
-                </button>
-                
-                <button
                   onClick={exportDatabase}
                   className="flex items-center space-x-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm transition-colors"
                 >
@@ -736,7 +664,6 @@ const AssetControlSystem = () => {
             </div>
           </div>
           
-          {/* Navegação */}
           <div className="flex space-x-1 mt-4">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -761,46 +688,12 @@ const AssetControlSystem = () => {
         </div>
       </div>
 
-      {/* Notificações */}
-      {showNotifications && (
-        <div className="absolute top-16 right-4 w-80 bg-white rounded-lg shadow-lg border z-50">
-          <div className="p-4 border-b">
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold">Notificações</h3>
-              <button onClick={() => setShowNotifications(false)}>
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          <div className="p-4">
-            {stats.maintenance > 0 ? (
-              <div className="flex items-center space-x-2 p-2 bg-red-50 rounded">
-                <AlertCircle className="w-4 h-4 text-red-600" />
-                <span className="text-sm">{stats.maintenance} ativo(s) em manutenção</span>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">Nenhuma notificação</p>
-            )}
-          </div>
-        </div>
-      )}
-
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Dashboard */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
-              <button
-                onClick={() => loadDataFromDatabase()}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span>Atualizar</span>
-              </button>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
             
-            {/* Cards de estatísticas */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between">
@@ -853,7 +746,6 @@ const AssetControlSystem = () => {
               </div>
             </div>
             
-            {/* Ações Rápidas */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
               <h3 className="text-lg font-semibold mb-4">Ações Rápidas</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -925,7 +817,6 @@ const AssetControlSystem = () => {
               </div>
             </div>
 
-            {/* Busca */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -939,7 +830,6 @@ const AssetControlSystem = () => {
               </div>
             </div>
 
-            {/* Lista de ativos */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -1122,7 +1012,7 @@ const AssetControlSystem = () => {
         )}
       </div>
 
-      {/* Modal para importação Excel */}
+      {/* Modal de importação Excel */}
       {showExcelImport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl w-full max-w-2xl">
@@ -1189,7 +1079,7 @@ const AssetControlSystem = () => {
         </div>
       )}
 
-      {/* Modal para cadastro/edição de ativo */}
+      {/* Modal de cadastro de ativo */}
       {showAssetForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1309,4 +1199,282 @@ const AssetControlSystem = () => {
                     <input
                       type="text"
                       value={assetForm.supplier}
-                      onChange={(e) => setAssetForm({
+                      onChange={(e) => setAssetForm({...assetForm, supplier: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      placeholder="Ex: Dell Brasil"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                <textarea
+                  value={assetForm.description}
+                  onChange={(e) => setAssetForm({...assetForm, description: e.target.value})}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Descrição detalhada do ativo..."
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-8">
+                <button
+                  onClick={() => {
+                    setShowAssetForm(false);
+                    setEditingAsset(null);
+                    resetAssetForm();
+                  }}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveAsset}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                >
+                  {editingAsset ? 'Atualizar' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de cadastro de sala */}
+      {showRoomForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">
+                  {editingRoom ? 'Editar Sala' : 'Nova Sala'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowRoomForm(false);
+                    setEditingRoom(null);
+                    setRoomForm({ name: '', description: '', floorId: '', capacity: '', area: '' });
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nome da Sala *</label>
+                  <input
+                    type="text"
+                    value={roomForm.name}
+                    onChange={(e) => setRoomForm({...roomForm, name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="Ex: Sala de Reuniões A"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Andar *</label>
+                  <select
+                    value={roomForm.floorId}
+                    onChange={(e) => setRoomForm({...roomForm, floorId: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    <option value="">Selecione um andar</option>
+                    {floors.map(floor => (
+                      <option key={floor.id} value={floor.id}>{floor.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                  <textarea
+                    value={roomForm.description}
+                    onChange={(e) => setRoomForm({...roomForm, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="Descrição da sala..."
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowRoomForm(false);
+                    setEditingRoom(null);
+                    setRoomForm({ name: '', description: '', floorId: '', capacity: '', area: '' });
+                  }}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveRoom}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                >
+                  {editingRoom ? 'Atualizar' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para opções de câmera */}
+      {showCameraOptions && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
+            <h4 className="text-lg font-semibold mb-4">Como deseja adicionar a foto?</h4>
+            <div className="space-y-3">
+              <button
+                onClick={handleCameraCapture}
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2"
+              >
+                <Camera className="w-5 h-5" />
+                <span>Tirar Foto (Câmera)</span>
+              </button>
+              <button
+                onClick={handleGallerySelect}
+                className="w-full bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2"
+              >
+                <Upload className="w-5 h-5" />
+                <span>Escolher da Galeria</span>
+              </button>
+              <button
+                onClick={() => setShowCameraOptions(false)}
+                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de detalhes do ativo */}
+      {showAssetDetail && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Detalhes do Ativo</h3>
+                <button
+                  onClick={() => setShowAssetDetail(null)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                    <p className="text-base text-gray-900">{showAssetDetail.name}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Código</label>
+                    <p className="text-base text-gray-900 font-mono">{showAssetDetail.code}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                    <span className="inline-block px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
+                      {showAssetDetail.category || 'Sem categoria'}
+                    </span>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <StatusBadge status={showAssetDetail.status} />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Localização</label>
+                    <p className="text-base text-gray-900">
+                      {getFloorName(showAssetDetail.floorId)} - {getRoomName(showAssetDetail.roomId)}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
+                    <p className="text-base text-gray-900 font-semibold">
+                      {showAssetDetail.value ? 
+                        `R$ ${parseFloat(showAssetDetail.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 
+                        'Não informado'
+                      }
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Foto</label>
+                    <div className="w-full h-64 bg-gray-100 rounded-lg overflow-hidden border">
+                      {showAssetDetail.photo ? (
+                        <img 
+                          src={showAssetDetail.photo} 
+                          alt={showAssetDetail.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="text-center">
+                            <Camera className="w-16 h-16 text-gray-400 mx-auto mb-2" />
+                            <span className="text-gray-500">Nenhuma foto disponível</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {showAssetDetail.description && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-base text-gray-900">{showAssetDetail.description}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-8">
+                <button
+                  onClick={() => {
+                    setShowAssetDetail(null);
+                    handleEditAsset(showAssetDetail);
+                  }}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => setShowAssetDetail(null)}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Input hidden para arquivo */}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handlePhotoCapture}
+        ref={fileInputRef}
+        className="hidden"
+      />
+    </div>
+  );
+};
+
+export default AssetControlSystem;
