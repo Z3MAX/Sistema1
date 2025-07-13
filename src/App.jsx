@@ -3,7 +3,8 @@ import {
   Camera, Plus, Edit, Trash2, Building, Package, Search, Eye, Save, Database,
   BarChart3, MapPin, Calendar, DollarSign, Filter, X, Home, Settings,
   TrendingUp, AlertCircle, CheckCircle, Clock, XCircle, Download, Upload,
-  Grid, List, SortAsc, SortDesc, RefreshCw, Users, Shield, Bell, FileText
+  Grid, List, SortAsc, SortDesc, RefreshCw, Users, Shield, Bell, FileText,
+  Printer, Tag, QrCode, Copy, Check
 } from 'lucide-react';
 
 const AssetControlSystem = () => {
@@ -15,6 +16,8 @@ const AssetControlSystem = () => {
   const [showAssetForm, setShowAssetForm] = useState(false);
   const [showRoomForm, setShowRoomForm] = useState(false);
   const [showExcelImport, setShowExcelImport] = useState(false);
+  const [showLabelModal, setShowLabelModal] = useState(false);
+  const [showLabelPreview, setShowLabelPreview] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,9 +36,22 @@ const AssetControlSystem = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   
+  // Estados para etiquetas
+  const [selectedAssets, setSelectedAssets] = useState([]);
+  const [labelSettings, setLabelSettings] = useState({
+    template: 'standard',
+    includeQR: true,
+    includeLocation: true,
+    includeDate: false,
+    fontSize: 'medium',
+    labelSize: '50x30' // mm
+  });
+  const [generatedLabels, setGeneratedLabels] = useState([]);
+  
   // Refs
   const fileInputRef = useRef(null);
   const excelInputRef = useRef(null);
+  const printRef = useRef(null);
 
   // Configurações
   const STORAGE_KEYS = {
@@ -50,6 +66,34 @@ const AssetControlSystem = () => {
   ];
 
   const statuses = ['Ativo', 'Inativo', 'Manutenção', 'Descartado'];
+
+  // Templates de etiquetas
+  const labelTemplates = {
+    standard: {
+      name: 'Padrão',
+      width: '50mm',
+      height: '30mm',
+      description: 'Template padrão com código e nome'
+    },
+    compact: {
+      name: 'Compacto',
+      width: '40mm',
+      height: '20mm',
+      description: 'Template compacto apenas com código'
+    },
+    detailed: {
+      name: 'Detalhado',
+      width: '70mm',
+      height: '40mm',
+      description: 'Template com todas as informações'
+    },
+    qrOnly: {
+      name: 'Apenas QR Code',
+      width: '25mm',
+      height: '25mm',
+      description: 'Apenas QR Code'
+    }
+  };
 
   // Estados dos formulários
   const [assetForm, setAssetForm] = useState({
@@ -147,6 +191,214 @@ const AssetControlSystem = () => {
   const updateAssetsInDatabase = (newAssets) => {
     setAssets(newAssets);
     saveToDatabase(STORAGE_KEYS.ASSETS, newAssets);
+  };
+
+  // Funções para etiquetas
+  const generateQRCode = (text) => {
+    // Simulação de QR Code usando um placeholder
+    const encodedText = encodeURIComponent(text);
+    return `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodedText}`;
+  };
+
+  const handleSelectAsset = (assetId, checked) => {
+    if (checked) {
+      setSelectedAssets([...selectedAssets, assetId]);
+    } else {
+      setSelectedAssets(selectedAssets.filter(id => id !== assetId));
+    }
+  };
+
+  const handleSelectAllAssets = (checked) => {
+    if (checked) {
+      setSelectedAssets(filteredAssets.map(asset => asset.id));
+    } else {
+      setSelectedAssets([]);
+    }
+  };
+
+  const generateLabels = () => {
+    const assetsToLabel = assets.filter(asset => selectedAssets.includes(asset.id));
+    
+    const labels = assetsToLabel.map(asset => ({
+      id: asset.id,
+      code: asset.code,
+      name: asset.name,
+      category: asset.category,
+      location: `${getFloorName(asset.floorId)} - ${getRoomName(asset.roomId)}`,
+      qrCode: generateQRCode(`${asset.code} - ${asset.name}`),
+      date: new Date().toLocaleDateString('pt-BR'),
+      template: labelSettings.template
+    }));
+
+    setGeneratedLabels(labels);
+    setShowLabelPreview(true);
+  };
+
+  const printLabels = () => {
+    if (printRef.current) {
+      const printContent = printRef.current.innerHTML;
+      const printWindow = window.open('', '_blank');
+      
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Etiquetas de Ativos</title>
+            <style>
+              body { 
+                margin: 0; 
+                padding: 20px; 
+                font-family: Arial, sans-serif; 
+                background: white;
+              }
+              .print-container {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 10px;
+                page-break-inside: avoid;
+              }
+              .label {
+                border: 2px solid #000;
+                padding: 8px;
+                margin: 5px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                page-break-inside: avoid;
+                background: white;
+              }
+              .label.standard { width: 50mm; height: 30mm; }
+              .label.compact { width: 40mm; height: 20mm; }
+              .label.detailed { width: 70mm; height: 40mm; }
+              .label.qrOnly { width: 25mm; height: 25mm; }
+              .label-code { 
+                font-weight: bold; 
+                font-size: 14px; 
+                margin-bottom: 4px; 
+              }
+              .label-name { 
+                font-size: 10px; 
+                margin-bottom: 2px; 
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                max-width: 100%;
+              }
+              .label-info { 
+                font-size: 8px; 
+                color: #666; 
+              }
+              .qr-code { 
+                width: 20mm; 
+                height: 20mm; 
+                margin: 2px; 
+              }
+              @media print {
+                body { margin: 0; }
+                .label { 
+                  border: 1px solid #000; 
+                  margin: 2px;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="print-container">
+              ${printContent}
+            </div>
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      printWindow.focus();
+      
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    }
+  };
+
+  const downloadLabelsAsPDF = () => {
+    // Função para download como PDF (usando window.print com CSS específico)
+    const printContent = printRef.current.innerHTML;
+    const printWindow = window.open('', '_blank');
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Etiquetas de Ativos - PDF</title>
+          <style>
+            @page { 
+              size: A4; 
+              margin: 10mm; 
+            }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              font-family: Arial, sans-serif; 
+            }
+            .print-container {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 5mm;
+              page-break-inside: avoid;
+            }
+            .label {
+              border: 1px solid #000;
+              padding: 2mm;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+              page-break-inside: avoid;
+              background: white;
+            }
+            .label.standard { width: 50mm; height: 30mm; }
+            .label.compact { width: 40mm; height: 20mm; }
+            .label.detailed { width: 70mm; height: 40mm; }
+            .label.qrOnly { width: 25mm; height: 25mm; }
+            .label-code { 
+              font-weight: bold; 
+              font-size: 12pt; 
+              margin-bottom: 1mm; 
+            }
+            .label-name { 
+              font-size: 8pt; 
+              margin-bottom: 1mm; 
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              max-width: 100%;
+            }
+            .label-info { 
+              font-size: 6pt; 
+              color: #666; 
+            }
+            .qr-code { 
+              width: 15mm; 
+              height: 15mm; 
+              margin: 1mm; 
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${printContent}
+          </div>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   // Funções de importação Excel
@@ -598,6 +850,37 @@ const AssetControlSystem = () => {
     );
   };
 
+  // Componente Label Preview
+  const LabelComponent = ({ label, template }) => {
+    const templateClass = template || 'standard';
+    
+    return (
+      <div className={`label ${templateClass} border-2 border-black p-2 bg-white flex flex-col items-center justify-center text-center`}>
+        {templateClass === 'qrOnly' ? (
+          <img src={label.qrCode} alt="QR Code" className="qr-code w-full h-full object-contain" />
+        ) : (
+          <>
+            <div className="label-code font-bold text-sm mb-1">{label.code}</div>
+            {templateClass !== 'compact' && (
+              <div className="label-name text-xs mb-1 overflow-hidden text-ellipsis whitespace-nowrap w-full">
+                {label.name}
+              </div>
+            )}
+            {labelSettings.includeQR && templateClass !== 'compact' && (
+              <img src={label.qrCode} alt="QR Code" className="qr-code w-8 h-8 mb-1" />
+            )}
+            {labelSettings.includeLocation && templateClass === 'detailed' && (
+              <div className="label-info text-xs text-gray-600">{label.location}</div>
+            )}
+            {labelSettings.includeDate && templateClass === 'detailed' && (
+              <div className="label-info text-xs text-gray-600">{label.date}</div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
   // Loading screen
   if (isLoading) {
     return (
@@ -800,6 +1083,15 @@ const AssetControlSystem = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-2xl font-bold text-gray-900">Gestão de Ativos</h2>
               <div className="flex items-center space-x-3">
+                {selectedAssets.length > 0 && (
+                  <button
+                    onClick={() => setShowLabelModal(true)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                  >
+                    <Tag className="w-4 h-4" />
+                    <span>Gerar Etiquetas ({selectedAssets.length})</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setShowExcelImport(true)}
                   className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
@@ -835,6 +1127,14 @@ const AssetControlSystem = () => {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        <input
+                          type="checkbox"
+                          checked={selectedAssets.length === filteredAssets.length && filteredAssets.length > 0}
+                          onChange={(e) => handleSelectAllAssets(e.target.checked)}
+                          className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                        />
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Foto</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome/Código</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
@@ -845,6 +1145,14 @@ const AssetControlSystem = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredAssets.map(asset => (
                       <tr key={asset.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={selectedAssets.includes(asset.id)}
+                            onChange={(e) => handleSelectAsset(asset.id, e.target.checked)}
+                            className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                          />
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden">
                             {asset.photo ? (
@@ -875,6 +1183,15 @@ const AssetControlSystem = () => {
                               className="text-blue-600 hover:text-blue-900"
                             >
                               <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedAssets([asset.id]);
+                                setShowLabelModal(true);
+                              }}
+                              className="text-purple-600 hover:text-purple-900"
+                            >
+                              <Tag className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleEditAsset(asset)}
@@ -1011,6 +1328,221 @@ const AssetControlSystem = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de configuração de etiquetas */}
+      {showLabelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Configurar Etiquetas</h3>
+                <button
+                  onClick={() => setShowLabelModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-semibold mb-3">Ativos Selecionados ({selectedAssets.length})</h4>
+                    <div className="max-h-32 overflow-y-auto border rounded-lg p-3">
+                      {assets.filter(a => selectedAssets.includes(a.id)).map(asset => (
+                        <div key={asset.id} className="flex items-center justify-between py-1">
+                          <span className="text-sm">{asset.code} - {asset.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Template da Etiqueta</label>
+                    <select
+                      value={labelSettings.template}
+                      onChange={(e) => setLabelSettings({...labelSettings, template: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {Object.entries(labelTemplates).map(([key, template]) => (
+                        <option key={key} value={key}>
+                          {template.name} ({template.width} x {template.height})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {labelTemplates[labelSettings.template]?.description}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <h4 className="font-semibold">Opções</h4>
+                    
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={labelSettings.includeQR}
+                        onChange={(e) => setLabelSettings({...labelSettings, includeQR: e.target.checked})}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm">Incluir QR Code</span>
+                    </label>
+                    
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={labelSettings.includeLocation}
+                        onChange={(e) => setLabelSettings({...labelSettings, includeLocation: e.target.checked})}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm">Incluir Localização</span>
+                    </label>
+                    
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={labelSettings.includeDate}
+                        onChange={(e) => setLabelSettings({...labelSettings, includeDate: e.target.checked})}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm">Incluir Data</span>
+                    </label>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Preview da Etiqueta</h4>
+                  <div className="border-2 border-dashed border-gray-300 p-6 rounded-lg bg-gray-50 flex items-center justify-center">
+                    {selectedAssets.length > 0 && (
+                      <LabelComponent
+                        label={{
+                          code: assets.find(a => a.id === selectedAssets[0])?.code || 'SAMPLE',
+                          name: assets.find(a => a.id === selectedAssets[0])?.name || 'Sample Asset',
+                          location: 'Sample Location',
+                          qrCode: generateQRCode('SAMPLE'),
+                          date: new Date().toLocaleDateString('pt-BR')
+                        }}
+                        template={labelSettings.template}
+                      />
+                    )}
+                  </div>
+                  
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p><strong>Dimensões:</strong> {labelTemplates[labelSettings.template]?.width} x {labelTemplates[labelSettings.template]?.height}</p>
+                    <p><strong>Recomendação:</strong> Use papel adesivo ou etiquetas próprias para impressão</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-8">
+                <button
+                  onClick={() => setShowLabelModal(false)}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    generateLabels();
+                    setShowLabelModal(false);
+                  }}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                >
+                  Gerar Etiquetas
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de preview das etiquetas */}
+      {showLabelPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Preview das Etiquetas ({generatedLabels.length})</h3>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={downloadLabelsAsPDF}
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Salvar PDF</span>
+                  </button>
+                  <button
+                    onClick={printLabels}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Imprimir</span>
+                  </button>
+                  <button
+                    onClick={() => setShowLabelPreview(false)}
+                    className="p-2 hover:bg-gray-100 rounded-lg"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <QrCode className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-blue-900">Instruções para Impressão</h4>
+                    <ul className="text-sm text-blue-800 mt-2 space-y-1">
+                      <li>• Configure sua impressora para papel A4 ou papel de etiquetas</li>
+                      <li>• Ajuste as margens para "Mínima" ou "Sem margem"</li>
+                      <li>• Use qualidade de impressão "Alta" para melhor legibilidade do QR Code</li>
+                      <li>• Teste com uma página antes de imprimir todas as etiquetas</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <div 
+                ref={printRef}
+                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 p-4 bg-gray-50 rounded-lg"
+              >
+                {generatedLabels.map((label, index) => (
+                  <div key={index} className="flex justify-center">
+                    <LabelComponent label={label} template={label.template} />
+                  </div>
+                ))}
+              </div>
+              
+              <div className="flex justify-between items-center mt-6">
+                <div className="text-sm text-gray-600">
+                  Total: {generatedLabels.length} etiqueta(s) • Template: {labelTemplates[labelSettings.template]?.name}
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowLabelPreview(false);
+                      setShowLabelModal(true);
+                    }}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowLabelPreview(false);
+                      setSelectedAssets([]);
+                      setGeneratedLabels([]);
+                    }}
+                    className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de importação Excel */}
       {showExcelImport && (
@@ -1444,6 +1976,17 @@ const AssetControlSystem = () => {
               </div>
               
               <div className="flex justify-end space-x-3 mt-8">
+                <button
+                  onClick={() => {
+                    setSelectedAssets([showAssetDetail.id]);
+                    setShowAssetDetail(null);
+                    setShowLabelModal(true);
+                  }}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center space-x-2"
+                >
+                  <Tag className="w-4 h-4" />
+                  <span>Gerar Etiqueta</span>
+                </button>
                 <button
                   onClick={() => {
                     setShowAssetDetail(null);
