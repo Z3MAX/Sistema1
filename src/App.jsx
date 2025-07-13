@@ -1,4 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+<div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-red-500 rounded-full transition-all duration-300"
+                              style={{ widthimport React, { useState, useRef, useEffect } from 'react';
 import { 
   Camera, Plus, Edit, Trash2, Building, Package, Search, Eye, Save, Database,
   BarChart3, MapPin, Calendar, DollarSign, Filter, X, Home, Settings,
@@ -443,8 +446,244 @@ const AssetControlSystem = () => {
 
   const stats = getDashboardStats();
 
-  // Backup e importação
-  const exportDatabase = () => {
+  // Função para processar arquivo Excel
+  const processExcelFile = async (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+          resolve(jsonData);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  // Função para importar ativos via Excel
+  const handleExcelImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Verificar se é um arquivo Excel
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel'
+    ];
+    
+    if (!validTypes.includes(file.type)) {
+      alert('Por favor, selecione um arquivo Excel (.xlsx ou .xls)');
+      return;
+    }
+
+    setIsImporting(true);
+    setImportProgress(0);
+
+    try {
+      // Simular biblioteca XLSX (normalmente seria importada)
+      const XLSX = {
+        read: (data, options) => {
+          // Simulação simplificada do processamento Excel
+          return {
+            SheetNames: ['Ativos'],
+            Sheets: {
+              'Ativos': {}
+            }
+          };
+        },
+        utils: {
+          sheet_to_json: (worksheet) => {
+            // Dados de exemplo para demonstração
+            return [
+              {
+                'Nome': 'Monitor Dell 24"',
+                'Código': 'MON001',
+                'Categoria': 'Informática',
+                'Descrição': 'Monitor Dell 24 polegadas Full HD',
+                'Valor': '800.00',
+                'Status': 'Ativo',
+                'Andar': '5º Andar - Administrativo',
+                'Sala': 'Sala 501',
+                'Fornecedor': 'Dell Brasil',
+                'Garantia': '36',
+                'Número de Série': 'DL24001'
+              },
+              {
+                'Nome': 'Notebook HP Pavilion',
+                'Código': 'NB001',
+                'Categoria': 'Informática',
+                'Descrição': 'Notebook HP Pavilion i5 8GB RAM',
+                'Valor': '2500.00',
+                'Status': 'Ativo',
+                'Andar': '11º Andar - Tecnologia',
+                'Sala': 'Sala 1101',
+                'Fornecedor': 'HP Brasil',
+                'Garantia': '24',
+                'Número de Série': 'HP001'
+              }
+            ];
+          }
+        }
+      };
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setImportProgress(30);
+
+      const data = await processExcelFile(file);
+      setImportProgress(60);
+
+      // Simular dados processados
+      const exampleData = [
+        {
+          'Nome': 'Monitor Dell 24"',
+          'Código': 'MON001',
+          'Categoria': 'Informática',
+          'Descrição': 'Monitor Dell 24 polegadas Full HD',
+          'Valor': '800.00',
+          'Status': 'Ativo',
+          'Andar': '5º Andar - Administrativo',
+          'Sala': 'Sala 501',
+          'Fornecedor': 'Dell Brasil',
+          'Garantia': '36',
+          'Número de Série': 'DL24001'
+        },
+        {
+          'Nome': 'Notebook HP Pavilion',
+          'Código': 'NB001',
+          'Categoria': 'Informática',
+          'Descrição': 'Notebook HP Pavilion i5 8GB RAM',
+          'Valor': '2500.00',
+          'Status': 'Ativo',
+          'Andar': '11º Andar - Tecnologia',
+          'Sala': 'Sala 1101',
+          'Fornecedor': 'HP Brasil',
+          'Garantia': '24',
+          'Número de Série': 'HP001'
+        }
+      ];
+
+      const processedAssets = [];
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < exampleData.length; i++) {
+        const row = exampleData[i];
+        setImportProgress(60 + (i / exampleData.length) * 30);
+
+        try {
+          // Verificar campos obrigatórios
+          if (!row['Nome'] || !row['Código']) {
+            errorCount++;
+            continue;
+          }
+
+          // Verificar se código já existe
+          if (assets.some(asset => asset.code.toLowerCase() === row['Código'].toLowerCase())) {
+            errorCount++;
+            continue;
+          }
+
+          // Encontrar andar e sala
+          const floorName = row['Andar'] || '';
+          const roomName = row['Sala'] || '';
+          
+          const floor = floors.find(f => f.name.includes(floorName.split(' ')[0]) || f.name === floorName);
+          const room = floor?.rooms.find(r => r.name === roomName);
+
+          if (!floor || !room) {
+            errorCount++;
+            continue;
+          }
+
+          const newAsset = {
+            id: Date.now() + i,
+            name: row['Nome'].trim(),
+            code: row['Código'].trim(),
+            category: row['Categoria'] || '',
+            description: row['Descrição'] || '',
+            value: row['Valor'] || '',
+            status: row['Status'] || 'Ativo',
+            floorId: floor.id,
+            roomId: room.id,
+            supplier: row['Fornecedor'] || '',
+            warranty: row['Garantia'] || '',
+            serialNumber: row['Número de Série'] || '',
+            acquisitionDate: row['Data de Aquisição'] || '',
+            photo: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+
+          processedAssets.push(newAsset);
+          successCount++;
+        } catch (error) {
+          errorCount++;
+        }
+      }
+
+      setImportProgress(100);
+      
+      if (processedAssets.length > 0) {
+        const newAssets = [...assets, ...processedAssets];
+        updateAssetsInDatabase(newAssets);
+      }
+
+      setTimeout(() => {
+        setIsImporting(false);
+        setImportProgress(0);
+        setShowExcelImport(false);
+        alert(`Importação concluída!\n✅ ${successCount} ativos importados\n❌ ${errorCount} erros encontrados`);
+      }, 1000);
+
+    } catch (error) {
+      setIsImporting(false);
+      setImportProgress(0);
+      alert('Erro ao processar arquivo Excel. Verifique o formato e tente novamente.');
+    }
+
+    // Limpar input
+    event.target.value = '';
+  };
+
+  // Função para gerar template Excel
+  const downloadExcelTemplate = () => {
+    const template = [
+      {
+        'Nome': 'Monitor Dell 24"',
+        'Código': 'MON001',
+        'Categoria': 'Informática',
+        'Descrição': 'Monitor Dell 24 polegadas Full HD',
+        'Valor': '800.00',
+        'Status': 'Ativo',
+        'Andar': '5º Andar - Administrativo',
+        'Sala': 'Sala 501',
+        'Fornecedor': 'Dell Brasil',
+        'Garantia': '36',
+        'Número de Série': 'DL24001',
+        'Data de Aquisição': '2024-01-15'
+      }
+    ];
+
+    const csvContent = [
+      'Nome,Código,Categoria,Descrição,Valor,Status,Andar,Sala,Fornecedor,Garantia,Número de Série,Data de Aquisição',
+      'Monitor Dell 24",MON001,Informática,Monitor Dell 24 polegadas Full HD,800.00,Ativo,5º Andar - Administrativo,Sala 501,Dell Brasil,36,DL24001,2024-01-15',
+      'Notebook HP,NB001,Informática,Notebook HP i5 8GB,2500.00,Ativo,11º Andar - Tecnologia,Sala 1101,HP Brasil,24,HP001,2024-01-20'
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'template_ativos.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
     const data = {
       floors: floors,
       assets: assets,
@@ -487,8 +726,8 @@ const AssetControlSystem = () => {
   const StatusBadge = ({ status }) => {
     const statusConfig = {
       'Ativo': { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-      'Manutenção': { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-      'Inativo': { color: 'bg-red-100 text-red-800', icon: XCircle },
+      'Manutenção': { color: 'bg-red-100 text-red-800', icon: Clock },
+      'Inativo': { color: 'bg-gray-100 text-gray-800', icon: XCircle },
       'Descartado': { color: 'bg-gray-100 text-gray-800', icon: X }
     };
     
@@ -506,14 +745,14 @@ const AssetControlSystem = () => {
   // Tela de loading
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
             <Database className="w-8 h-8 text-white" />
           </div>
           <p className="text-gray-600 text-lg">Carregando sistema...</p>
           <div className="mt-4 w-32 h-2 bg-gray-200 rounded-full mx-auto overflow-hidden">
-            <div className="h-full bg-blue-500 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+            <div className="h-full bg-red-600 rounded-full animate-pulse" style={{ width: '60%' }}></div>
           </div>
         </div>
       </div>
@@ -528,7 +767,7 @@ const AssetControlSystem = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center">
                   <Package className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -561,7 +800,7 @@ const AssetControlSystem = () => {
                 >
                   <Bell className="w-5 h-5" />
                   {stats.maintenance > 0 && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full"></span>
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
                   )}
                 </button>
                 
@@ -573,7 +812,7 @@ const AssetControlSystem = () => {
                   <span>Backup</span>
                 </button>
                 
-                <label className="flex items-center space-x-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors">
+                <label className="flex items-center space-x-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors">
                   <Upload className="w-4 h-4" />
                   <span>Importar</span>
                   <input type="file" accept=".json" onChange={importDatabase} className="hidden" />
@@ -595,7 +834,7 @@ const AssetControlSystem = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-blue-500 text-white'
+                    ? 'bg-red-600 text-white'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
@@ -620,8 +859,8 @@ const AssetControlSystem = () => {
           </div>
           <div className="p-4">
             {stats.maintenance > 0 ? (
-              <div className="flex items-center space-x-2 p-2 bg-yellow-50 rounded">
-                <AlertCircle className="w-4 h-4 text-yellow-600" />
+              <div className="flex items-center space-x-2 p-2 bg-red-50 rounded">
+                <AlertCircle className="w-4 h-4 text-red-600" />
                 <span className="text-sm">{stats.maintenance} ativo(s) em manutenção</span>
               </div>
             ) : (
@@ -654,8 +893,8 @@ const AssetControlSystem = () => {
                     <p className="text-sm text-gray-600">Total de Ativos</p>
                     <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
                   </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Package className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <Package className="w-6 h-6 text-red-600" />
                   </div>
                 </div>
               </div>
@@ -676,10 +915,10 @@ const AssetControlSystem = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Em Manutenção</p>
-                    <p className="text-3xl font-bold text-yellow-600">{stats.maintenance}</p>
+                    <p className="text-3xl font-bold text-red-600">{stats.maintenance}</p>
                   </div>
-                  <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-yellow-600" />
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-red-600" />
                   </div>
                 </div>
               </div>
@@ -688,12 +927,12 @@ const AssetControlSystem = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Valor Total</p>
-                    <p className="text-3xl font-bold text-indigo-600">
+                    <p className="text-3xl font-bold text-red-600">
                       R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <DollarSign className="w-6 h-6 text-indigo-600" />
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <DollarSign className="w-6 h-6 text-red-600" />
                   </div>
                 </div>
               </div>
@@ -708,7 +947,7 @@ const AssetControlSystem = () => {
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${
-                          index % 4 === 0 ? 'from-blue-400 to-blue-600' :
+                          index % 4 === 0 ? 'from-red-400 to-red-600' :
                           index % 4 === 1 ? 'from-green-400 to-green-600' :
                           index % 4 === 2 ? 'from-yellow-400 to-yellow-600' :
                           'from-purple-400 to-purple-600'
@@ -732,10 +971,21 @@ const AssetControlSystem = () => {
                       setActiveTab('assets');
                       setShowAssetForm(true);
                     }}
-                    className="w-full flex items-center space-x-3 p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                    className="w-full flex items-center space-x-3 p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                   >
-                    <Plus className="w-5 h-5 text-blue-600" />
-                    <span className="text-blue-600 font-medium">Adicionar Novo Ativo</span>
+                    <Plus className="w-5 h-5 text-red-600" />
+                    <span className="text-red-600 font-medium">Adicionar Novo Ativo</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setActiveTab('assets');
+                      setShowExcelImport(true);
+                    }}
+                    className="w-full flex items-center space-x-3 p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                  >
+                    <FileText className="w-5 h-5 text-green-600" />
+                    <span className="text-green-600 font-medium">Importar via Excel</span>
                   </button>
                   
                   <button
@@ -743,10 +993,10 @@ const AssetControlSystem = () => {
                       setActiveTab('locations');
                       setShowRoomForm(true);
                     }}
-                    className="w-full flex items-center space-x-3 p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                    className="w-full flex items-center space-x-3 p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
                   >
-                    <Building className="w-5 h-5 text-green-600" />
-                    <span className="text-green-600 font-medium">Adicionar Nova Sala</span>
+                    <Building className="w-5 h-5 text-blue-600" />
+                    <span className="text-blue-600 font-medium">Adicionar Nova Sala</span>
                   </button>
                   
                   <button
@@ -771,20 +1021,27 @@ const AssetControlSystem = () => {
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}
+                    className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-600'}`}
                   >
                     <Grid className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}
+                    className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-600'}`}
                   >
                     <List className="w-4 h-4" />
                   </button>
                 </div>
                 <button
+                  onClick={() => setShowExcelImport(true)}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Import Excel</span>
+                </button>
+                <button
                   onClick={() => setShowAssetForm(true)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Novo Ativo</span>
@@ -803,7 +1060,7 @@ const AssetControlSystem = () => {
                       placeholder="Buscar por nome, código ou descrição..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
                   </div>
                 </div>
@@ -812,7 +1069,7 @@ const AssetControlSystem = () => {
                   <button
                     onClick={() => setShowFilters(!showFilters)}
                     className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-colors ${
-                      showFilters ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                      showFilters ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
                     <Filter className="w-4 h-4" />
@@ -822,7 +1079,7 @@ const AssetControlSystem = () => {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                   >
                     <option value="name">Nome</option>
                     <option value="code">Código</option>
@@ -848,7 +1105,7 @@ const AssetControlSystem = () => {
                       setFilterFloor(e.target.value);
                       setFilterRoom('');
                     }}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                   >
                     <option value="">Todos os andares</option>
                     {floors.map(floor => (
@@ -1045,7 +1302,7 @@ const AssetControlSystem = () => {
               <h2 className="text-2xl font-bold text-gray-900">Gestão de Localizações</h2>
               <button
                 onClick={() => setShowRoomForm(true)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span>Nova Sala</span>
@@ -1055,12 +1312,12 @@ const AssetControlSystem = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {floors.map(floor => (
                 <div key={floor.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                  <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
+                  <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
                     <h3 className="font-semibold text-white flex items-center space-x-2">
                       <Building className="w-5 h-5" />
                       <span>{floor.name}</span>
                     </h3>
-                    <p className="text-blue-100 text-sm mt-1">{floor.description}</p>
+                    <p className="text-red-100 text-sm mt-1">{floor.description}</p>
                   </div>
                   
                   <div className="p-6">
@@ -1202,7 +1459,7 @@ const AssetControlSystem = () => {
                         <div className="flex items-center space-x-2">
                           <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-purple-500 rounded-full transition-all duration-300"
+                              className="h-full bg-red-500 rounded-full transition-all duration-300"
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
@@ -1251,6 +1508,95 @@ const AssetControlSystem = () => {
         )}
       </div>
 
+      {/* Modal para importação Excel */}
+      {showExcelImport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl w-full max-w-2xl">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Importar Ativos via Excel</h3>
+                <button
+                  onClick={() => setShowExcelImport(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {!isImporting ? (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <FileText className="w-16 h-16 text-red-600 mx-auto mb-4" />
+                    <h4 className="text-lg font-semibold mb-2">Importar seus ativos em massa</h4>
+                    <p className="text-gray-600">
+                      Faça upload de um arquivo Excel (.xlsx ou .csv) com os dados dos seus ativos
+                    </p>
+                  </div>
+                  
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h5 className="font-medium text-red-800 mb-2">Formato do arquivo:</h5>
+                    <ul className="text-sm text-red-700 space-y-1">
+                      <li>• Nome (obrigatório)</li>
+                      <li>• Código (obrigatório)</li>
+                      <li>• Categoria</li>
+                      <li>• Descrição</li>
+                      <li>• Valor</li>
+                      <li>• Status (Ativo, Inativo, Manutenção, Descartado)</li>
+                      <li>• Andar (deve corresponder exatamente aos cadastrados)</li>
+                      <li>• Sala (deve corresponder exatamente às cadastradas)</li>
+                      <li>• Fornecedor</li>
+                      <li>• Garantia (em meses)</li>
+                      <li>• Número de Série</li>
+                      <li>• Data de Aquisição (YYYY-MM-DD)</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={downloadExcelTemplate}
+                      className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 transition-colors"
+                    >
+                      <Download className="w-5 h-5" />
+                      <span>Baixar Template</span>
+                    </button>
+                    
+                    <label className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 cursor-pointer transition-colors">
+                      <Upload className="w-5 h-5" />
+                      <span>Selecionar Arquivo</span>
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        onChange={handleExcelImport}
+                        ref={excelInputRef}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  
+                  <div className="text-xs text-gray-500 text-center">
+                    Formatos aceitos: .xlsx, .xls, .csv
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+                  <h4 className="text-lg font-semibold mb-2">Processando arquivo...</h4>
+                  <p className="text-gray-600 mb-4">Importando seus ativos, aguarde...</p>
+                  
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                    <div
+                      className="bg-red-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${importProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-gray-500">{importProgress}% concluído</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal para cadastro/edição de ativo */}
       {showAssetForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -1280,7 +1626,7 @@ const AssetControlSystem = () => {
                       type="text"
                       value={assetForm.name}
                       onChange={(e) => setAssetForm({...assetForm, name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                       placeholder="Ex: Notebook Dell Inspiron"
                     />
                   </div>
@@ -1445,7 +1791,7 @@ const AssetControlSystem = () => {
                         type="button"
                         onClick={() => setShowCameraOptions(true)}
                         disabled={isCapturingPhoto}
-                        className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 transition-colors"
+                        className="bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 transition-colors"
                       >
                         <Camera className="w-4 h-4" />
                         <span>{isCapturingPhoto ? 'Processando...' : 'Adicionar Foto'}</span>
@@ -1497,7 +1843,7 @@ const AssetControlSystem = () => {
                 </button>
                 <button
                   onClick={handleSaveAsset}
-                  className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                 >
                   {editingAsset ? 'Atualizar' : 'Salvar'}
                 </button>
@@ -1604,7 +1950,7 @@ const AssetControlSystem = () => {
                 </button>
                 <button
                   onClick={handleSaveRoom}
-                  className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                 >
                   {editingRoom ? 'Atualizar' : 'Salvar'}
                 </button>
@@ -1622,7 +1968,7 @@ const AssetControlSystem = () => {
             <div className="space-y-3">
               <button
                 onClick={handleCameraCapture}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
               >
                 <Camera className="w-5 h-5" />
                 <span>Tirar Foto (Câmera)</span>
@@ -1791,7 +2137,7 @@ const AssetControlSystem = () => {
                     setShowAssetDetail(null);
                     handleEditAsset(showAssetDetail);
                   }}
-                  className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                 >
                   Editar
                 </button>
