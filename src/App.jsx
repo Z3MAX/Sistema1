@@ -1,6 +1,386 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
-// Ícones SVG simples para evitar problemas de importação
+// =================== CONFIGURAÇÃO SUPABASE ===================
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+});
+
+// =================== CONTEXT DE AUTENTICAÇÃO ===================
+const AuthContext = createContext({});
+
+const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Verificar sessão atual
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        await loadProfile(session.user.id);
+      }
+      
+      setLoading(false);
+    };
+
+    getInitialSession();
+
+    // Escutar mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await loadProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
+        
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadProfile = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error('Erro ao carregar perfil:', error);
+    }
+  };
+
+  // Registrar usuário
+  const signUp = async (email, password, name, company = '') => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name,
+            company: company
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Erro no registro:', error);
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fazer login
+  const signIn = async (email, password) => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Erro no login:', error);
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fazer logout
+  const signOut = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('Erro no logout:', error);
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const value = {
+    user,
+    profile,
+    loading,
+    signUp,
+    signIn,
+    signOut,
+    loadProfile
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+// =================== SERVIÇOS DE DADOS ===================
+const dataService = {
+  // ===== FLOORS =====
+  floors: {
+    async getAll() {
+      try {
+        const { data, error } = await supabase
+          .from('floors')
+          .select(`
+            *,
+            rooms (*)
+          `)
+          .order('number', { ascending: true });
+
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Erro ao buscar andares:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    async create(floor) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Usuário não autenticado');
+
+        const { data, error } = await supabase
+          .from('floors')
+          .insert([{ ...floor, user_id: user.id }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Erro ao criar andar:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    async update(id, updates) {
+      try {
+        const { data, error } = await supabase
+          .from('floors')
+          .update(updates)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Erro ao atualizar andar:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    async delete(id) {
+      try {
+        const { error } = await supabase
+          .from('floors')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        return { success: true };
+      } catch (error) {
+        console.error('Erro ao deletar andar:', error);
+        return { success: false, error: error.message };
+      }
+    }
+  },
+
+  // ===== ROOMS =====
+  rooms: {
+    async create(room) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Usuário não autenticado');
+
+        const { data, error } = await supabase
+          .from('rooms')
+          .insert([{ ...room, user_id: user.id }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Erro ao criar sala:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    async update(id, updates) {
+      try {
+        const { data, error } = await supabase
+          .from('rooms')
+          .update(updates)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Erro ao atualizar sala:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    async delete(id) {
+      try {
+        const { error } = await supabase
+          .from('rooms')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        return { success: true };
+      } catch (error) {
+        console.error('Erro ao deletar sala:', error);
+        return { success: false, error: error.message };
+      }
+    }
+  },
+
+  // ===== ASSETS =====
+  assets: {
+    async getAll() {
+      try {
+        const { data, error } = await supabase
+          .from('assets')
+          .select(`
+            *,
+            floors (name),
+            rooms (name)
+          `)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Erro ao buscar ativos:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    async create(asset) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Usuário não autenticado');
+
+        const { data, error } = await supabase
+          .from('assets')
+          .insert([{ ...asset, user_id: user.id }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Erro ao criar ativo:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    async update(id, updates) {
+      try {
+        const { data, error } = await supabase
+          .from('assets')
+          .update(updates)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Erro ao atualizar ativo:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    async delete(id) {
+      try {
+        const { error } = await supabase
+          .from('assets')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        return { success: true };
+      } catch (error) {
+        console.error('Erro ao deletar ativo:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    async checkCodeExists(code, excludeId = null) {
+      try {
+        let query = supabase
+          .from('assets')
+          .select('id')
+          .eq('code', code);
+
+        if (excludeId) {
+          query = query.neq('id', excludeId);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+        return { success: true, exists: data.length > 0 };
+      } catch (error) {
+        console.error('Erro ao verificar código:', error);
+        return { success: false, error: error.message };
+      }
+    }
+  }
+};
+
+// =================== ÍCONES SVG ===================
 const Icons = {
   Camera: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,10 +509,191 @@ const Icons = {
       <line x1="12" y1="8" x2="12" y2="12"></line>
       <line x1="12" y1="16" x2="12.01" y2="16"></line>
     </svg>
+  ),
+  User: () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  ),
+  LogOut: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+    </svg>
   )
 };
 
+// =================== COMPONENTE DE AUTENTICAÇÃO ===================
+const AuthModal = ({ isOpen, onClose }) => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const { signIn, signUp } = useAuth();
+
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    name: '',
+    company: ''
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+
+    try {
+      let result;
+      
+      if (isLogin) {
+        result = await signIn(formData.email, formData.password);
+      } else {
+        if (formData.name.length < 2) {
+          setMessage('❌ Nome deve ter pelo menos 2 caracteres');
+          return;
+        }
+        result = await signUp(formData.email, formData.password, formData.name, formData.company);
+      }
+
+      if (result.success) {
+        if (isLogin) {
+          onClose();
+        } else {
+          setMessage('✅ Conta criada! Verifique seu e-mail para confirmação.');
+        }
+      } else {
+        setMessage(`❌ ${result.error}`);
+      }
+    } catch (error) {
+      setMessage(`❌ ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[9999]">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <Icons.X />
+        </button>
+
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Icons.User />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {isLogin ? '🔑 Entrar' : '📝 Criar Conta'}
+          </h2>
+          <p className="text-gray-600 mt-2">
+            {isLogin ? 'Acesse sua conta' : 'Crie sua conta gratuita'}
+          </p>
+        </div>
+
+        {message && (
+          <div className={`p-3 rounded-lg mb-4 text-sm ${
+            message.includes('✅') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }`}>
+            {message}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nome Completo *
+                </label>
+                <input
+                  type="text"
+                  required
+                  minLength="2"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+                  placeholder="Seu nome completo"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Empresa (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.company}
+                  onChange={(e) => setFormData({...formData, company: e.target.value})}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+                  placeholder="Nome da sua empresa"
+                />
+              </div>
+            </>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              E-mail *
+            </label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+              placeholder="seu@email.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Senha *
+            </label>
+            <input
+              type="password"
+              required
+              minLength="6"
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+              placeholder="Mínimo 6 caracteres"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white py-3 px-4 rounded-lg font-medium transition-colors transform hover:scale-105"
+          >
+            {loading ? '⏳ Processando...' : (isLogin ? '🔑 Entrar' : '📝 Criar Conta')}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setMessage('');
+              setFormData({ email: '', password: '', name: '', company: '' });
+            }}
+            className="text-red-600 hover:text-red-700 font-medium transition-colors"
+          >
+            {isLogin ? '📝 Não tem conta? Criar agora' : '🔑 Já tem conta? Entrar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =================== COMPONENTE PRINCIPAL ===================
 const AssetControlSystem = () => {
+  const { user, profile, loading: authLoading, signOut } = useAuth();
+  
   // Estados principais
   const [activeTab, setActiveTab] = useState('dashboard');
   const [floors, setFloors] = useState([]);
@@ -143,10 +704,10 @@ const AssetControlSystem = () => {
   const [editingRoom, setEditingRoom] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAssetDetail, setShowAssetDetail] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedAssets, setSelectedAssets] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   
-  // Estados específicos para foto - SIMPLIFICADO
+  // Estados específicos para foto
   const [photoState, setPhotoState] = useState({
     showOptions: false,
     showPreview: false,
@@ -154,22 +715,6 @@ const AssetControlSystem = () => {
     isProcessing: false,
     error: ''
   });
-  
-  // Refs
-  const fileInputRef = useRef(null);
-
-  // Configurações
-  const STORAGE_KEYS = {
-    FLOORS: 'asset_system_floors',
-    ASSETS: 'asset_system_assets'
-  };
-
-  const categories = [
-    'Informática', 'Móveis', 'Equipamentos', 'Veículos', 
-    'Eletroeletrônicos', 'Ferramentas', 'Segurança', 'Outros'
-  ];
-
-  const statuses = ['Ativo', 'Inativo', 'Manutenção', 'Descartado'];
 
   // Estados dos formulários
   const [assetForm, setAssetForm] = useState({
@@ -179,22 +724,61 @@ const AssetControlSystem = () => {
     description: '',
     value: '',
     status: 'Ativo',
-    floorId: '',
-    roomId: '',
+    floor_id: '',
+    room_id: '',
     photo: null,
     supplier: '',
-    serialNumber: ''
+    serial_number: ''
   });
 
   const [roomForm, setRoomForm] = useState({
     name: '',
     description: '',
-    floorId: ''
+    floor_id: ''
   });
 
-  // =================== FUNÇÕES DE FOTO SIMPLIFICADAS ===================
-  
-  // Abrir opções de foto
+  const categories = [
+    'Informática', 'Móveis', 'Equipamentos', 'Veículos', 
+    'Eletroeletrônicos', 'Ferramentas', 'Segurança', 'Outros'
+  ];
+
+  const statuses = ['Ativo', 'Inativo', 'Manutenção', 'Descartado'];
+
+  // =================== EFEITOS ===================
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user]);
+
+  // =================== FUNÇÕES DE DADOS ===================
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [floorsResult, assetsResult] = await Promise.all([
+        dataService.floors.getAll(),
+        dataService.assets.getAll()
+      ]);
+
+      if (floorsResult.success) {
+        setFloors(floorsResult.data);
+      } else {
+        console.error('Erro ao carregar andares:', floorsResult.error);
+      }
+
+      if (assetsResult.success) {
+        setAssets(assetsResult.data);
+      } else {
+        console.error('Erro ao carregar ativos:', assetsResult.error);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // =================== FUNÇÕES DE FOTO ===================
   const openPhotoOptions = () => {
     setPhotoState(prev => ({
       ...prev,
@@ -203,7 +787,6 @@ const AssetControlSystem = () => {
     }));
   };
 
-  // Fechar todos os modais de foto
   const closeAllPhotoModals = () => {
     setPhotoState({
       showOptions: false,
@@ -214,38 +797,28 @@ const AssetControlSystem = () => {
     });
   };
 
-  // Processar arquivo de imagem
   const processImageFile = async (file) => {
     if (!file) return;
-
-    console.log('📸 Processando arquivo:', file.name, file.type, file.size);
 
     setPhotoState(prev => ({ ...prev, isProcessing: true, error: '' }));
 
     try {
-      // Validações
       if (!file.type.startsWith('image/')) {
         throw new Error('Por favor, selecione apenas arquivos de imagem.');
       }
 
-      if (file.size > 10 * 1024 * 1024) { // 10MB
+      if (file.size > 10 * 1024 * 1024) {
         throw new Error('A imagem deve ter no máximo 10MB.');
       }
 
-      // Ler arquivo usando Promise para melhor controle
       const imageDataUrl = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (event) => resolve(event.target.result);
         reader.onerror = () => reject(new Error('Erro ao ler arquivo de imagem.'));
         reader.readAsDataURL(file);
       });
-
-      console.log('✅ Arquivo lido com sucesso');
       
-      // Redimensionar imagem
       const resizedImage = await resizeImage(imageDataUrl, 1024, 768);
-      
-      console.log('✅ Imagem redimensionada');
 
       setPhotoState(prev => ({
         ...prev,
@@ -256,7 +829,6 @@ const AssetControlSystem = () => {
       }));
       
     } catch (error) {
-      console.error('❌ Erro ao processar imagem:', error);
       setPhotoState(prev => ({
         ...prev,
         error: error.message || 'Erro ao processar imagem.',
@@ -265,7 +837,6 @@ const AssetControlSystem = () => {
     }
   };
 
-  // Redimensionar imagem
   const resizeImage = (dataUrl, maxWidth, maxHeight) => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
@@ -275,7 +846,6 @@ const AssetControlSystem = () => {
       img.onload = () => {
         let { width, height } = img;
         
-        // Calcular novas dimensões mantendo proporção
         if (width > height) {
           if (width > maxWidth) {
             height = (height * maxWidth) / width;
@@ -301,33 +871,25 @@ const AssetControlSystem = () => {
     });
   };
 
-  // Tirar foto usando câmera - VERSÃO SIMPLIFICADA E ROBUSTA
   const handleTakePhoto = () => {
-    console.log('📷 Iniciando captura de foto...');
-    
     setPhotoState(prev => ({ ...prev, showOptions: false, error: '' }));
 
     try {
-      // Criar input file com atributos para câmera
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*';
-      input.capture = 'environment'; // Câmera traseira
+      input.capture = 'environment';
       
-      // Event listener para quando arquivo for selecionado
       input.addEventListener('change', (event) => {
-        console.log('📸 Arquivo selecionado da câmera');
         const file = event.target.files[0];
         if (file) {
           processImageFile(file);
         }
       });
       
-      // Disparar o input
       input.click();
       
     } catch (error) {
-      console.error('❌ Erro ao abrir câmera:', error);
       setPhotoState(prev => ({
         ...prev,
         error: 'Erro ao acessar a câmera. Verifique as permissões.'
@@ -335,10 +897,7 @@ const AssetControlSystem = () => {
     }
   };
 
-  // Selecionar da galeria
   const handleSelectFromGallery = () => {
-    console.log('🖼️ Abrindo galeria...');
-    
     setPhotoState(prev => ({ ...prev, showOptions: false, error: '' }));
     
     try {
@@ -347,7 +906,6 @@ const AssetControlSystem = () => {
       input.accept = 'image/*';
       
       input.addEventListener('change', (event) => {
-        console.log('🖼️ Arquivo selecionado da galeria');
         const file = event.target.files[0];
         if (file) {
           processImageFile(file);
@@ -357,7 +915,6 @@ const AssetControlSystem = () => {
       input.click();
       
     } catch (error) {
-      console.error('❌ Erro ao abrir galeria:', error);
       setPhotoState(prev => ({
         ...prev,
         error: 'Erro ao acessar galeria.'
@@ -365,16 +922,13 @@ const AssetControlSystem = () => {
     }
   };
 
-  // Confirmar foto
   const confirmPhoto = () => {
     if (photoState.capturedPhoto) {
-      console.log('✅ Foto confirmada e adicionada ao formulário');
       setAssetForm(prev => ({ ...prev, photo: photoState.capturedPhoto }));
       closeAllPhotoModals();
     }
   };
 
-  // Descartar foto e tirar nova
   const retakePhoto = () => {
     setPhotoState(prev => ({
       ...prev,
@@ -384,153 +938,46 @@ const AssetControlSystem = () => {
     }));
   };
 
-  // Remover foto do formulário
   const removePhotoFromForm = () => {
     setAssetForm(prev => ({ ...prev, photo: null }));
   };
 
-  // =================== OUTRAS FUNÇÕES ===================
-
-  useEffect(() => {
-    loadDataFromDatabase();
-  }, []);
-
-  const loadDataFromDatabase = () => {
-    try {
-      setIsLoading(true);
-      
-      const savedFloors = localStorage.getItem(STORAGE_KEYS.FLOORS);
-      if (savedFloors) {
-        setFloors(JSON.parse(savedFloors));
-      } else {
-        const initialFloors = [
-          { 
-            id: 1, 
-            name: '5º Andar - Administrativo', 
-            rooms: [
-              { id: 1, name: 'Sala 501', description: 'Recepção', floorId: 1 },
-              { id: 2, name: 'Sala 502', description: 'Financeiro', floorId: 1 }
-            ]
-          },
-          { 
-            id: 2, 
-            name: '11º Andar - Tecnologia', 
-            rooms: [
-              { id: 3, name: 'Sala 1101', description: 'Desenvolvimento', floorId: 2 },
-              { id: 4, name: 'Sala 1102', description: 'TI', floorId: 2 }
-            ]
-          }
-        ];
-        setFloors(initialFloors);
-        saveToDatabase(STORAGE_KEYS.FLOORS, initialFloors);
-      }
-
-      const savedAssets = localStorage.getItem(STORAGE_KEYS.ASSETS);
-      if (savedAssets) {
-        setAssets(JSON.parse(savedAssets));
-      }
-
-      setTimeout(() => setIsLoading(false), 500);
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      setIsLoading(false);
-    }
-  };
-
-  const saveToDatabase = (key, data) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-      return true;
-    } catch (error) {
-      console.error('Erro ao salvar dados:', error);
-      return false;
-    }
-  };
-
-  const updateFloorsInDatabase = (newFloors) => {
-    setFloors(newFloors);
-    saveToDatabase(STORAGE_KEYS.FLOORS, newFloors);
-  };
-
-  const updateAssetsInDatabase = (newAssets) => {
-    setAssets(newAssets);
-    saveToDatabase(STORAGE_KEYS.ASSETS, newAssets);
-  };
-
-  const exportDatabase = () => {
-    const data = {
-      floors: floors,
-      assets: assets,
-      exportDate: new Date().toISOString(),
-      version: '2.0'
-    };
-    
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `assets_backup_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importDatabase = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target.result);
-          if (data.floors && data.assets) {
-            setFloors(data.floors);
-            setAssets(data.assets);
-            saveToDatabase(STORAGE_KEYS.FLOORS, data.floors);
-            saveToDatabase(STORAGE_KEYS.ASSETS, data.assets);
-            alert('Dados importados com sucesso!');
-          }
-        } catch (error) {
-          alert('Erro ao importar dados.');
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
-
-  const handleSaveRoom = () => {
-    if (!roomForm.name?.trim() || !roomForm.floorId) {
+  // =================== FUNÇÕES DE SALAS ===================
+  const handleSaveRoom = async () => {
+    if (!roomForm.name?.trim() || !roomForm.floor_id) {
       alert('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
 
-    const newRoom = {
-      id: editingRoom?.id || Date.now(),
-      name: roomForm.name.trim(),
-      description: roomForm.description.trim(),
-      floorId: parseInt(roomForm.floorId),
-      createdAt: editingRoom?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      setIsLoading(true);
+      
+      const roomData = {
+        name: roomForm.name.trim(),
+        description: roomForm.description?.trim() || '',
+        floor_id: parseInt(roomForm.floor_id)
+      };
 
-    let newFloors;
-    if (editingRoom) {
-      newFloors = floors.map(floor => ({
-        ...floor,
-        rooms: floor.rooms.map(room => 
-          room.id === editingRoom.id ? newRoom : room
-        )
-      }));
-      setEditingRoom(null);
-    } else {
-      newFloors = floors.map(floor => 
-        floor.id === parseInt(roomForm.floorId) 
-          ? { ...floor, rooms: [...floor.rooms, newRoom] }
-          : floor
-      );
+      let result;
+      if (editingRoom) {
+        result = await dataService.rooms.update(editingRoom.id, roomData);
+      } else {
+        result = await dataService.rooms.create(roomData);
+      }
+
+      if (result.success) {
+        await loadData(); // Recarregar dados
+        setRoomForm({ name: '', description: '', floor_id: '' });
+        setShowRoomForm(false);
+        setEditingRoom(null);
+      } else {
+        alert(`Erro ao ${editingRoom ? 'atualizar' : 'criar'} sala: ${result.error}`);
+      }
+    } catch (error) {
+      alert(`Erro ao ${editingRoom ? 'atualizar' : 'criar'} sala: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
-
-    updateFloorsInDatabase(newFloors);
-    setRoomForm({ name: '', description: '', floorId: '' });
-    setShowRoomForm(false);
   };
 
   const handleEditRoom = (room) => {
@@ -538,28 +985,40 @@ const AssetControlSystem = () => {
     setRoomForm({
       name: room.name,
       description: room.description || '',
-      floorId: room.floorId.toString()
+      floor_id: room.floor_id.toString()
     });
     setShowRoomForm(true);
   };
 
-  const handleDeleteRoom = (roomId) => {
-    if (confirm('Tem certeza que deseja excluir esta sala?')) {
-      const assetsInRoom = assets.filter(asset => asset.roomId === roomId);
+  const handleDeleteRoom = async (roomId) => {
+    if (!confirm('Tem certeza que deseja excluir esta sala?')) return;
+
+    try {
+      setIsLoading(true);
+      
+      // Verificar se há ativos na sala
+      const assetsInRoom = assets.filter(asset => asset.room_id === roomId);
       if (assetsInRoom.length > 0) {
         alert(`Não é possível excluir esta sala pois existem ${assetsInRoom.length} ativo(s) cadastrado(s) nela.`);
         return;
       }
 
-      const newFloors = floors.map(floor => ({
-        ...floor,
-        rooms: floor.rooms.filter(room => room.id !== roomId)
-      }));
-      updateFloorsInDatabase(newFloors);
+      const result = await dataService.rooms.delete(roomId);
+      
+      if (result.success) {
+        await loadData(); // Recarregar dados
+      } else {
+        alert(`Erro ao excluir sala: ${result.error}`);
+      }
+    } catch (error) {
+      alert(`Erro ao excluir sala: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSaveAsset = () => {
+  // =================== FUNÇÕES DE ATIVOS ===================
+  const handleSaveAsset = async () => {
     if (!assetForm.name?.trim()) {
       alert('Por favor, preencha o nome do ativo.');
       return;
@@ -569,47 +1028,58 @@ const AssetControlSystem = () => {
       alert('Por favor, preencha o código do ativo.');
       return;
     }
-
-    if (!editingAsset && assets.some(asset => asset.code.toLowerCase() === assetForm.code.toLowerCase())) {
-      alert('Já existe um ativo com este código.');
-      return;
-    }
     
-    if (!assetForm.floorId || !assetForm.roomId) {
+    if (!assetForm.floor_id || !assetForm.room_id) {
       alert('Por favor, selecione o andar e a sala.');
       return;
     }
 
-    const newAsset = {
-      id: editingAsset?.id || Date.now(),
-      name: assetForm.name.trim(),
-      code: assetForm.code.trim(),
-      category: assetForm.category || '',
-      description: assetForm.description?.trim() || '',
-      value: assetForm.value || '',
-      status: assetForm.status || 'Ativo',
-      floorId: parseInt(assetForm.floorId),
-      roomId: parseInt(assetForm.roomId),
-      photo: assetForm.photo || null,
-      supplier: assetForm.supplier || '',
-      serialNumber: assetForm.serialNumber || '',
-      createdAt: editingAsset?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      setIsLoading(true);
 
-    let newAssets;
-    if (editingAsset) {
-      newAssets = assets.map(asset => 
-        asset.id === editingAsset.id ? newAsset : asset
-      );
-      setEditingAsset(null);
-    } else {
-      newAssets = [...assets, newAsset];
+      // Verificar se código já existe
+      if (!editingAsset) {
+        const codeCheck = await dataService.assets.checkCodeExists(assetForm.code);
+        if (codeCheck.success && codeCheck.exists) {
+          alert('Já existe um ativo com este código.');
+          return;
+        }
+      }
+
+      const assetData = {
+        name: assetForm.name.trim(),
+        code: assetForm.code.trim(),
+        category: assetForm.category || null,
+        description: assetForm.description?.trim() || null,
+        value: assetForm.value ? parseFloat(assetForm.value) : null,
+        status: assetForm.status || 'Ativo',
+        floor_id: parseInt(assetForm.floor_id),
+        room_id: parseInt(assetForm.room_id),
+        photo: assetForm.photo || null,
+        supplier: assetForm.supplier?.trim() || null,
+        serial_number: assetForm.serial_number?.trim() || null
+      };
+
+      let result;
+      if (editingAsset) {
+        result = await dataService.assets.update(editingAsset.id, assetData);
+      } else {
+        result = await dataService.assets.create(assetData);
+      }
+
+      if (result.success) {
+        await loadData(); // Recarregar dados
+        resetAssetForm();
+        setShowAssetForm(false);
+        setEditingAsset(null);
+      } else {
+        alert(`Erro ao ${editingAsset ? 'atualizar' : 'criar'} ativo: ${result.error}`);
+      }
+    } catch (error) {
+      alert(`Erro ao ${editingAsset ? 'atualizar' : 'criar'} ativo: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
-
-    updateAssetsInDatabase(newAssets);
-    resetAssetForm();
-    setShowAssetForm(false);
   };
 
   const handleEditAsset = (asset) => {
@@ -621,19 +1091,32 @@ const AssetControlSystem = () => {
       description: asset.description || '',
       value: asset.value || '',
       status: asset.status || 'Ativo',
-      floorId: asset.floorId.toString(),
-      roomId: asset.roomId.toString(),
+      floor_id: asset.floor_id?.toString() || '',
+      room_id: asset.room_id?.toString() || '',
       photo: asset.photo || null,
       supplier: asset.supplier || '',
-      serialNumber: asset.serialNumber || ''
+      serial_number: asset.serial_number || ''
     });
     setShowAssetForm(true);
   };
 
-  const handleDeleteAsset = (assetId) => {
-    if (confirm('Tem certeza que deseja excluir este ativo?')) {
-      const newAssets = assets.filter(asset => asset.id !== assetId);
-      updateAssetsInDatabase(newAssets);
+  const handleDeleteAsset = async (assetId) => {
+    if (!confirm('Tem certeza que deseja excluir este ativo?')) return;
+
+    try {
+      setIsLoading(true);
+      
+      const result = await dataService.assets.delete(assetId);
+      
+      if (result.success) {
+        await loadData(); // Recarregar dados
+      } else {
+        alert(`Erro ao excluir ativo: ${result.error}`);
+      }
+    } catch (error) {
+      alert(`Erro ao excluir ativo: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -645,33 +1128,35 @@ const AssetControlSystem = () => {
       description: '',
       value: '',
       status: 'Ativo',
-      floorId: '',
-      roomId: '',
+      floor_id: '',
+      room_id: '',
       photo: null,
       supplier: '',
-      serialNumber: ''
+      serial_number: ''
     });
+    closeAllPhotoModals();
   };
 
+  // =================== FUNÇÕES AUXILIARES ===================
   const getFloorName = (floorId) => {
     const floor = floors.find(f => f.id === floorId);
     return floor ? floor.name : '';
   };
 
   const getRoomName = (roomId) => {
-    const room = floors.flatMap(f => f.rooms).find(r => r.id === roomId);
+    const room = floors.flatMap(f => f.rooms || []).find(r => r.id === roomId);
     return room ? room.name : '';
   };
 
   const getRoomsForFloor = (floorId) => {
     const floor = floors.find(f => f.id === parseInt(floorId));
-    return floor ? floor.rooms : [];
+    return floor ? (floor.rooms || []) : [];
   };
 
   const filteredAssets = assets.filter(asset => {
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          asset.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         (asset.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
@@ -688,7 +1173,7 @@ const AssetControlSystem = () => {
       maintenance,
       inactive,
       totalValue,
-      totalRooms: floors.reduce((sum, floor) => sum + floor.rooms.length, 0)
+      totalRooms: floors.reduce((sum, floor) => sum + (floor.rooms?.length || 0), 0)
     };
   };
 
@@ -713,7 +1198,19 @@ const AssetControlSystem = () => {
     );
   };
 
-  if (isLoading) {
+  const handleLogout = async () => {
+    if (confirm('Tem certeza que deseja sair?')) {
+      const result = await signOut();
+      if (result.success) {
+        setFloors([]);
+        setAssets([]);
+        setActiveTab('dashboard');
+      }
+    }
+  };
+
+  // =================== LOADING DE AUTENTICAÇÃO ===================
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center">
         <div className="text-center">
@@ -726,6 +1223,62 @@ const AssetControlSystem = () => {
     );
   }
 
+  // =================== TELA DE LOGIN ===================
+  if (!user) {
+    return (
+      <>
+        <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center p-4">
+          <div className="max-w-md w-full">
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <Icons.Package />
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">AssetManager Pro</h1>
+              <p className="text-gray-600">Sistema completo de controle de ativos com fotos</p>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-2xl p-8">
+              <h2 className="text-2xl font-bold text-center mb-6 text-gray-900">Bem-vindo!</h2>
+              
+              <div className="space-y-4 mb-6">
+                <div className="flex items-center space-x-3 text-gray-700">
+                  <Icons.CheckCircle />
+                  <span>📷 Fotos dos ativos com câmera</span>
+                </div>
+                <div className="flex items-center space-x-3 text-gray-700">
+                  <Icons.CheckCircle />
+                  <span>🏢 Gestão de localizações</span>
+                </div>
+                <div className="flex items-center space-x-3 text-gray-700">
+                  <Icons.CheckCircle />
+                  <span>📊 Relatórios automáticos</span>
+                </div>
+                <div className="flex items-center space-x-3 text-gray-700">
+                  <Icons.CheckCircle />
+                  <span>🔒 Dados seguros na nuvem</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg font-medium transition-all transform hover:scale-105 shadow-lg"
+              >
+                🚀 Começar Agora
+              </button>
+
+              <p className="text-center text-sm text-gray-500 mt-4">
+                Gratuito para sempre • Sem cartão de crédito
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      </>
+    );
+  }
+
+  // =================== SISTEMA PRINCIPAL ===================
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -763,20 +1316,23 @@ const AssetControlSystem = () => {
                 </div>
               </div>
               
-              <div className="hidden sm:flex items-center space-x-2">
-                <button
-                  onClick={exportDatabase}
-                  className="flex items-center space-x-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm transition-colors"
-                >
-                  <Icons.Download />
-                  <span className="hidden md:inline">Backup</span>
-                </button>
+              {/* User Menu */}
+              <div className="flex items-center space-x-2">
+                <div className="hidden md:flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg">
+                  <Icons.User />
+                  <span className="text-sm font-medium text-gray-700">
+                    {profile?.name || user.email}
+                  </span>
+                </div>
                 
-                <label className="flex items-center space-x-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors">
-                  <Icons.Upload />
-                  <span className="hidden md:inline">Importar</span>
-                  <input type="file" accept=".json" onChange={importDatabase} className="hidden" />
-                </label>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center space-x-1 text-gray-600 hover:text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors"
+                  title="Sair"
+                >
+                  <Icons.LogOut />
+                  <span className="hidden md:inline">Sair</span>
+                </button>
               </div>
             </div>
           </div>
@@ -810,7 +1366,18 @@ const AssetControlSystem = () => {
         {/* Dashboard */}
         {activeTab === 'dashboard' && (
           <div className="space-y-4 md:space-y-6">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 px-2">Dashboard</h2>
+            <div className="flex justify-between items-center px-2">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900">Dashboard</h2>
+              {profile && (
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">Bem-vindo,</p>
+                  <p className="font-semibold text-gray-900">{profile.name}</p>
+                  {profile.company && (
+                    <p className="text-xs text-gray-500">{profile.company}</p>
+                  )}
+                </div>
+              )}
+            </div>
             
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100">
@@ -902,7 +1469,7 @@ const AssetControlSystem = () => {
                 
                 <button
                   onClick={() => setShowAssetForm(true)}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 text-sm"
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 text-sm transition-colors"
                 >
                   <Icons.Plus />
                   <span>Novo Ativo</span>
@@ -911,7 +1478,9 @@ const AssetControlSystem = () => {
 
               <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div className="relative">
-                  <Icons.Search />
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <Icons.Search />
+                  </div>
                   <input
                     type="text"
                     placeholder="Buscar por nome, código ou descrição..."
@@ -924,58 +1493,77 @@ const AssetControlSystem = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredAssets.map(asset => (
-                  <div key={asset.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                        {asset.photo ? (
-                          <img src={asset.photo} alt={asset.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Icons.Package />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium text-gray-900 truncate">{asset.name}</h3>
-                        <p className="text-xs text-gray-500 font-mono">{asset.code}</p>
-                        {asset.category && (
-                          <span className="inline-block mt-1 px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">
-                            {asset.category}
-                          </span>
-                        )}
+              {isLoading ? (
+                <div className="text-center py-12 bg-white rounded-xl">
+                  <div className="w-8 h-8 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Carregando ativos...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredAssets.map(asset => (
+                    <div key={asset.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                          {asset.photo ? (
+                            <img src={asset.photo} alt={asset.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Icons.Package />
+                            </div>
+                          )}
+                        </div>
                         
-                        <div className="mt-2 flex items-center justify-between">
-                          <StatusBadge status={asset.status} />
-                          <div className="flex items-center space-x-1">
-                            <button
-                              onClick={() => setShowAssetDetail(asset)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                            >
-                              <Icons.Eye />
-                            </button>
-                            <button
-                              onClick={() => handleEditAsset(asset)}
-                              className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                            >
-                              <Icons.Edit />
-                            </button>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-gray-900 truncate">{asset.name}</h3>
+                          <p className="text-xs text-gray-500 font-mono">{asset.code}</p>
+                          {asset.category && (
+                            <span className="inline-block mt-1 px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">
+                              {asset.category}
+                            </span>
+                          )}
+                          
+                          <div className="mt-2 flex items-center justify-between">
+                            <StatusBadge status={asset.status} />
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={() => setShowAssetDetail(asset)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              >
+                                <Icons.Eye />
+                              </button>
+                              <button
+                                onClick={() => handleEditAsset(asset)}
+                                className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              >
+                                <Icons.Edit />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAsset(asset.id)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              >
+                                <Icons.Trash2 />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-                
-                {filteredAssets.length === 0 && (
-                  <div className="col-span-full text-center py-12 bg-white rounded-xl">
-                    <Icons.Package />
-                    <p className="mt-4 text-gray-500">Nenhum ativo encontrado</p>
-                  </div>
-                )}
-              </div>
+                  ))}
+                  
+                  {filteredAssets.length === 0 && !isLoading && (
+                    <div className="col-span-full text-center py-12 bg-white rounded-xl">
+                      <Icons.Package />
+                      <p className="mt-4 text-gray-500">Nenhum ativo encontrado</p>
+                      <button
+                        onClick={() => setShowAssetForm(true)}
+                        className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Adicionar Primeiro Ativo
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -987,7 +1575,7 @@ const AssetControlSystem = () => {
               <h2 className="text-xl md:text-2xl font-bold text-gray-900">Gestão de Localizações</h2>
               <button
                 onClick={() => setShowRoomForm(true)}
-                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2"
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 transition-colors"
               >
                 <Icons.Plus />
                 <span>Nova Sala</span>
@@ -1002,19 +1590,22 @@ const AssetControlSystem = () => {
                       <Icons.Building />
                       <span className="text-sm md:text-base">{floor.name}</span>
                     </h3>
+                    {floor.description && (
+                      <p className="text-red-100 text-xs md:text-sm mt-1">{floor.description}</p>
+                    )}
                   </div>
                   
                   <div className="p-4 md:p-6">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-xs md:text-sm text-gray-500">
-                        {floor.rooms.length} sala(s)
+                        {floor.rooms?.length || 0} sala(s)
                       </span>
                       <span className="text-xs md:text-sm text-gray-500">
-                        {assets.filter(a => a.floorId === floor.id).length} ativo(s)
+                        {assets.filter(a => a.floor_id === floor.id).length} ativo(s)
                       </span>
                     </div>
                     
-                    {floor.rooms.length === 0 ? (
+                    {!floor.rooms || floor.rooms.length === 0 ? (
                       <p className="text-gray-500 text-sm text-center py-8">Nenhuma sala cadastrada</p>
                     ) : (
                       <div className="space-y-3">
@@ -1029,13 +1620,13 @@ const AssetControlSystem = () => {
                             <div className="flex space-x-1 ml-2 flex-shrink-0">
                               <button
                                 onClick={() => handleEditRoom(room)}
-                                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                               >
                                 <Icons.Edit />
                               </button>
                               <button
                                 onClick={() => handleDeleteRoom(room.id)}
-                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               >
                                 <Icons.Trash2 />
                               </button>
@@ -1047,6 +1638,14 @@ const AssetControlSystem = () => {
                   </div>
                 </div>
               ))}
+              
+              {floors.length === 0 && !isLoading && (
+                <div className="col-span-full text-center py-12 bg-white rounded-xl">
+                  <Icons.Building />
+                  <p className="mt-4 text-gray-500">Nenhum andar encontrado</p>
+                  <p className="text-sm text-gray-400 mt-2">Os andares padrão serão criados automaticamente</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1081,11 +1680,49 @@ const AssetControlSystem = () => {
                 })}
               </div>
             </div>
+
+            {/* Relatório por Categoria */}
+            <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100">
+              <h3 className="text-base md:text-lg font-semibold mb-4">Resumo por Categoria</h3>
+              <div className="space-y-4">
+                {categories.map(category => {
+                  const count = assets.filter(a => a.category === category).length;
+                  const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
+                  const value = assets
+                    .filter(a => a.category === category)
+                    .reduce((sum, asset) => sum + (parseFloat(asset.value) || 0), 0);
+                  
+                  if (count === 0) return null;
+                  
+                  return (
+                    <div key={category} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                          {category}
+                        </span>
+                        <span className="text-sm text-gray-600">{count} itens</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-20 md:w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-sm text-gray-600 font-medium w-20 text-right">
+                          R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* =================== MODAIS DE FOTO CORRIGIDOS =================== */}
+      {/* =================== MODAIS DE FOTO =================== */}
       
       {/* Modal de Opções de Foto */}
       {photoState.showOptions && (
@@ -1212,7 +1849,7 @@ const AssetControlSystem = () => {
             </div>
             <button
               onClick={() => setPhotoState(prev => ({ ...prev, error: '' }))}
-              className="ml-auto hover:bg-red-600 rounded p-1"
+              className="ml-auto hover:bg-red-600 rounded p-1 transition-colors"
             >
               <Icons.X />
             </button>
@@ -1220,7 +1857,9 @@ const AssetControlSystem = () => {
         </div>
       )}
 
-      {/* Modal de cadastro de ativo - COM FOTO FUNCIONAL */}
+      {/* =================== MODAIS DE FORMULÁRIOS =================== */}
+
+      {/* Modal de cadastro de ativo */}
       {showAssetForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1234,9 +1873,8 @@ const AssetControlSystem = () => {
                     setShowAssetForm(false);
                     setEditingAsset(null);
                     resetAssetForm();
-                    closeAllPhotoModals();
                   }}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <Icons.X />
                 </button>
@@ -1250,7 +1888,7 @@ const AssetControlSystem = () => {
                       type="text"
                       value={assetForm.name}
                       onChange={(e) => setAssetForm({...assetForm, name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                       placeholder="Ex: Notebook Dell Inspiron"
                     />
                   </div>
@@ -1261,7 +1899,7 @@ const AssetControlSystem = () => {
                       type="text"
                       value={assetForm.code}
                       onChange={(e) => setAssetForm({...assetForm, code: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                       placeholder="Ex: NB001"
                     />
                   </div>
@@ -1271,7 +1909,7 @@ const AssetControlSystem = () => {
                     <select
                       value={assetForm.category}
                       onChange={(e) => setAssetForm({...assetForm, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                     >
                       <option value="">Selecione uma categoria</option>
                       {categories.map(cat => (
@@ -1285,7 +1923,7 @@ const AssetControlSystem = () => {
                     <select
                       value={assetForm.status}
                       onChange={(e) => setAssetForm({...assetForm, status: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                     >
                       {statuses.map(status => (
                         <option key={status} value={status}>{status}</option>
@@ -1296,9 +1934,9 @@ const AssetControlSystem = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Andar *</label>
                     <select
-                      value={assetForm.floorId}
-                      onChange={(e) => setAssetForm({...assetForm, floorId: e.target.value, roomId: ''})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      value={assetForm.floor_id}
+                      onChange={(e) => setAssetForm({...assetForm, floor_id: e.target.value, room_id: ''})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                     >
                       <option value="">Selecione um andar</option>
                       {floors.map(floor => (
@@ -1310,13 +1948,13 @@ const AssetControlSystem = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Sala *</label>
                     <select
-                      value={assetForm.roomId}
-                      onChange={(e) => setAssetForm({...assetForm, roomId: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                      disabled={!assetForm.floorId}
+                      value={assetForm.room_id}
+                      onChange={(e) => setAssetForm({...assetForm, room_id: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+                      disabled={!assetForm.floor_id}
                     >
                       <option value="">Selecione uma sala</option>
-                      {getRoomsForFloor(assetForm.floorId).map(room => (
+                      {getRoomsForFloor(assetForm.floor_id).map(room => (
                         <option key={room.id} value={room.id}>{room.name}</option>
                       ))}
                     </select>
@@ -1324,7 +1962,7 @@ const AssetControlSystem = () => {
                 </div>
                 
                 <div className="space-y-4">
-                  {/* SEÇÃO DE FOTO - FUNCIONAL E CORRIGIDA */}
+                  {/* SEÇÃO DE FOTO - FUNCIONAL E INTEGRADA */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">📷 Foto do Ativo</label>
                     <div className="space-y-3">
@@ -1383,7 +2021,7 @@ const AssetControlSystem = () => {
                       step="0.01"
                       value={assetForm.value}
                       onChange={(e) => setAssetForm({...assetForm, value: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                       placeholder="Ex: 2500.00"
                     />
                   </div>
@@ -1394,7 +2032,7 @@ const AssetControlSystem = () => {
                       type="text"
                       value={assetForm.supplier}
                       onChange={(e) => setAssetForm({...assetForm, supplier: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                       placeholder="Ex: Dell Brasil"
                     />
                   </div>
@@ -1403,9 +2041,9 @@ const AssetControlSystem = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Número de Série</label>
                     <input
                       type="text"
-                      value={assetForm.serialNumber}
-                      onChange={(e) => setAssetForm({...assetForm, serialNumber: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      value={assetForm.serial_number}
+                      onChange={(e) => setAssetForm({...assetForm, serial_number: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                       placeholder="Ex: DL24001"
                     />
                   </div>
@@ -1418,7 +2056,7 @@ const AssetControlSystem = () => {
                   value={assetForm.description}
                   onChange={(e) => setAssetForm({...assetForm, description: e.target.value})}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                   placeholder="Descrição detalhada do ativo..."
                 />
               </div>
@@ -1429,7 +2067,6 @@ const AssetControlSystem = () => {
                     setShowAssetForm(false);
                     setEditingAsset(null);
                     resetAssetForm();
-                    closeAllPhotoModals();
                   }}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
@@ -1437,9 +2074,10 @@ const AssetControlSystem = () => {
                 </button>
                 <button
                   onClick={handleSaveAsset}
-                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                  disabled={isLoading}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
                 >
-                  {editingAsset ? 'Atualizar' : 'Salvar'}
+                  {isLoading ? '⏳ Salvando...' : (editingAsset ? 'Atualizar' : 'Salvar')}
                 </button>
               </div>
             </div>
@@ -1460,9 +2098,9 @@ const AssetControlSystem = () => {
                   onClick={() => {
                     setShowRoomForm(false);
                     setEditingRoom(null);
-                    setRoomForm({ name: '', description: '', floorId: '' });
+                    setRoomForm({ name: '', description: '', floor_id: '' });
                   }}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <Icons.X />
                 </button>
@@ -1475,7 +2113,7 @@ const AssetControlSystem = () => {
                     type="text"
                     value={roomForm.name}
                     onChange={(e) => setRoomForm({...roomForm, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                     placeholder="Ex: Sala de Reuniões A"
                   />
                 </div>
@@ -1483,9 +2121,9 @@ const AssetControlSystem = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Andar *</label>
                   <select
-                    value={roomForm.floorId}
-                    onChange={(e) => setRoomForm({...roomForm, floorId: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    value={roomForm.floor_id}
+                    onChange={(e) => setRoomForm({...roomForm, floor_id: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                   >
                     <option value="">Selecione um andar</option>
                     {floors.map(floor => (
@@ -1500,7 +2138,7 @@ const AssetControlSystem = () => {
                     value={roomForm.description}
                     onChange={(e) => setRoomForm({...roomForm, description: e.target.value})}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                     placeholder="Descrição da sala..."
                   />
                 </div>
@@ -1511,17 +2149,18 @@ const AssetControlSystem = () => {
                   onClick={() => {
                     setShowRoomForm(false);
                     setEditingRoom(null);
-                    setRoomForm({ name: '', description: '', floorId: '' });
+                    setRoomForm({ name: '', description: '', floor_id: '' });
                   }}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSaveRoom}
-                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                  disabled={isLoading}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
                 >
-                  {editingRoom ? 'Atualizar' : 'Salvar'}
+                  {isLoading ? '⏳ Salvando...' : (editingRoom ? 'Atualizar' : 'Salvar')}
                 </button>
               </div>
             </div>
@@ -1538,7 +2177,7 @@ const AssetControlSystem = () => {
                 <h3 className="text-xl font-semibold">Detalhes do Ativo</h3>
                 <button
                   onClick={() => setShowAssetDetail(null)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <Icons.X />
                 </button>
@@ -1571,7 +2210,7 @@ const AssetControlSystem = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Localização</label>
                     <p className="text-base text-gray-900">
-                      {getFloorName(showAssetDetail.floorId)} - {getRoomName(showAssetDetail.roomId)}
+                      {getFloorName(showAssetDetail.floor_id)} - {getRoomName(showAssetDetail.room_id)}
                     </p>
                   </div>
                   
@@ -1584,6 +2223,20 @@ const AssetControlSystem = () => {
                       }
                     </p>
                   </div>
+
+                  {showAssetDetail.supplier && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Fornecedor</label>
+                      <p className="text-base text-gray-900">{showAssetDetail.supplier}</p>
+                    </div>
+                  )}
+
+                  {showAssetDetail.serial_number && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Número de Série</label>
+                      <p className="text-base text-gray-900 font-mono">{showAssetDetail.serial_number}</p>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-4">
@@ -1615,6 +2268,14 @@ const AssetControlSystem = () => {
                       </div>
                     </div>
                   )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Informações do Sistema</label>
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm text-gray-600">
+                      <p><strong>Criado em:</strong> {new Date(showAssetDetail.created_at).toLocaleDateString('pt-BR')}</p>
+                      <p><strong>Última atualização:</strong> {new Date(showAssetDetail.updated_at).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -1624,13 +2285,13 @@ const AssetControlSystem = () => {
                     setShowAssetDetail(null);
                     handleEditAsset(showAssetDetail);
                   }}
-                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                 >
                   Editar
                 </button>
                 <button
                   onClick={() => setShowAssetDetail(null)}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Fechar
                 </button>
@@ -1639,19 +2300,17 @@ const AssetControlSystem = () => {
           </div>
         </div>
       )}
-
-      {/* CSS adicional para scroll suave */}
-      <style jsx>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </div>
   );
 };
 
-export default AssetControlSystem;
+// =================== COMPONENTE PRINCIPAL COM PROVIDER ===================
+const App = () => {
+  return (
+    <AuthProvider>
+      <AssetControlSystem />
+    </AuthProvider>
+  );
+};
+
+export default App;
