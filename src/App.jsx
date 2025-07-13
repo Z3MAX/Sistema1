@@ -10,7 +10,6 @@ import {
 const AssetControlSystem = () => {
   // Estados principais
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [viewMode, setViewMode] = useState('grid');
   const [floors, setFloors] = useState([]);
   const [assets, setAssets] = useState([]);
   const [showAssetForm, setShowAssetForm] = useState(false);
@@ -26,21 +25,21 @@ const AssetControlSystem = () => {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [showAssetDetail, setShowAssetDetail] = useState(null);
-  const [showCameraOptions, setShowCameraOptions] = useState(false);
-  const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
-  const [showFilters, setShowFilters] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   
-  // Estados para captura de foto
-  const [showPhotoPreview, setShowPhotoPreview] = useState(false);
-  const [capturedPhoto, setCapturedPhoto] = useState(null);
-  const [photoError, setPhotoError] = useState('');
-  const [showCameraCapture, setShowCameraCapture] = useState(false);
+  // Estados específicos para foto - REFATORADO
+  const [photoState, setPhotoState] = useState({
+    showOptions: false,
+    showPreview: false,
+    showCamera: false,
+    capturedPhoto: null,
+    isProcessing: false,
+    error: '',
+    stream: null
+  });
   
   // Estados para etiquetas
   const [selectedAssets, setSelectedAssets] = useState([]);
@@ -48,20 +47,16 @@ const AssetControlSystem = () => {
     template: 'standard',
     includeQR: true,
     includeLocation: true,
-    includeDate: false,
-    fontSize: 'medium',
-    labelSize: '50x30'
+    includeDate: false
   });
   const [generatedLabels, setGeneratedLabels] = useState([]);
   
   // Refs
-  const fileInputRef = useRef(null);
-  const cameraInputRef = useRef(null);
-  const galleryInputRef = useRef(null);
   const excelInputRef = useRef(null);
   const printRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Configurações
   const STORAGE_KEYS = {
@@ -77,7 +72,6 @@ const AssetControlSystem = () => {
 
   const statuses = ['Ativo', 'Inativo', 'Manutenção', 'Descartado'];
 
-  // Templates de etiquetas
   const labelTemplates = {
     standard: {
       name: 'Padrão',
@@ -96,12 +90,6 @@ const AssetControlSystem = () => {
       width: '70mm',
       height: '40mm',
       description: 'Template com todas as informações'
-    },
-    qrOnly: {
-      name: 'Apenas QR Code',
-      width: '25mm',
-      height: '25mm',
-      description: 'Apenas QR Code'
     }
   };
 
@@ -130,12 +118,208 @@ const AssetControlSystem = () => {
     area: ''
   });
 
-  // Efeitos
+  // =================== FUNÇÕES DE FOTO REFATORADAS ===================
+  
+  // Abrir opções de foto
+  const openPhotoOptions = () => {
+    setPhotoState(prev => ({
+      ...prev,
+      showOptions: true,
+      error: ''
+    }));
+  };
+
+  // Fechar todos os modais de foto
+  const closeAllPhotoModals = () => {
+    // Parar stream se estiver ativo
+    if (photoState.stream) {
+      photoState.stream.getTracks().forEach(track => track.stop());
+    }
+    
+    setPhotoState({
+      showOptions: false,
+      showPreview: false,
+      showCamera: false,
+      capturedPhoto: null,
+      isProcessing: false,
+      error: '',
+      stream: null
+    });
+  };
+
+  // Processar arquivo de imagem
+  const processImageFile = async (file) => {
+    if (!file) return;
+
+    setPhotoState(prev => ({ ...prev, isProcessing: true, error: '' }));
+
+    try {
+      // Validações
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Por favor, selecione apenas arquivos de imagem.');
+      }
+
+      if (file.size > 10 * 1024 * 1024) { // 10MB
+        throw new Error('A imagem deve ter no máximo 10MB.');
+      }
+
+      // Ler arquivo
+      const reader = new FileReader();
+      
+      reader.onload = async (event) => {
+        try {
+          const imageDataUrl = event.target.result;
+          
+          // Redimensionar imagem
+          const resizedImage = await resizeImage(imageDataUrl, 1024, 768);
+          
+          setPhotoState(prev => ({
+            ...prev,
+            capturedPhoto: resizedImage,
+            showPreview: true,
+            showOptions: false,
+            isProcessing: false
+          }));
+          
+        } catch (error) {
+          setPhotoState(prev => ({
+            ...prev,
+            error: error.message || 'Erro ao processar imagem.',
+            isProcessing: false
+          }));
+        }
+      };
+
+      reader.onerror = () => {
+        setPhotoState(prev => ({
+          ...prev,
+          error: 'Erro ao ler arquivo de imagem.',
+          isProcessing: false
+        }));
+      };
+
+      reader.readAsDataURL(file);
+
+    } catch (error) {
+      setPhotoState(prev => ({
+        ...prev,
+        error: error.message || 'Erro ao processar imagem.',
+        isProcessing: false
+      }));
+    }
+  };
+
+  // Redimensionar imagem
+  const resizeImage = (dataUrl, maxWidth, maxHeight) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        let { width, height } = img;
+        
+        // Calcular novas dimensões mantendo proporção
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(resizedDataUrl);
+      };
+      
+      img.src = dataUrl;
+    });
+  };
+
+  // Tirar foto usando câmera
+  const handleTakePhoto = async () => {
+    setPhotoState(prev => ({ ...prev, showOptions: false, error: '' }));
+
+    // Método 1: Tentar usar input file com capture (mais compatível)
+    try {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.capture = 'environment';
+      
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          processImageFile(file);
+        }
+      };
+      
+      input.click();
+      
+    } catch (error) {
+      setPhotoState(prev => ({
+        ...prev,
+        error: 'Erro ao acessar a câmera. Verifique as permissões.'
+      }));
+    }
+  };
+
+  // Selecionar da galeria
+  const handleSelectFromGallery = () => {
+    setPhotoState(prev => ({ ...prev, showOptions: false, error: '' }));
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        processImageFile(file);
+      }
+    };
+    
+    input.click();
+  };
+
+  // Confirmar foto
+  const confirmPhoto = () => {
+    if (photoState.capturedPhoto) {
+      setAssetForm(prev => ({ ...prev, photo: photoState.capturedPhoto }));
+      closeAllPhotoModals();
+    }
+  };
+
+  // Descartar foto e tirar nova
+  const retakePhoto = () => {
+    setPhotoState(prev => ({
+      ...prev,
+      showPreview: false,
+      showOptions: true,
+      capturedPhoto: null
+    }));
+  };
+
+  // Remover foto do formulário
+  const removePhotoFromForm = () => {
+    setAssetForm(prev => ({ ...prev, photo: null }));
+  };
+
+  // =================== OUTRAS FUNÇÕES ===================
+
   useEffect(() => {
     loadDataFromDatabase();
   }, []);
 
-  // Funções do banco de dados
   const loadDataFromDatabase = () => {
     try {
       setIsLoading(true);
@@ -212,249 +396,6 @@ const AssetControlSystem = () => {
     saveToDatabase(STORAGE_KEYS.ASSETS, newAssets);
   };
 
-  // Funções para captura de foto - VERSÃO MELHORADA
-  const handleTakePhoto = () => {
-    setShowCameraOptions(false);
-    setPhotoError('');
-    
-    console.log('🔥 Tentando abrir câmera...');
-    
-    // Método 1: Tentar input com capture primeiro (mais compatível)
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment';
-    input.setAttribute('capture', 'camera');
-    
-    // Aplicar estilos para garantir que funcione
-    input.style.position = 'absolute';
-    input.style.top = '-9999px';
-    input.style.left = '-9999px';
-    input.style.visibility = 'hidden';
-    
-    input.onchange = async (e) => {
-      console.log('📸 Arquivo selecionado da câmera:', e.target.files[0]);
-      const file = e.target.files[0];
-      if (file) {
-        await processImageFile(file);
-      }
-      // Limpar
-      if (document.body.contains(input)) {
-        document.body.removeChild(input);
-      }
-    };
-    
-    input.onerror = (e) => {
-      console.error('❌ Erro no input de câmera:', e);
-      setPhotoError('Erro ao acessar câmera. Tente novamente.');
-      if (document.body.contains(input)) {
-        document.body.removeChild(input);
-      }
-    };
-    
-    // Adicionar ao DOM e clicar
-    document.body.appendChild(input);
-    
-    // Forçar foco e clique
-    setTimeout(() => {
-      input.focus();
-      input.click();
-    }, 100);
-    
-    // Remover após timeout se não usado
-    setTimeout(() => {
-      if (document.body.contains(input)) {
-        document.body.removeChild(input);
-      }
-    }, 30000); // 30 segundos
-  };
-
-  const handleSelectFromGallery = () => {
-    setShowCameraOptions(false);
-    setPhotoError('');
-    
-    console.log('🖼️ Abrindo galeria...');
-    
-    // Criar input para galeria (sem capture)
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.multiple = false;
-    
-    // Aplicar estilos
-    input.style.position = 'absolute';
-    input.style.top = '-9999px';
-    input.style.left = '-9999px';
-    input.style.visibility = 'hidden';
-    
-    input.onchange = async (e) => {
-      console.log('🖼️ Arquivo selecionado da galeria:', e.target.files[0]);
-      const file = e.target.files[0];
-      if (file) {
-        await processImageFile(file);
-      }
-      // Limpar
-      if (document.body.contains(input)) {
-        document.body.removeChild(input);
-      }
-    };
-    
-    // Adicionar ao DOM e clicar
-    document.body.appendChild(input);
-    
-    setTimeout(() => {
-      input.focus();
-      input.click();
-    }, 100);
-    
-    // Remover após timeout
-    setTimeout(() => {
-      if (document.body.contains(input)) {
-        document.body.removeChild(input);
-      }
-    }, 30000);
-  };
-
-  const processImageFile = async (file) => {
-    try {
-      setIsCapturingPhoto(true);
-      setPhotoError('');
-
-      // Validar arquivo
-      if (!file.type.startsWith('image/')) {
-        throw new Error('Por favor, selecione apenas arquivos de imagem.');
-      }
-
-      // Verificar tamanho (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error('A imagem deve ter no máximo 5MB.');
-      }
-
-      // Ler arquivo
-      const reader = new FileReader();
-      
-      reader.onload = async (event) => {
-        try {
-          const imageDataUrl = event.target.result;
-          
-          // Redimensionar imagem se necessário
-          const resizedImage = await resizeImage(imageDataUrl, 800, 600);
-          
-          setCapturedPhoto(resizedImage);
-          setShowPhotoPreview(true);
-          
-        } catch (error) {
-          setPhotoError(error.message || 'Erro ao processar imagem.');
-        } finally {
-          setIsCapturingPhoto(false);
-        }
-      };
-
-      reader.onerror = () => {
-        setPhotoError('Erro ao ler arquivo de imagem.');
-        setIsCapturingPhoto(false);
-      };
-
-      reader.readAsDataURL(file);
-
-    } catch (error) {
-      setPhotoError(error.message || 'Erro ao processar imagem.');
-      setIsCapturingPhoto(false);
-    }
-  };
-
-  const resizeImage = (dataUrl, maxWidth, maxHeight) => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        // Calcular novas dimensões mantendo proporção
-        let { width, height } = img;
-        
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
-        
-        // Redimensionar
-        canvas.width = width;
-        canvas.height = height;
-        
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // Converter para data URL com qualidade otimizada
-        const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        resolve(resizedDataUrl);
-      };
-      
-      img.src = dataUrl;
-    });
-  };
-
-  const handleSavePhoto = () => {
-    if (capturedPhoto) {
-      setAssetForm(prev => ({ ...prev, photo: capturedPhoto }));
-      setCapturedPhoto(null);
-      setShowPhotoPreview(false);
-    }
-  };
-
-  const handleRetakePhoto = () => {
-    setCapturedPhoto(null);
-    setShowPhotoPreview(false);
-    setShowCameraOptions(true);
-  };
-
-  const handleRemovePhoto = () => {
-    setAssetForm(prev => ({ ...prev, photo: null }));
-  };
-
-  const capturePhotoFromVideo = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
-      
-      // Definir dimensões do canvas
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      
-      // Desenhar o frame atual do vídeo no canvas
-      context.drawImage(video, 0, 0);
-      
-      // Converter para base64
-      const photoData = canvas.toDataURL('image/jpeg', 0.8);
-      
-      // Parar o stream da câmera
-      const stream = video.srcObject;
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      
-      setCapturedPhoto(photoData);
-      setShowCameraCapture(false);
-      setShowPhotoPreview(true);
-    }
-  };
-
-  const cancelCameraCapture = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject;
-      stream.getTracks().forEach(track => track.stop());
-    }
-    setShowCameraCapture(false);
-  };
-
-  // Funções para etiquetas
   const generateQRCode = (text) => {
     const encodedText = encodeURIComponent(text);
     return `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodedText}`;
@@ -494,283 +435,6 @@ const AssetControlSystem = () => {
     setShowLabelPreview(true);
   };
 
-  const printLabels = () => {
-    if (printRef.current) {
-      const printContent = printRef.current.innerHTML;
-      const printWindow = window.open('', '_blank');
-      
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Etiquetas de Ativos</title>
-            <style>
-              body { 
-                margin: 0; 
-                padding: 20px; 
-                font-family: Arial, sans-serif; 
-                background: white;
-              }
-              .print-container {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 10px;
-                page-break-inside: avoid;
-              }
-              .label {
-                border: 2px solid #000;
-                padding: 8px;
-                margin: 5px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                page-break-inside: avoid;
-                background: white;
-              }
-              .label.standard { width: 50mm; height: 30mm; }
-              .label.compact { width: 40mm; height: 20mm; }
-              .label.detailed { width: 70mm; height: 40mm; }
-              .label.qrOnly { width: 25mm; height: 25mm; }
-              .label-code { 
-                font-weight: bold; 
-                font-size: 14px; 
-                margin-bottom: 4px; 
-              }
-              .label-name { 
-                font-size: 10px; 
-                margin-bottom: 2px; 
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                max-width: 100%;
-              }
-              .label-info { 
-                font-size: 8px; 
-                color: #666; 
-              }
-              .qr-code { 
-                width: 20mm; 
-                height: 20mm; 
-                margin: 2px; 
-              }
-              @media print {
-                body { margin: 0; }
-                .label { 
-                  border: 1px solid #000; 
-                  margin: 2px;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="print-container">
-              ${printContent}
-            </div>
-          </body>
-        </html>
-      `);
-      
-      printWindow.document.close();
-      printWindow.focus();
-      
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 250);
-    }
-  };
-
-  const downloadLabelsAsPDF = () => {
-    const printContent = printRef.current.innerHTML;
-    const printWindow = window.open('', '_blank');
-    
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Etiquetas de Ativos - PDF</title>
-          <style>
-            @page { 
-              size: A4; 
-              margin: 10mm; 
-            }
-            body { 
-              margin: 0; 
-              padding: 0; 
-              font-family: Arial, sans-serif; 
-            }
-            .print-container {
-              display: grid;
-              grid-template-columns: repeat(4, 1fr);
-              gap: 5mm;
-              page-break-inside: avoid;
-            }
-            .label {
-              border: 1px solid #000;
-              padding: 2mm;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              text-align: center;
-              page-break-inside: avoid;
-              background: white;
-            }
-            .label.standard { width: 50mm; height: 30mm; }
-            .label.compact { width: 40mm; height: 20mm; }
-            .label.detailed { width: 70mm; height: 40mm; }
-            .label.qrOnly { width: 25mm; height: 25mm; }
-            .label-code { 
-              font-weight: bold; 
-              font-size: 12pt; 
-              margin-bottom: 1mm; 
-            }
-            .label-name { 
-              font-size: 8pt; 
-              margin-bottom: 1mm; 
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-              max-width: 100%;
-            }
-            .label-info { 
-              font-size: 6pt; 
-              color: #666; 
-            }
-            .qr-code { 
-              width: 15mm; 
-              height: 15mm; 
-              margin: 1mm; 
-            }
-          </style>
-        </head>
-        <body>
-          <div class="print-container">
-            ${printContent}
-          </div>
-        </body>
-      </html>
-    `);
-    
-    printWindow.document.close();
-    printWindow.focus();
-    
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
-  };
-
-  // Funções de importação Excel
-  const handleExcelImport = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const validTypes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-      'text/csv'
-    ];
-    
-    if (!validTypes.includes(file.type)) {
-      alert('Por favor, selecione um arquivo Excel (.xlsx ou .xls) ou CSV');
-      return;
-    }
-
-    setIsImporting(true);
-    setImportProgress(0);
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setImportProgress(30);
-
-      const exampleData = [
-        {
-          'Nome': 'Monitor Dell 24"',
-          'Código': 'MON001',
-          'Categoria': 'Informática',
-          'Descrição': 'Monitor Dell 24 polegadas Full HD',
-          'Valor': '800.00',
-          'Status': 'Ativo',
-          'Andar': '5º Andar - Administrativo',
-          'Sala': 'Sala 501',
-          'Fornecedor': 'Dell Brasil',
-          'Garantia': '36',
-          'Número de Série': 'DL24001'
-        }
-      ];
-
-      setImportProgress(60);
-      const processedAssets = [];
-      let successCount = 0;
-
-      for (let i = 0; i < exampleData.length; i++) {
-        const row = exampleData[i];
-        setImportProgress(60 + (i / exampleData.length) * 30);
-
-        if (row['Nome'] && row['Código']) {
-          const floor = floors.find(f => f.name.includes('5º'));
-          if (floor && floor.rooms.length > 0) {
-            const newAsset = {
-              id: Date.now() + i,
-              name: row['Nome'].trim(),
-              code: row['Código'].trim(),
-              category: row['Categoria'] || '',
-              description: row['Descrição'] || '',
-              value: row['Valor'] || '',
-              status: row['Status'] || 'Ativo',
-              floorId: floor.id,
-              roomId: floor.rooms[0].id,
-              supplier: row['Fornecedor'] || '',
-              warranty: row['Garantia'] || '',
-              serialNumber: row['Número de Série'] || '',
-              photo: null,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            };
-            processedAssets.push(newAsset);
-            successCount++;
-          }
-        }
-      }
-
-      setImportProgress(100);
-      
-      if (processedAssets.length > 0) {
-        const newAssets = [...assets, ...processedAssets];
-        updateAssetsInDatabase(newAssets);
-      }
-
-      setTimeout(() => {
-        setIsImporting(false);
-        setImportProgress(0);
-        setShowExcelImport(false);
-        alert(`Importação concluída! ${successCount} ativos importados.`);
-      }, 1000);
-
-    } catch (error) {
-      setIsImporting(false);
-      setImportProgress(0);
-      alert('Erro ao processar arquivo.');
-    }
-
-    event.target.value = '';
-  };
-
-  const downloadExcelTemplate = () => {
-    const csvContent = [
-      'Nome,Código,Categoria,Descrição,Valor,Status,Andar,Sala,Fornecedor,Garantia,Número de Série',
-      'Monitor Dell 24",MON001,Informática,Monitor Dell 24 polegadas,800.00,Ativo,5º Andar,Sala 501,Dell Brasil,36,DL24001'
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'template_ativos.csv';
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
-
-  // Funções de backup
   const exportDatabase = () => {
     const data = {
       floors: floors,
@@ -810,7 +474,6 @@ const AssetControlSystem = () => {
     }
   };
 
-  // Funções para salas
   const handleSaveRoom = () => {
     if (!roomForm.name?.trim() || !roomForm.floorId) {
       alert('Por favor, preencha todos os campos obrigatórios.');
@@ -878,7 +541,6 @@ const AssetControlSystem = () => {
     }
   };
 
-  // Funções para ativos
   const handleSaveAsset = () => {
     if (!assetForm.name?.trim()) {
       alert('Por favor, preencha o nome do ativo.');
@@ -979,7 +641,6 @@ const AssetControlSystem = () => {
     });
   };
 
-  // Funções auxiliares
   const getFloorName = (floorId) => {
     const floor = floors.find(f => f.id === floorId);
     return floor ? floor.name : '';
@@ -995,7 +656,6 @@ const AssetControlSystem = () => {
     return floor ? floor.rooms : [];
   };
 
-  // Filtros
   const filteredAssets = assets.filter(asset => {
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          asset.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1008,19 +668,12 @@ const AssetControlSystem = () => {
     return matchesSearch && matchesFloor && matchesRoom && matchesStatus && matchesCategory;
   });
 
-  // Estatísticas
   const getDashboardStats = () => {
     const total = assets.length;
     const active = assets.filter(a => a.status === 'Ativo').length;
     const maintenance = assets.filter(a => a.status === 'Manutenção').length;
     const inactive = assets.filter(a => a.status === 'Inativo').length;
     const totalValue = assets.reduce((sum, asset) => sum + (parseFloat(asset.value) || 0), 0);
-    
-    const categoryStats = categories.map(category => ({
-      name: category,
-      count: assets.filter(a => a.category === category).length,
-      percentage: total > 0 ? ((assets.filter(a => a.category === category).length / total) * 100).toFixed(1) : 0
-    })).filter(stat => stat.count > 0);
 
     return {
       total,
@@ -1028,14 +681,12 @@ const AssetControlSystem = () => {
       maintenance,
       inactive,
       totalValue,
-      categoryStats,
       totalRooms: floors.reduce((sum, floor) => sum + floor.rooms.length, 0)
     };
   };
 
   const stats = getDashboardStats();
 
-  // Componente Status Badge
   const StatusBadge = ({ status }) => {
     const statusConfig = {
       'Ativo': { color: 'bg-green-100 text-green-800', icon: CheckCircle },
@@ -1055,38 +706,30 @@ const AssetControlSystem = () => {
     );
   };
 
-  // Componente Label Preview
   const LabelComponent = ({ label, template }) => {
     const templateClass = template || 'standard';
     
     return (
       <div className={`label ${templateClass} border-2 border-black p-2 bg-white flex flex-col items-center justify-center text-center`}>
-        {templateClass === 'qrOnly' ? (
-          <img src={label.qrCode} alt="QR Code" className="qr-code w-full h-full object-contain" />
-        ) : (
-          <>
-            <div className="label-code font-bold text-sm mb-1">{label.code}</div>
-            {templateClass !== 'compact' && (
-              <div className="label-name text-xs mb-1 overflow-hidden text-ellipsis whitespace-nowrap w-full">
-                {label.name}
-              </div>
-            )}
-            {labelSettings.includeQR && templateClass !== 'compact' && (
-              <img src={label.qrCode} alt="QR Code" className="qr-code w-8 h-8 mb-1" />
-            )}
-            {labelSettings.includeLocation && templateClass === 'detailed' && (
-              <div className="label-info text-xs text-gray-600">{label.location}</div>
-            )}
-            {labelSettings.includeDate && templateClass === 'detailed' && (
-              <div className="label-info text-xs text-gray-600">{label.date}</div>
-            )}
-          </>
+        <div className="label-code font-bold text-sm mb-1">{label.code}</div>
+        {templateClass !== 'compact' && (
+          <div className="label-name text-xs mb-1 overflow-hidden text-ellipsis whitespace-nowrap w-full">
+            {label.name}
+          </div>
+        )}
+        {labelSettings.includeQR && templateClass !== 'compact' && (
+          <img src={label.qrCode} alt="QR Code" className="qr-code w-8 h-8 mb-1" />
+        )}
+        {labelSettings.includeLocation && templateClass === 'detailed' && (
+          <div className="label-info text-xs text-gray-600">{label.location}</div>
+        )}
+        {labelSettings.includeDate && templateClass === 'detailed' && (
+          <div className="label-info text-xs text-gray-600">{label.date}</div>
         )}
       </div>
     );
   };
 
-  // Loading screen
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center">
@@ -1122,7 +765,6 @@ const AssetControlSystem = () => {
             </div>
             
             <div className="flex items-center space-x-2">
-              {/* Stats desktop */}
               <div className="hidden md:flex items-center space-x-4 text-sm text-gray-600">
                 <div className="flex items-center space-x-1">
                   <Package className="w-4 h-4" />
@@ -1138,7 +780,6 @@ const AssetControlSystem = () => {
                 </div>
               </div>
               
-              {/* Action buttons */}
               <div className="hidden sm:flex items-center space-x-2">
                 <button
                   onClick={exportDatabase}
@@ -1157,7 +798,6 @@ const AssetControlSystem = () => {
             </div>
           </div>
           
-          {/* Navigation tabs */}
           <div className="flex space-x-1 mt-4 overflow-x-auto scrollbar-hide">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: Home, shortLabel: 'Home' },
@@ -1257,17 +897,6 @@ const AssetControlSystem = () => {
                 
                 <button
                   onClick={() => {
-                    setActiveTab('assets');
-                    setShowExcelImport(true);
-                  }}
-                  className="flex items-center space-x-3 p-3 md:p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-                >
-                  <FileText className="w-5 h-5 text-green-600" />
-                  <span className="text-green-600 font-medium">Importar Excel</span>
-                </button>
-                
-                <button
-                  onClick={() => {
                     setActiveTab('locations');
                     setShowRoomForm(true);
                   }}
@@ -1275,14 +904,6 @@ const AssetControlSystem = () => {
                 >
                   <Building className="w-5 h-5 text-blue-600" />
                   <span className="text-blue-600 font-medium">Adicionar Sala</span>
-                </button>
-                
-                <button
-                  onClick={() => setActiveTab('reports')}
-                  className="flex items-center space-x-3 p-3 md:p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
-                >
-                  <BarChart3 className="w-5 h-5 text-purple-600" />
-                  <span className="text-purple-600 font-medium">Ver Relatórios</span>
                 </button>
               </div>
             </div>
@@ -1307,13 +928,6 @@ const AssetControlSystem = () => {
                     </button>
                   )}
                   <button
-                    onClick={() => setShowExcelImport(true)}
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 text-sm"
-                  >
-                    <FileText className="w-4 h-4" />
-                    <span>Import Excel</span>
-                  </button>
-                  <button
                     onClick={() => setShowAssetForm(true)}
                     className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 text-sm"
                   >
@@ -1323,7 +937,6 @@ const AssetControlSystem = () => {
                 </div>
               </div>
 
-              {/* Search */}
               <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -1338,9 +951,7 @@ const AssetControlSystem = () => {
               </div>
             </div>
 
-            {/* Assets Grid/List - Mobile optimized */}
             <div className="space-y-4">
-              {/* Mobile card view */}
               <div className="block md:hidden space-y-3">
                 {filteredAssets.map(asset => (
                   <div key={asset.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
@@ -1382,15 +993,6 @@ const AssetControlSystem = () => {
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => {
-                                setSelectedAssets([asset.id]);
-                                setShowLabelModal(true);
-                              }}
-                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
-                            >
-                              <Tag className="w-4 h-4" />
-                            </button>
-                            <button
                               onClick={() => handleEditAsset(asset)}
                               className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg"
                             >
@@ -1418,7 +1020,6 @@ const AssetControlSystem = () => {
                 )}
               </div>
 
-              {/* Desktop table view */}
               <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -1480,15 +1081,6 @@ const AssetControlSystem = () => {
                                 className="text-blue-600 hover:text-blue-900"
                               >
                                 <Eye className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedAssets([asset.id]);
-                                  setShowLabelModal(true);
-                                }}
-                                className="text-purple-600 hover:text-purple-900"
-                              >
-                                <Tag className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleEditAsset(asset)}
@@ -1627,143 +1219,57 @@ const AssetControlSystem = () => {
         )}
       </div>
 
-      {/* Modal de captura de câmera nativa */}
-      {showCameraCapture && (
-        <div className="fixed inset-0 bg-black bg-opacity-95 flex flex-col items-center justify-center z-50">
-          <div className="w-full max-w-md mx-4">
-            <div className="bg-white rounded-t-xl p-4 text-center">
-              <h3 className="text-lg font-semibold text-gray-900">Tirar Foto</h3>
-              <p className="text-sm text-gray-600">Posicione o ativo na câmera e toque em capturar</p>
-            </div>
-            
-            <div className="relative bg-black">
-              <video 
-                ref={videoRef}
-                autoPlay 
-                playsInline 
-                muted
-                className="w-full h-80 object-cover"
-              />
-              <canvas ref={canvasRef} className="hidden" />
-            </div>
-            
-            <div className="bg-white rounded-b-xl p-4 flex justify-center space-x-4">
-              <button
-                onClick={cancelCameraCapture}
-                className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg flex items-center space-x-2"
-              >
-                <X className="w-5 h-5" />
-                <span>Cancelar</span>
-              </button>
-              
-              <button
-                onClick={capturePhotoFromVideo}
-                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center space-x-2"
-              >
-                <Camera className="w-5 h-5" />
-                <span>Capturar</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de captura de foto - Preview */}
-      {showPhotoPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Preview da Foto</h3>
-                <button
-                  onClick={() => {
-                    setShowPhotoPreview(false);
-                    setCapturedPhoto(null);
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+      {/* =================== MODAIS DE FOTO REFATORADOS =================== */}
+      
+      {/* Modal de Opções de Foto */}
+      {photoState.showOptions && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl transform transition-all">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Camera className="w-8 h-8 text-red-600" />
               </div>
-              
-              {capturedPhoto && (
-                <div className="space-y-4">
-                  <div className="w-full bg-gray-100 rounded-lg overflow-hidden">
-                    <img 
-                      src={capturedPhoto} 
-                      alt="Foto capturada" 
-                      className="w-full h-auto max-h-80 object-contain"
-                    />
-                  </div>
-                  
-                  <div className="flex flex-col space-y-2">
-                    <button
-                      onClick={handleSavePhoto}
-                      className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2"
-                    >
-                      <Check className="w-5 h-5" />
-                      <span>Usar Esta Foto</span>
-                    </button>
-                    
-                    <button
-                      onClick={handleRetakePhoto}
-                      className="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2"
-                    >
-                      <RotateCcw className="w-5 h-5" />
-                      <span>Tirar Outra Foto</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Adicionar Foto</h3>
+              <p className="text-sm text-gray-600">Como você gostaria de adicionar a foto do ativo?</p>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal para opções de câmera - ATUALIZADO */}
-      {showCameraOptions && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
-            <h4 className="text-lg font-semibold mb-4 text-center">Adicionar Foto do Ativo</h4>
-            <p className="text-sm text-gray-600 mb-6 text-center">Como você gostaria de adicionar a foto?</p>
             
             <div className="space-y-3">
               <button
                 onClick={handleTakePhoto}
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-4 px-4 rounded-lg flex items-center justify-center space-x-3 transition-colors"
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-4 px-4 rounded-xl flex items-center justify-center space-x-3 transition-all transform hover:scale-105 shadow-lg"
               >
                 <Camera className="w-6 h-6" />
                 <div className="text-left">
-                  <div className="font-medium">Abrir Câmera</div>
-                  <div className="text-sm opacity-90">Tirar nova foto</div>
+                  <div className="font-semibold">📷 Tirar Foto</div>
+                  <div className="text-sm opacity-90">Usar câmera do celular</div>
                 </div>
               </button>
               
               <button
                 onClick={handleSelectFromGallery}
-                className="w-full bg-green-500 hover:bg-green-600 text-white py-4 px-4 rounded-lg flex items-center justify-center space-x-3 transition-colors"
+                className="w-full bg-green-500 hover:bg-green-600 text-white py-4 px-4 rounded-xl flex items-center justify-center space-x-3 transition-all transform hover:scale-105 shadow-lg"
               >
                 <Image className="w-6 h-6" />
                 <div className="text-left">
-                  <div className="font-medium">Galeria</div>
+                  <div className="font-semibold">🖼️ Galeria</div>
                   <div className="text-sm opacity-90">Escolher foto existente</div>
                 </div>
               </button>
               
               <button
-                onClick={() => setShowCameraOptions(false)}
-                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg transition-colors"
+                onClick={closeAllPhotoModals}
+                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-xl transition-all"
               >
-                Cancelar
+                ❌ Cancelar
               </button>
             </div>
             
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <div className="mt-6 p-3 bg-blue-50 rounded-xl border border-blue-200">
               <div className="flex items-start space-x-2">
                 <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="text-xs text-blue-800">
-                  <p className="font-medium">Dica:</p>
-                  <p>Para melhor qualidade, tire a foto em boa iluminação e mantenha o celular estável.</p>
+                  <p className="font-medium">💡 Dica:</p>
+                  <p>Permita o acesso à câmera quando solicitado. Use boa iluminação para melhor qualidade.</p>
                 </div>
               </div>
             </div>
@@ -1771,28 +1277,76 @@ const AssetControlSystem = () => {
         </div>
       )}
 
-      {/* Loading para captura de foto */}
-      {isCapturingPhoto && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 text-center">
-            <div className="w-12 h-12 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Processando foto...</p>
+      {/* Modal de Preview da Foto */}
+      {photoState.showPreview && photoState.capturedPhoto && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Preview da Foto</h3>
+                <button
+                  onClick={closeAllPhotoModals}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="w-full bg-gray-100 rounded-xl overflow-hidden border-2 border-gray-200">
+                  <img 
+                    src={photoState.capturedPhoto} 
+                    alt="Foto capturada" 
+                    className="w-full h-auto max-h-80 object-contain"
+                  />
+                </div>
+                
+                <div className="flex flex-col space-y-3">
+                  <button
+                    onClick={confirmPhoto}
+                    className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-4 rounded-xl flex items-center justify-center space-x-2 transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    <Check className="w-5 h-5" />
+                    <span className="font-semibold">✅ Usar Esta Foto</span>
+                  </button>
+                  
+                  <button
+                    onClick={retakePhoto}
+                    className="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-xl flex items-center justify-center space-x-2 transition-all"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    <span>🔄 Tirar Outra Foto</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Error message for photo */}
-      {photoError && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm">
+      {/* Loading de Processamento */}
+      {photoState.isProcessing && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-2xl p-8 text-center shadow-2xl">
+            <div className="w-16 h-16 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Processando Foto</h3>
+            <p className="text-gray-600">Aguarde um momento...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Erro de Foto */}
+      {photoState.error && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white p-4 rounded-xl shadow-2xl z-[9999] max-w-sm animate-pulse">
           <div className="flex items-start space-x-2">
             <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="font-medium">Erro na foto</p>
-              <p className="text-sm">{photoError}</p>
+              <p className="font-semibold">❌ Erro na Foto</p>
+              <p className="text-sm">{photoState.error}</p>
             </div>
             <button
-              onClick={() => setPhotoError('')}
-              className="ml-auto"
+              onClick={() => setPhotoState(prev => ({ ...prev, error: '' }))}
+              className="ml-auto hover:bg-red-600 rounded p-1"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1800,7 +1354,7 @@ const AssetControlSystem = () => {
         </div>
       )}
 
-      {/* Modal de cadastro de ativo - ATUALIZADO COM FOTO */}
+      {/* Modal de cadastro de ativo - COM FOTO FUNCIONAL */}
       {showAssetForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1814,6 +1368,7 @@ const AssetControlSystem = () => {
                     setShowAssetForm(false);
                     setEditingAsset(null);
                     resetAssetForm();
+                    closeAllPhotoModals();
                   }}
                   className="p-2 hover:bg-gray-100 rounded-lg"
                 >
@@ -1903,32 +1458,32 @@ const AssetControlSystem = () => {
                 </div>
                 
                 <div className="space-y-4">
-                  {/* Seção de Foto - NOVA */}
+                  {/* SEÇÃO DE FOTO - FUNCIONAL */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Foto do Ativo</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">📷 Foto do Ativo</label>
                     <div className="space-y-3">
                       {assetForm.photo ? (
                         <div className="relative">
-                          <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden border">
+                          <div className="w-full h-48 bg-gray-100 rounded-xl overflow-hidden border-2 border-gray-200 shadow-sm">
                             <img 
                               src={assetForm.photo} 
                               alt="Foto do ativo" 
                               className="w-full h-full object-cover"
                             />
                           </div>
-                          <div className="flex space-x-2 mt-2">
+                          <div className="flex space-x-2 mt-3">
                             <button
                               type="button"
-                              onClick={() => setShowCameraOptions(true)}
-                              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center justify-center space-x-2 text-sm"
+                              onClick={openPhotoOptions}
+                              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 text-sm font-medium transition-colors"
                             >
                               <Camera className="w-4 h-4" />
-                              <span>Alterar Foto</span>
+                              <span>📷 Alterar Foto</span>
                             </button>
                             <button
                               type="button"
-                              onClick={handleRemovePhoto}
-                              className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center"
+                              onClick={removePhotoFromForm}
+                              className="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-lg flex items-center justify-center transition-colors"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1936,15 +1491,20 @@ const AssetControlSystem = () => {
                         </div>
                       ) : (
                         <div 
-                          onClick={() => setShowCameraOptions(true)}
-                          className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-red-400 hover:bg-red-50 transition-colors"
+                          onClick={openPhotoOptions}
+                          className="w-full h-48 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-red-400 hover:bg-red-50 transition-all duration-200 bg-gray-50"
                         >
-                          <Camera className="w-12 h-12 text-gray-400 mb-2" />
-                          <p className="text-gray-500 text-center">
-                            <span className="font-medium">Clique para adicionar foto</span>
-                            <br />
-                            <span className="text-sm">Tire uma foto ou selecione da galeria</span>
-                          </p>
+                          <div className="text-center p-6">
+                            <Camera className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-600 font-medium">📷 Clique para adicionar foto</p>
+                            <p className="text-sm text-gray-500 mt-1">
+                              Tire uma foto ou escolha da galeria
+                            </p>
+                            <div className="mt-3 inline-flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                              <Camera className="w-3 h-3 mr-1" />
+                              Recomendado
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -2003,14 +1563,15 @@ const AssetControlSystem = () => {
                     setShowAssetForm(false);
                     setEditingAsset(null);
                     resetAssetForm();
+                    closeAllPhotoModals();
                   }}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSaveAsset}
-                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                 >
                   {editingAsset ? 'Atualizar' : 'Salvar'}
                 </button>
@@ -2020,7 +1581,6 @@ const AssetControlSystem = () => {
         </div>
       )}
 
-      {/* Outros modais permanecem iguais... */}
       {/* Modal de configuração de etiquetas */}
       {showLabelModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -2143,162 +1703,6 @@ const AssetControlSystem = () => {
                   Gerar Etiquetas
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de preview das etiquetas */}
-      {showLabelPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold">Preview das Etiquetas ({generatedLabels.length})</h3>
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={downloadLabelsAsPDF}
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Salvar PDF</span>
-                  </button>
-                  <button
-                    onClick={printLabels}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-                  >
-                    <Printer className="w-4 h-4" />
-                    <span>Imprimir</span>
-                  </button>
-                  <button
-                    onClick={() => setShowLabelPreview(false)}
-                    className="p-2 hover:bg-gray-100 rounded-lg"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-              
-              <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <QrCode className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-blue-900">Instruções para Impressão</h4>
-                    <ul className="text-sm text-blue-800 mt-2 space-y-1">
-                      <li>• Configure sua impressora para papel A4 ou papel de etiquetas</li>
-                      <li>• Ajuste as margens para "Mínima" ou "Sem margem"</li>
-                      <li>• Use qualidade de impressão "Alta" para melhor legibilidade do QR Code</li>
-                      <li>• Teste com uma página antes de imprimir todas as etiquetas</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              
-              <div 
-                ref={printRef}
-                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 p-4 bg-gray-50 rounded-lg"
-              >
-                {generatedLabels.map((label, index) => (
-                  <div key={index} className="flex justify-center">
-                    <LabelComponent label={label} template={label.template} />
-                  </div>
-                ))}
-              </div>
-              
-              <div className="flex justify-between items-center mt-6">
-                <div className="text-sm text-gray-600">
-                  Total: {generatedLabels.length} etiqueta(s) • Template: {labelTemplates[labelSettings.template]?.name}
-                </div>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => {
-                      setShowLabelPreview(false);
-                      setShowLabelModal(true);
-                    }}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                  >
-                    Voltar
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowLabelPreview(false);
-                      setSelectedAssets([]);
-                      setGeneratedLabels([]);
-                    }}
-                    className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
-                  >
-                    Fechar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Restante dos modais... */}
-      {/* Modal de importação Excel */}
-      {showExcelImport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-2xl">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold">Importar Ativos via Excel</h3>
-                <button
-                  onClick={() => setShowExcelImport(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              {!isImporting ? (
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <FileText className="w-16 h-16 text-red-600 mx-auto mb-4" />
-                    <h4 className="text-lg font-semibold mb-2">Importar seus ativos em massa</h4>
-                    <p className="text-gray-600">
-                      Faça upload de um arquivo Excel (.xlsx ou .csv) com os dados dos seus ativos
-                    </p>
-                  </div>
-                  
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button
-                      onClick={downloadExcelTemplate}
-                      className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2"
-                    >
-                      <Download className="w-5 h-5" />
-                      <span>Baixar Template</span>
-                    </button>
-                    
-                    <label className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg flex items-center justify-center space-x-2 cursor-pointer">
-                      <Upload className="w-5 h-5" />
-                      <span>Selecionar Arquivo</span>
-                      <input
-                        type="file"
-                        accept=".xlsx,.xls,.csv"
-                        onChange={handleExcelImport}
-                        ref={excelInputRef}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
-                  <h4 className="text-lg font-semibold mb-2">Processando arquivo...</h4>
-                  <p className="text-gray-600 mb-4">Importando seus ativos, aguarde...</p>
-                  
-                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                    <div
-                      className="bg-red-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${importProgress}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-sm text-gray-500">{importProgress}% concluído</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
