@@ -1,7 +1,9 @@
 <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-red-500 rounded-full transition-all duration-300"
-                              style={{ widthimport React, { useState, useRef, useEffect } from 'react';
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>import React, { useState, useRef, useEffect } from 'react';
 import { 
   Camera, Plus, Edit, Trash2, Building, Package, Search, Eye, Save, Database,
   BarChart3, MapPin, Calendar, DollarSign, Filter, X, Home, Settings,
@@ -1637,7 +1639,7 @@ const AssetControlSystem = () => {
                       type="text"
                       value={assetForm.code}
                       onChange={(e) => setAssetForm({...assetForm, code: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                       placeholder="Ex: NB001"
                     />
                   </div>
@@ -1647,7 +1649,7 @@ const AssetControlSystem = () => {
                     <select
                       value={assetForm.category}
                       onChange={(e) => setAssetForm({...assetForm, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                     >
                       <option value="">Selecione uma categoria</option>
                       {categories.map(cat => (
@@ -1661,7 +1663,7 @@ const AssetControlSystem = () => {
                     <select
                       value={assetForm.status}
                       onChange={(e) => setAssetForm({...assetForm, status: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                     >
                       {statuses.map(status => (
                         <option key={status} value={status}>{status}</option>
@@ -1675,7 +1677,7 @@ const AssetControlSystem = () => {
                       type="text"
                       value={assetForm.serialNumber}
                       onChange={(e) => setAssetForm({...assetForm, serialNumber: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                       placeholder="Ex: SN123456789"
                     />
                   </div>
@@ -1686,7 +1688,7 @@ const AssetControlSystem = () => {
                       type="text"
                       value={assetForm.supplier}
                       onChange={(e) => setAssetForm({...assetForm, supplier: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                       placeholder="Ex: Dell Brasil"
                     />
                   </div>
@@ -1698,7 +1700,7 @@ const AssetControlSystem = () => {
                     <select
                       value={assetForm.floorId}
                       onChange={(e) => setAssetForm({...assetForm, floorId: e.target.value, roomId: ''})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                     >
                       <option value="">Selecione um andar</option>
                       {floors.map(floor => (
@@ -1712,7 +1714,7 @@ const AssetControlSystem = () => {
                     <select
                       value={assetForm.roomId}
                       onChange={(e) => setAssetForm({...assetForm, roomId: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                       disabled={!assetForm.floorId}
                     >
                       <option value="">Selecione uma sala</option>
@@ -1728,7 +1730,7 @@ const AssetControlSystem = () => {
                       type="date"
                       value={assetForm.acquisitionDate}
                       onChange={(e) => setAssetForm({...assetForm, acquisitionDate: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
                   </div>
                   
@@ -1739,7 +1741,7 @@ const AssetControlSystem = () => {
                       step="0.01"
                       value={assetForm.value}
                       onChange={(e) => setAssetForm({...assetForm, value: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                       placeholder="Ex: 2500.00"
                     />
                   </div>
@@ -1750,7 +1752,7 @@ const AssetControlSystem = () => {
                       type="number"
                       value={assetForm.warranty}
                       onChange={(e) => setAssetForm({...assetForm, warranty: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                       placeholder="Ex: 36"
                     />
                   </div>
@@ -1881,7 +1883,7 @@ const AssetControlSystem = () => {
                     type="text"
                     value={roomForm.name}
                     onChange={(e) => setRoomForm({...roomForm, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                     placeholder="Ex: Sala de Reuniões A"
                   />
                 </div>
@@ -1891,7 +1893,7 @@ const AssetControlSystem = () => {
                   <select
                     value={roomForm.floorId}
                     onChange={(e) => setRoomForm({...roomForm, floorId: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                   >
                     <option value="">Selecione um andar</option>
                     {floors.map(floor => (
@@ -1907,7 +1909,7 @@ const AssetControlSystem = () => {
                       type="number"
                       value={roomForm.capacity}
                       onChange={(e) => setRoomForm({...roomForm, capacity: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                       placeholder="Ex: 10"
                     />
                   </div>
@@ -1919,7 +1921,7 @@ const AssetControlSystem = () => {
                       step="0.01"
                       value={roomForm.area}
                       onChange={(e) => setRoomForm({...roomForm, area: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                       placeholder="Ex: 25.5"
                     />
                   </div>
