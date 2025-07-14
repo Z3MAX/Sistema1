@@ -1,4 +1,4 @@
-// src/config/database.js - VERSÃO COM DEBUG DETALHADO
+// src/config/database.js - VERSÃO ATUALIZADA PARA NETLIFY + NEON
 import { neon } from '@neondatabase/serverless';
 
 // 🔧 DEBUG: Verificar todas as possíveis variáveis de ambiente
@@ -6,45 +6,46 @@ console.log('🔍 === DEBUG DATABASE CONNECTION ===');
 console.log('Environment mode:', import.meta.env.MODE);
 console.log('Environment variables available:', Object.keys(import.meta.env));
 
-// Verificar diferentes variáveis possíveis
+// Verificar diferentes variáveis possíveis (em ordem de prioridade)
 const possibleVars = [
   'VITE_DATABASE_URL',
+  'NETLIFY_DATABASE_URL',
   'VITE_NEON_DATABASE_URL', 
   'DATABASE_URL',
-  'NETLIFY_DATABASE_URL',
   'NEON_DATABASE_URL'
 ];
 
 possibleVars.forEach(varName => {
   const value = import.meta.env[varName];
-  console.log(`${varName}:`, value ? 'CONFIGURADA' : 'NÃO ENCONTRADA');
+  console.log(`${varName}:`, value ? '✅ CONFIGURADA' : '❌ NÃO ENCONTRADA');
   if (value) {
     // Mostrar apenas parte da string por segurança
-    const masked = value.substring(0, 20) + '...' + value.substring(value.length - 20);
+    const masked = value.substring(0, 30) + '...' + value.substring(value.length - 20);
     console.log(`  -> ${masked}`);
   }
 });
 
-// Tentar obter a URL do banco
+// Tentar obter a URL do banco (prioridade para VITE_ em builds)
 const DATABASE_URL = 
   import.meta.env.VITE_DATABASE_URL || 
+  import.meta.env.NETLIFY_DATABASE_URL ||
   import.meta.env.VITE_NEON_DATABASE_URL || 
   import.meta.env.DATABASE_URL ||
-  import.meta.env.NETLIFY_DATABASE_URL ||
   import.meta.env.NEON_DATABASE_URL;
 
-console.log('🔗 Selected DATABASE_URL:', DATABASE_URL ? 'FOUND' : 'NOT FOUND');
+console.log('🔗 Selected DATABASE_URL:', DATABASE_URL ? '✅ ENCONTRADA' : '❌ NÃO ENCONTRADA');
 
 if (DATABASE_URL) {
-  console.log('🔗 Database URL preview:', DATABASE_URL.substring(0, 30) + '...');
-  console.log('🔗 Contains required parts:');
-  console.log('  - postgresql://:', DATABASE_URL.includes('postgresql://'));
-  console.log('  - neondb_owner:', DATABASE_URL.includes('neondb_owner'));
-  console.log('  - pooler:', DATABASE_URL.includes('pooler'));
-  console.log('  - sslmode:', DATABASE_URL.includes('sslmode'));
+  console.log('🔗 Database URL preview:', DATABASE_URL.substring(0, 40) + '...');
+  console.log('🔗 URL validation:');
+  console.log('  - Starts with postgresql://:', DATABASE_URL.startsWith('postgresql://'));
+  console.log('  - Contains neondb_owner:', DATABASE_URL.includes('neondb_owner'));
+  console.log('  - Contains pooler:', DATABASE_URL.includes('pooler'));
+  console.log('  - Contains sslmode:', DATABASE_URL.includes('sslmode'));
+  console.log('  - Contains neon domain:', DATABASE_URL.includes('aws.neon.tech'));
 } else {
   console.error('❌ NO DATABASE_URL FOUND!');
-  console.log('🔧 Available env vars:', Object.keys(import.meta.env));
+  console.log('🔧 Will run in offline mode');
 }
 
 // Inicializar conexão apenas se houver URL
@@ -53,7 +54,7 @@ const sql = DATABASE_URL ? neon(DATABASE_URL) : null;
 if (sql) {
   console.log('✅ Neon client created successfully');
 } else {
-  console.error('❌ Failed to create Neon client - no DATABASE_URL');
+  console.log('⚠️ No Neon client - running in offline mode');
 }
 
 // Função melhorada para testar conexão
@@ -61,25 +62,23 @@ const testConnection = async () => {
   console.log('🔄 === STARTING CONNECTION TEST ===');
   
   if (!DATABASE_URL) {
-    console.error('❌ Cannot test connection - no DATABASE_URL');
-    console.log('📱 Running in offline mode');
+    console.log('⚠️ No DATABASE_URL - running in offline mode');
     return false;
   }
 
   if (!sql) {
-    console.error('❌ Cannot test connection - no SQL client');
-    console.log('📱 Running in offline mode');
+    console.log('⚠️ No SQL client - running in offline mode');
     return false;
   }
 
   try {
     console.log('🔄 Testing Neon connection...');
-    console.log('🔄 Using URL:', DATABASE_URL.substring(0, 30) + '...');
+    console.log('🔄 Using URL:', DATABASE_URL.substring(0, 40) + '...');
     
-    // Teste com timeout mais longo
-    const testPromise = sql`SELECT 1 as test, NOW() as timestamp, current_database() as db_name`;
+    // Teste com timeout de 10 segundos
+    const testPromise = sql`SELECT 1 as test, NOW() as timestamp, current_database() as db_name, current_user as user_name`;
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)
+      setTimeout(() => reject(new Error('Connection timeout after 10 seconds')), 10000)
     );
     
     const result = await Promise.race([testPromise, timeoutPromise]);
@@ -87,6 +86,7 @@ const testConnection = async () => {
     console.log('✅ Connection successful!');
     console.log('📊 Test result:', result[0]);
     console.log('🏢 Database name:', result[0].db_name);
+    console.log('👤 User name:', result[0].user_name);
     console.log('⏰ Server time:', result[0].timestamp);
     
     return true;
@@ -94,20 +94,18 @@ const testConnection = async () => {
     console.error('❌ Connection failed!');
     console.error('❌ Error type:', error.constructor.name);
     console.error('❌ Error message:', error.message);
-    console.error('❌ Error code:', error.code);
-    console.error('❌ Full error:', error);
     
     // Diagnóstico específico por tipo de erro
     if (error.message.includes('timeout')) {
-      console.log('🔧 DIAGNOSIS: Connection timeout - possible network issue');
-    } else if (error.message.includes('authentication')) {
-      console.log('🔧 DIAGNOSIS: Authentication failed - check credentials');
+      console.log('🔧 DIAGNOSIS: Connection timeout - check network or Neon status');
+    } else if (error.message.includes('authentication') || error.message.includes('password')) {
+      console.log('🔧 DIAGNOSIS: Authentication failed - check credentials in connection string');
     } else if (error.message.includes('database') && error.message.includes('does not exist')) {
-      console.log('🔧 DIAGNOSIS: Database not found - check database name');
-    } else if (error.message.includes('connection')) {
-      console.log('🔧 DIAGNOSIS: Connection refused - check host/port');
+      console.log('🔧 DIAGNOSIS: Database not found - check database name in connection string');
+    } else if (error.message.includes('connection') || error.message.includes('refused')) {
+      console.log('🔧 DIAGNOSIS: Connection refused - check host/port in connection string');
     } else {
-      console.log('🔧 DIAGNOSIS: Unknown error - check logs above');
+      console.log('🔧 DIAGNOSIS: Unknown error - check Neon project status');
     }
     
     console.log('📱 Falling back to offline mode');
@@ -115,7 +113,7 @@ const testConnection = async () => {
   }
 };
 
-// Função para criar tabelas com debug
+// Função para criar tabelas com debug melhorado
 const createTables = async () => {
   console.log('🔄 === STARTING TABLE CREATION ===');
   
@@ -219,7 +217,7 @@ const createTables = async () => {
       }
     }
 
-    // Criar índices
+    // Criar índices para performance
     console.log('📝 Creating indexes...');
     const indexes = [
       'CREATE INDEX IF NOT EXISTS idx_laptops_user_id ON laptops(user_id)',
@@ -227,7 +225,8 @@ const createTables = async () => {
       'CREATE INDEX IF NOT EXISTS idx_laptops_status ON laptops(status)',
       'CREATE INDEX IF NOT EXISTS idx_floors_user_id ON floors(user_id)',
       'CREATE INDEX IF NOT EXISTS idx_rooms_user_id ON rooms(user_id)',
-      'CREATE INDEX IF NOT EXISTS idx_rooms_floor_id ON rooms(floor_id)'
+      'CREATE INDEX IF NOT EXISTS idx_rooms_floor_id ON rooms(floor_id)',
+      'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)'
     ];
 
     for (const indexSql of indexes) {
@@ -246,8 +245,7 @@ const createTables = async () => {
     console.error('❌ Error details:', {
       message: error.message,
       code: error.code,
-      severity: error.severity,
-      position: error.position
+      severity: error.severity
     });
     return false;
   }
@@ -344,7 +342,7 @@ const insertInitialData = async (userId) => {
   }
 };
 
-// Função para criar dados offline
+// Função para criar dados offline (fallback)
 const createOfflineInitialData = (userId) => {
   console.log('📱 === CREATING OFFLINE INITIAL DATA ===');
   
@@ -501,7 +499,13 @@ const getConnectionStatus = () => {
     mode: import.meta.env.MODE || 'unknown',
     urlSource: DATABASE_URL ? 'configured' : 'none',
     environment: import.meta.env.MODE,
-    allEnvVars: Object.keys(import.meta.env)
+    variables: {
+      VITE_DATABASE_URL: !!import.meta.env.VITE_DATABASE_URL,
+      NETLIFY_DATABASE_URL: !!import.meta.env.NETLIFY_DATABASE_URL,
+      VITE_NEON_DATABASE_URL: !!import.meta.env.VITE_NEON_DATABASE_URL,
+      DATABASE_URL: !!import.meta.env.DATABASE_URL,
+      NEON_DATABASE_URL: !!import.meta.env.NEON_DATABASE_URL
+    }
   };
   
   console.log('📊 Connection status:', status);
@@ -513,6 +517,7 @@ console.log('🔄 === DATABASE MODULE INITIALIZED ===');
 console.log('Database URL found:', !!DATABASE_URL);
 console.log('SQL client created:', !!sql);
 console.log('Ready for connections:', isDatabaseAvailable());
+console.log('Connection status:', getConnectionStatus());
 console.log('===========================================');
 
 // Exportar tudo
