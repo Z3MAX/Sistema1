@@ -27,55 +27,48 @@ const AuthProvider = ({ children }) => {
   }, []);
 
   const initializeApp = async () => {
+    console.log('🚀 Iniciando aplicação...');
+    setLoading(true);
+    
     try {
-      setLoading(true);
-      console.log('🚀 Iniciando aplicação...');
-      
-      // Testar conexão com o banco
-      console.log('🔄 Tentando conectar com o banco...');
-      const connected = await testConnection();
-      
-      if (!connected) {
-        console.warn('⚠️ Falha na conexão com o banco, mas continuando...');
-        // Não bloquear a aplicação se o banco não conectar
-        setIsInitialized(true);
-        setLoading(false);
-        return;
-      }
-      
-      // Criar tabelas se necessário
-      console.log('🔄 Criando tabelas...');
-      await createTables();
-      
-      // Verificar se há usuário salvo no localStorage
-      console.log('🔄 Verificando usuário salvo...');
+      // Verificar usuário salvo primeiro (sem depender do banco)
       const savedUser = localStorage.getItem('dellLaptopUser');
       if (savedUser) {
         try {
           const userData = JSON.parse(savedUser);
           console.log('👤 Usuário encontrado no localStorage:', userData.email);
-          const currentUser = await authService.getUserById(userData.id);
-          if (currentUser) {
-            setUser(currentUser);
-            console.log('✅ Usuário logado automaticamente');
-          } else {
-            console.log('🗑️ Usuário não encontrado no banco, removendo do localStorage');
-            localStorage.removeItem('dellLaptopUser');
-          }
+          setUser(userData); // Setar o usuário diretamente do localStorage
         } catch (error) {
-          console.error('❌ Erro ao verificar usuário salvo:', error);
+          console.error('❌ Erro ao ler usuário do localStorage:', error);
           localStorage.removeItem('dellLaptopUser');
         }
       }
-      
-      setIsInitialized(true);
-      console.log('✅ Aplicação inicializada com sucesso!');
+
+      // Tentar inicializar banco em background (sem bloquear a UI)
+      setTimeout(async () => {
+        try {
+          console.log('🔄 Tentando conectar com o banco em background...');
+          const connected = await testConnection();
+          
+          if (connected) {
+            console.log('✅ Banco conectado! Criando tabelas...');
+            await createTables();
+            console.log('✅ Sistema totalmente inicializado!');
+          } else {
+            console.log('⚠️ Banco não conectado, funcionando em modo offline');
+          }
+        } catch (error) {
+          console.error('❌ Erro na inicialização do banco:', error);
+        }
+      }, 100); // Executar após 100ms para não bloquear a UI
+
     } catch (error) {
-      console.error('❌ Erro ao inicializar aplicação:', error);
-      // Mesmo com erro, permitir que a aplicação continue
-      setIsInitialized(true);
+      console.error('❌ Erro na inicialização:', error);
     } finally {
+      // Sempre finalizar o loading
       setLoading(false);
+      setIsInitialized(true);
+      console.log('✅ Aplicação pronta para uso!');
     }
   };
 
@@ -1631,31 +1624,60 @@ const DellLaptopControlSystem = () => {
 
 // =================== COMPONENTE PRINCIPAL COM PROVIDER ===================
 const App = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+};
+
+const AppContent = () => {
   const { user, loading, isInitialized } = useAuth();
 
-  if (loading || !isInitialized) {
+  // Se ainda está carregando e não inicializou, mostrar loading
+  if (loading && !isInitialized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-8"></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Inicializando Sistema</h2>
-          <p className="text-gray-600">Conectando com o banco de dados...</p>
+          <p className="text-gray-600">Preparando aplicação...</p>
+          <div className="mt-8">
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              🔄 Recarregar Página
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Se inicializou mas ainda está carregando algo específico
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Carregando...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  // Se há usuário logado, mostrar sistema principal
+  if (user) {
+    return <DellLaptopControlSystem />;
+  }
+
+  // Se não há usuário, mostrar tela de login
   return (
-    <AuthProvider>
-      {user ? (
-        <DellLaptopControlSystem />
-      ) : (
-        <AuthComponent onLogin={(userData) => {
-          const { login } = useAuth();
-          login(userData);
-        }} />
-      )}
-    </AuthProvider>
+    <AuthComponent onLogin={(userData) => {
+      const { login } = useAuth();
+      login(userData);
+    }} />
   );
 };
 
