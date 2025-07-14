@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 
 // =================== CONFIGURAÇÃO SUPABASE (SIMULADA) ===================
-// Para demo sem Supabase real
 const supabase = {
   auth: {
     getSession: () => Promise.resolve({ data: { session: null } }),
@@ -54,58 +53,25 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar sessão atual
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        await loadProfile(session.user.id);
-      }
-      
-      setLoading(false);
+    // Simular usuário logado automaticamente para demo
+    const mockUser = {
+      id: '1',
+      email: 'admin@dell.com',
+      user_metadata: { name: 'Admin Dell', company: 'Dell Technologies' }
     };
-
-    getInitialSession();
-
-    // Escutar mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await loadProfile(session.user.id);
-        } else {
-          setProfile(null);
-        }
-        
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    
+    setUser(mockUser);
+    setProfile({
+      id: '1',
+      name: 'Admin Dell',
+      company: 'Dell Technologies'
+    });
+    setLoading(false);
   }, []);
 
-  const loadProfile = async (userId) => {
-    try {
-      // Simulação de dados de perfil
-      const mockProfile = {
-        id: userId,
-        name: 'Usuário Demo',
-        company: 'Empresa Exemplo'
-      };
-      setProfile(mockProfile);
-    } catch (error) {
-      console.error('Erro ao carregar perfil:', error);
-    }
-  };
-
-  // Registrar usuário (simulado)
   const signUp = async (email, password, name, company = '') => {
     try {
       setLoading(true);
-      
-      // Simulação de registro
       const mockUser = {
         id: Date.now().toString(),
         email: email,
@@ -113,42 +79,36 @@ const AuthProvider = ({ children }) => {
       };
       
       setUser(mockUser);
-      await loadProfile(mockUser.id);
+      setProfile({ id: mockUser.id, name, company });
       
       return { success: true, data: { user: mockUser } };
     } catch (error) {
-      console.error('Erro no registro:', error);
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }
   };
 
-  // Fazer login (simulado)
   const signIn = async (email, password) => {
     try {
       setLoading(true);
-      
-      // Simulação de login
       const mockUser = {
         id: Date.now().toString(),
         email: email,
-        user_metadata: { name: 'Usuário Demo', company: 'Empresa Exemplo' }
+        user_metadata: { name: 'Admin Dell', company: 'Dell Technologies' }
       };
       
       setUser(mockUser);
-      await loadProfile(mockUser.id);
+      setProfile({ id: mockUser.id, name: 'Admin Dell', company: 'Dell Technologies' });
       
       return { success: true, data: { user: mockUser } };
     } catch (error) {
-      console.error('Erro no login:', error);
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }
   };
 
-  // Fazer logout (simulado)
   const signOut = async () => {
     try {
       setLoading(true);
@@ -156,7 +116,6 @@ const AuthProvider = ({ children }) => {
       setProfile(null);
       return { success: true };
     } catch (error) {
-      console.error('Erro no logout:', error);
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
@@ -169,8 +128,7 @@ const AuthProvider = ({ children }) => {
     loading,
     signUp,
     signIn,
-    signOut,
-    loadProfile
+    signOut
   };
 
   return (
@@ -182,58 +140,84 @@ const AuthProvider = ({ children }) => {
 
 // =================== SERVIÇOS DE DADOS (SIMULADOS) ===================
 const dataService = {
-  // Dados mock para demonstração
   mockFloors: [
     {
       id: 1,
       name: 'Térreo',
-      description: 'Andar principal',
+      description: 'Recepção e atendimento',
       rooms: [
-        { id: 1, name: 'Recepção', description: 'Área de atendimento', floor_id: 1 },
-        { id: 2, name: 'Sala de Reuniões A', description: 'Para 10 pessoas', floor_id: 1 }
+        { id: 1, name: 'Recepção', description: 'Área de atendimento ao cliente', floor_id: 1 },
+        { id: 2, name: 'Sala de Suporte', description: 'Suporte técnico', floor_id: 1 }
       ]
     },
     {
       id: 2,
       name: '1º Andar',
-      description: 'Escritórios',
+      description: 'Área administrativa',
       rooms: [
-        { id: 3, name: 'Escritório 1', description: 'Área administrativa', floor_id: 2 },
-        { id: 4, name: 'Escritório 2', description: 'Área comercial', floor_id: 2 }
+        { id: 3, name: 'Escritório Admin', description: 'Administração', floor_id: 2 },
+        { id: 4, name: 'Sala de TI', description: 'Departamento de TI', floor_id: 2 }
       ]
     }
   ],
 
-  mockAssets: [
+  mockLaptops: [
     {
       id: 1,
-      name: 'Notebook Dell',
-      code: 'NB-001',
-      category: 'Informática',
-      description: 'Notebook para desenvolvimento',
-      value: 3500.00,
-      status: 'Ativo',
+      model: 'Dell Inspiron 15 3000',
+      serial_number: 'DL3000-001',
+      service_tag: 'BXPYQ3',
+      processor: 'Intel Core i5-1135G7',
+      ram: '8GB DDR4',
+      storage: '256GB SSD',
+      graphics: 'Intel Iris Xe',
+      screen_size: '15.6"',
+      color: 'Preto',
+      warranty_end: '2025-12-31',
+      condition: 'Excelente',
+      condition_score: 95,
+      status: 'Disponível',
       floor_id: 1,
       room_id: 1,
       photo: null,
-      supplier: 'Dell Brasil',
-      serial_number: 'DL001',
+      damage_analysis: null,
+      purchase_date: '2024-01-15',
+      purchase_price: 2500.00,
+      assigned_user: null,
+      notes: 'Novo na caixa',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
     {
       id: 2,
-      name: 'Mesa de Escritório',
-      code: 'MB-001',
-      category: 'Móveis',
-      description: 'Mesa para escritório',
-      value: 800.00,
-      status: 'Ativo',
+      model: 'Dell XPS 13 9310',
+      serial_number: 'DLXPS-002',
+      service_tag: 'HWPYQ4',
+      processor: 'Intel Core i7-1165G7',
+      ram: '16GB LPDDR4x',
+      storage: '512GB SSD',
+      graphics: 'Intel Iris Xe',
+      screen_size: '13.3"',
+      color: 'Prata',
+      warranty_end: '2025-08-15',
+      condition: 'Bom',
+      condition_score: 80,
+      status: 'Em Uso',
       floor_id: 2,
       room_id: 3,
       photo: null,
-      supplier: 'Móveis XYZ',
-      serial_number: 'MX001',
+      damage_analysis: {
+        overall_condition: 'Bom',
+        damage_score: 20,
+        damages: [
+          { type: 'Riscos leves', location: 'Tampa', severity: 'Leve' },
+          { type: 'Desgaste', location: 'Teclado', severity: 'Moderado' }
+        ]
+      },
+      purchase_date: '2024-02-20',
+      purchase_price: 4200.00,
+      assigned_user: 'João Silva',
+      notes: 'Pequenos sinais de uso',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
@@ -243,11 +227,9 @@ const dataService = {
   floors: {
     async getAll() {
       try {
-        // Simular delay de rede
         await new Promise(resolve => setTimeout(resolve, 500));
         return { success: true, data: dataService.mockFloors };
       } catch (error) {
-        console.error('Erro ao buscar andares:', error);
         return { success: false, error: error.message };
       }
     },
@@ -263,7 +245,6 @@ const dataService = {
         dataService.mockFloors.push(newFloor);
         return { success: true, data: newFloor };
       } catch (error) {
-        console.error('Erro ao criar andar:', error);
         return { success: false, error: error.message };
       }
     },
@@ -278,7 +259,6 @@ const dataService = {
         }
         throw new Error('Andar não encontrado');
       } catch (error) {
-        console.error('Erro ao atualizar andar:', error);
         return { success: false, error: error.message };
       }
     },
@@ -293,7 +273,6 @@ const dataService = {
         }
         throw new Error('Andar não encontrado');
       } catch (error) {
-        console.error('Erro ao deletar andar:', error);
         return { success: false, error: error.message };
       }
     }
@@ -317,7 +296,6 @@ const dataService = {
         
         return { success: true, data: newRoom };
       } catch (error) {
-        console.error('Erro ao criar sala:', error);
         return { success: false, error: error.message };
       }
     },
@@ -336,7 +314,6 @@ const dataService = {
         }
         throw new Error('Sala não encontrada');
       } catch (error) {
-        console.error('Erro ao atualizar sala:', error);
         return { success: false, error: error.message };
       }
     },
@@ -355,37 +332,34 @@ const dataService = {
         }
         throw new Error('Sala não encontrada');
       } catch (error) {
-        console.error('Erro ao deletar sala:', error);
         return { success: false, error: error.message };
       }
     }
   },
 
-  // ===== ASSETS =====
-  assets: {
+  // ===== LAPTOPS =====
+  laptops: {
     async getAll() {
       try {
         await new Promise(resolve => setTimeout(resolve, 500));
-        return { success: true, data: dataService.mockAssets };
+        return { success: true, data: dataService.mockLaptops };
       } catch (error) {
-        console.error('Erro ao buscar ativos:', error);
         return { success: false, error: error.message };
       }
     },
 
-    async create(asset) {
+    async create(laptop) {
       try {
         await new Promise(resolve => setTimeout(resolve, 300));
-        const newAsset = {
-          ...asset,
+        const newLaptop = {
+          ...laptop,
           id: Date.now(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
-        dataService.mockAssets.push(newAsset);
-        return { success: true, data: newAsset };
+        dataService.mockLaptops.push(newLaptop);
+        return { success: true, data: newLaptop };
       } catch (error) {
-        console.error('Erro ao criar ativo:', error);
         return { success: false, error: error.message };
       }
     },
@@ -393,18 +367,17 @@ const dataService = {
     async update(id, updates) {
       try {
         await new Promise(resolve => setTimeout(resolve, 300));
-        const assetIndex = dataService.mockAssets.findIndex(a => a.id === id);
-        if (assetIndex >= 0) {
-          dataService.mockAssets[assetIndex] = {
-            ...dataService.mockAssets[assetIndex],
+        const laptopIndex = dataService.mockLaptops.findIndex(l => l.id === id);
+        if (laptopIndex >= 0) {
+          dataService.mockLaptops[laptopIndex] = {
+            ...dataService.mockLaptops[laptopIndex],
             ...updates,
             updated_at: new Date().toISOString()
           };
-          return { success: true, data: dataService.mockAssets[assetIndex] };
+          return { success: true, data: dataService.mockLaptops[laptopIndex] };
         }
-        throw new Error('Ativo não encontrado');
+        throw new Error('Laptop não encontrado');
       } catch (error) {
-        console.error('Erro ao atualizar ativo:', error);
         return { success: false, error: error.message };
       }
     },
@@ -412,37 +385,130 @@ const dataService = {
     async delete(id) {
       try {
         await new Promise(resolve => setTimeout(resolve, 300));
-        const assetIndex = dataService.mockAssets.findIndex(a => a.id === id);
-        if (assetIndex >= 0) {
-          dataService.mockAssets.splice(assetIndex, 1);
+        const laptopIndex = dataService.mockLaptops.findIndex(l => l.id === id);
+        if (laptopIndex >= 0) {
+          dataService.mockLaptops.splice(laptopIndex, 1);
           return { success: true };
         }
-        throw new Error('Ativo não encontrado');
+        throw new Error('Laptop não encontrado');
       } catch (error) {
-        console.error('Erro ao deletar ativo:', error);
         return { success: false, error: error.message };
       }
     },
 
-    async checkCodeExists(code, excludeId = null) {
+    async checkSerialExists(serial, excludeId = null) {
       try {
         await new Promise(resolve => setTimeout(resolve, 200));
-        const exists = dataService.mockAssets.some(a => a.code === code && a.id !== excludeId);
+        const exists = dataService.mockLaptops.some(l => l.serial_number === serial && l.id !== excludeId);
         return { success: true, exists };
       } catch (error) {
-        console.error('Erro ao verificar código:', error);
         return { success: false, error: error.message };
       }
     }
   }
 };
 
-// =================== ÍCONES SVG MELHORADOS ===================
+// =================== SIMULAÇÃO DE ANÁLISE DE IA ===================
+const AIAnalysisService = {
+  async analyzeLaptopDamage(imageData) {
+    // Simular processamento de IA
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Análise simulada baseada em diferentes cenários
+    const scenarios = [
+      {
+        overall_condition: 'Excelente',
+        damage_score: 5,
+        confidence: 98,
+        damages: [],
+        recommendations: [
+          'Laptop em excelente estado',
+          'Continuar com manutenção preventiva regular',
+          'Nenhuma ação imediata necessária'
+        ]
+      },
+      {
+        overall_condition: 'Bom',
+        damage_score: 25,
+        confidence: 92,
+        damages: [
+          { type: 'Riscos superficiais', location: 'Tampa', severity: 'Leve', description: 'Pequenos riscos na superfície da tampa' },
+          { type: 'Desgaste do teclado', location: 'Teclado', severity: 'Leve', description: 'Leve desgaste nas teclas mais usadas' }
+        ],
+        recommendations: [
+          'Estado geral bom com sinais normais de uso',
+          'Considerar limpeza profunda do teclado',
+          'Usar capa protetora para evitar mais riscos'
+        ]
+      },
+      {
+        overall_condition: 'Regular',
+        damage_score: 45,
+        confidence: 89,
+        damages: [
+          { type: 'Riscos profundos', location: 'Tampa', severity: 'Moderado', description: 'Riscos visíveis na tampa traseira' },
+          { type: 'Desgaste acentuado', location: 'Teclado', severity: 'Moderado', description: 'Várias teclas com desgaste visível' },
+          { type: 'Manchas na tela', location: 'Tela', severity: 'Leve', description: 'Algumas manchas na tela LCD' }
+        ],
+        recommendations: [
+          'Laptop precisa de atenção',
+          'Agendar limpeza profissional',
+          'Verificar funcionamento do teclado',
+          'Considerar substituição da tela se manchas piorarem'
+        ]
+      },
+      {
+        overall_condition: 'Ruim',
+        damage_score: 70,
+        confidence: 85,
+        damages: [
+          { type: 'Trincas', location: 'Tela', severity: 'Grave', description: 'Trincas visíveis na tela LCD' },
+          { type: 'Danos estruturais', location: 'Carcaça', severity: 'Grave', description: 'Danos na estrutura da carcaça' },
+          { type: 'Teclas faltando', location: 'Teclado', severity: 'Grave', description: 'Algumas teclas estão faltando' }
+        ],
+        recommendations: [
+          'Laptop necessita reparo urgente',
+          'Substituição da tela necessária',
+          'Verificação completa da estrutura',
+          'Considerar se vale a pena o reparo'
+        ]
+      }
+    ];
+    
+    // Selecionar cenário aleatório para demonstração
+    const randomScenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+    
+    return {
+      success: true,
+      data: {
+        analysis_id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        model_detected: 'Dell Inspiron/XPS Series',
+        ...randomScenario
+      }
+    };
+  }
+};
+
+// =================== ÍCONES SVG ===================
 const Icons = {
+  Laptop: () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h2a2 2 0 002-2z" />
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+      <line x1="8" y1="21" x2="16" y2="21"></line>
+      <line x1="12" y1="17" x2="12" y2="21"></line>
+    </svg>
+  ),
   Camera: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  ),
+  Zap: () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"></polygon>
     </svg>
   ),
   Plus: () => (
@@ -465,11 +531,6 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
     </svg>
   ),
-  Package: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-    </svg>
-  ),
   Search: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -481,11 +542,27 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
     </svg>
   ),
-  Database: () => (
-    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
-      <path d="m3 5 0 14c0 1.6 4 3 9 3s9-1.4 9-3V5"></path>
-      <path d="m3 12c0 1.6 4 3 9 3s9-1.4 9-3"></path>
+  X: () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  ),
+  CheckCircle: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  AlertCircle: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+  ),
+  Clock: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle>
+      <polyline points="12,6 12,12 16,14"></polyline>
     </svg>
   ),
   Home: () => (
@@ -498,78 +575,62 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
     </svg>
   ),
+  Shield: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    </svg>
+  ),
   DollarSign: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
     </svg>
   ),
-  CheckCircle: () => (
-    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  Clock: () => (
-    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10"></circle>
-      <polyline points="12,6 12,12 16,14"></polyline>
-    </svg>
-  ),
-  XCircle: () => (
-    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10"></circle>
-      <line x1="15" y1="9" x2="9" y2="15"></line>
-      <line x1="9" y1="9" x2="15" y2="15"></line>
-    </svg>
-  ),
-  X: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  ),
-  Download: () => (
+  MapPin: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
-  Upload: () => (
+  Cpu: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+      <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+      <rect x="9" y="9" width="6" height="6"></rect>
+      <line x1="9" y1="1" x2="9" y2="4"></line>
+      <line x1="15" y1="1" x2="15" y2="4"></line>
+      <line x1="9" y1="20" x2="9" y2="23"></line>
+      <line x1="15" y1="20" x2="15" y2="23"></line>
+      <line x1="20" y1="9" x2="23" y2="9"></line>
+      <line x1="20" y1="14" x2="23" y2="14"></line>
+      <line x1="1" y1="9" x2="4" y2="9"></line>
+      <line x1="1" y1="14" x2="4" y2="14"></line>
     </svg>
   ),
-  Tag: () => (
+  HardDrive: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+      <line x1="22" y1="12" x2="2" y2="12"></line>
+      <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path>
+      <line x1="6" y1="16" x2="6.01" y2="16"></line>
+      <line x1="10" y1="16" x2="10.01" y2="16"></line>
     </svg>
   ),
-  Image: () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-      <circle cx="8.5" cy="8.5" r="1.5"></circle>
-      <polyline points="21,15 16,10 5,21"></polyline>
-    </svg>
-  ),
-  Check: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <polyline points="20,6 9,17 4,12"></polyline>
-    </svg>
-  ),
-  RotateCcw: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <polyline points="1,4 1,10 7,10"></polyline>
-      <path d="M3.51,15a9,9,0,0,0,13.48,2.55"></path>
-      <path d="M20.49,9A9,9,0,0,0,7,6.54L1,10"></path>
-    </svg>
-  ),
-  AlertCircle: () => (
+  Monitor: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10"></circle>
-      <line x1="12" y1="8" x2="12" y2="12"></line>
-      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+      <line x1="8" y1="21" x2="16" y2="21"></line>
+      <line x1="12" y1="17" x2="12" y2="21"></line>
     </svg>
   ),
   User: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  ),
+  Calendar: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+      <line x1="16" y1="2" x2="16" y2="6"></line>
+      <line x1="8" y1="2" x2="8" y2="6"></line>
+      <line x1="3" y1="10" x2="21" y2="10"></line>
     </svg>
   ),
   LogOut: () => (
@@ -581,907 +642,58 @@ const Icons = {
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l1.5 1.5L5 6L3.5 4.5L5 3zm0 18l1.5-1.5L5 18l-1.5 1.5L5 21zM19 3l-1.5 1.5L19 6l1.5-1.5L19 3zm0 18l-1.5-1.5L19 18l1.5 1.5L19 21zM9 12l3-3 3 3-3 3-3-3z" />
     </svg>
-  ),
-  Zap: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"></polygon>
-    </svg>
-  ),
-  Shield: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    </svg>
-  ),
-  MapPin: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
   )
 };
 
-// =================== COMPONENTE DE AUTENTICAÇÃO MELHORADO ===================
-const AuthModal = ({ isOpen, onClose }) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const { signIn, signUp } = useAuth();
-
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    name: '',
-    company: ''
-  });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage('');
-
-    try {
-      let result;
-      
-      if (isLogin) {
-        result = await signIn(formData.email, formData.password);
-      } else {
-        if (formData.name.length < 2) {
-          setMessage('❌ Nome deve ter pelo menos 2 caracteres');
-          return;
-        }
-        result = await signUp(formData.email, formData.password, formData.name, formData.company);
-      }
-
-      if (result.success) {
-        if (isLogin) {
-          onClose();
-        } else {
-          setMessage('✅ Conta criada! Verifique seu e-mail para confirmação.');
-        }
-      } else {
-        setMessage(`❌ ${result.error}`);
-      }
-    } catch (error) {
-      setMessage(`❌ ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
-      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20 relative overflow-hidden">
-        {/* Background Gradient Effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/30 to-pink-50/50 rounded-3xl"></div>
-        
-        <div className="relative z-10">
-          <button
-            onClick={onClose}
-            className="absolute -top-2 -right-2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all shadow-lg hover:shadow-xl"
-          >
-            <Icons.X />
-          </button>
-
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
-              <Icons.User />
-            </div>
-
-      {/* =================== MODAIS DE FOTO MELHORADOS =================== */}
-      
-      {/* Modal de Opções de Foto */}
-      {photoState.showOptions && (
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
-          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-white/20 relative overflow-hidden">
-            {/* Background Gradient Effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/30 to-pink-50/50 rounded-3xl"></div>
-            
-            <div className="relative z-10">
-              <div className="text-center mb-8">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
-                  <Icons.Camera />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">📷 Adicionar Foto</h3>
-                <p className="text-gray-600 font-medium">Como você gostaria de adicionar a foto do ativo?</p>
-              </div>
-              
-              <div className="space-y-4">
-                <button
-                  onClick={handleTakePhoto}
-                  className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white py-5 px-6 rounded-2xl flex items-center justify-center space-x-4 transition-all transform hover:scale-105 shadow-lg font-bold"
-                >
-                  <Icons.Camera />
-                  <div className="text-left">
-                    <div className="font-bold">📷 Tirar Foto</div>
-                    <div className="text-sm opacity-90">Usar câmera do dispositivo</div>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={handleSelectFromGallery}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-5 px-6 rounded-2xl flex items-center justify-center space-x-4 transition-all transform hover:scale-105 shadow-lg font-bold"
-                >
-                  <Icons.Image />
-                  <div className="text-left">
-                    <div className="font-bold">🖼️ Galeria</div>
-                    <div className="text-sm opacity-90">Escolher foto existente</div>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={closeAllPhotoModals}
-                  className="w-full bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white py-4 px-6 rounded-2xl transition-all font-bold"
-                >
-                  ❌ Cancelar
-                </button>
-              </div>
-              
-              <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border border-blue-200">
-                <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Icons.AlertCircle />
-                  </div>
-                  <div className="text-sm text-blue-800">
-                    <p className="font-bold">💡 Dica Importante:</p>
-                    <p>Permita o acesso à câmera quando solicitado. Use boa iluminação para melhor qualidade da foto.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Preview da Foto Melhorado */}
-      {photoState.showPreview && photoState.capturedPhoto && (
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/90 via-purple-900/90 to-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
-          <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20">
-            <div className="p-8">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">🖼️ Preview da Foto</h3>
-                <button
-                  onClick={closeAllPhotoModals}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-                >
-                  <Icons.X />
-                </button>
-              </div>
-              
-              <div className="space-y-6">
-                <div className="w-full bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden border-4 border-white shadow-xl">
-                  <img 
-                    src={photoState.capturedPhoto} 
-                    alt="Foto capturada" 
-                    className="w-full h-auto max-h-80 object-contain"
-                  />
-                </div>
-                
-                <div className="flex flex-col space-y-4">
-                  <button
-                    onClick={confirmPhoto}
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-5 rounded-2xl flex items-center justify-center space-x-3 transition-all transform hover:scale-105 shadow-lg font-bold"
-                  >
-                    <Icons.Check />
-                    <span>✅ Usar Esta Foto</span>
-                  </button>
-                  
-                  <button
-                    onClick={retakePhoto}
-                    className="w-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-6 py-4 rounded-2xl flex items-center justify-center space-x-3 transition-all font-bold"
-                  >
-                    <Icons.RotateCcw />
-                    <span>🔄 Tirar Outra Foto</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Loading de Processamento Melhorado */}
-      {photoState.isProcessing && (
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[9999]">
-          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-10 text-center shadow-2xl border border-white/20">
-            <div className="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-6"></div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">🔄 Processando Foto</h3>
-            <p className="text-gray-600 font-medium">Aguarde um momento...</p>
-            <div className="mt-4 flex items-center justify-center space-x-2">
-              <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-              <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Erro de Foto Melhorado */}
-      {photoState.error && (
-        <div className="fixed top-6 right-6 bg-gradient-to-r from-red-500 to-pink-500 text-white p-6 rounded-2xl shadow-2xl z-[9999] max-w-sm border border-red-400">
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-              <Icons.AlertCircle />
-            </div>
-            <div className="flex-1">
-              <p className="font-bold text-lg">❌ Erro na Foto</p>
-              <p className="text-sm opacity-90">{photoState.error}</p>
-            </div>
-            <button
-              onClick={() => setPhotoState(prev => ({ ...prev, error: '' }))}
-              className="ml-2 hover:bg-white/20 rounded-xl p-1 transition-colors"
-            >
-              <Icons.X />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* =================== MODAIS DE FORMULÁRIOS MELHORADOS =================== */}
-
-      {/* Modal de cadastro de ativo melhorado */}
-      {showAssetForm && (
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-6xl max-h-[95vh] overflow-y-auto shadow-2xl border border-white/20">
-            <div className="p-8">
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h3 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-gray-900 bg-clip-text text-transparent">
-                    {editingAsset ? '✏️ Editar Ativo' : '➕ Novo Ativo'}
-                  </h3>
-                  <p className="text-gray-600 mt-2 font-medium">
-                    {editingAsset ? 'Atualize as informações do ativo' : 'Cadastre um novo ativo no sistema'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowAssetForm(false);
-                    setEditingAsset(null);
-                    resetAssetForm();
-                  }}
-                  className="p-3 hover:bg-gray-100 rounded-2xl transition-colors"
-                >
-                  <Icons.X />
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">Nome do Ativo *</label>
-                    <input
-                      type="text"
-                      value={assetForm.name}
-                      onChange={(e) => setAssetForm({...assetForm, name: e.target.value})}
-                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
-                      placeholder="Ex: Notebook Dell Inspiron 15"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">Código *</label>
-                    <input
-                      type="text"
-                      value={assetForm.code}
-                      onChange={(e) => setAssetForm({...assetForm, code: e.target.value})}
-                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-mono"
-                      placeholder="Ex: NB-001"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">Categoria</label>
-                    <select
-                      value={assetForm.category}
-                      onChange={(e) => setAssetForm({...assetForm, category: e.target.value})}
-                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
-                    >
-                      <option value="">🏷️ Selecione uma categoria</option>
-                      {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">Status</label>
-                    <select
-                      value={assetForm.status}
-                      onChange={(e) => setAssetForm({...assetForm, status: e.target.value})}
-                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
-                    >
-                      {statuses.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">Andar *</label>
-                    <select
-                      value={assetForm.floor_id}
-                      onChange={(e) => setAssetForm({...assetForm, floor_id: e.target.value, room_id: ''})}
-                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
-                    >
-                      <option value="">🏢 Selecione um andar</option>
-                      {floors.map(floor => (
-                        <option key={floor.id} value={floor.id}>{floor.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">Sala *</label>
-                    <select
-                      value={assetForm.room_id}
-                      onChange={(e) => setAssetForm({...assetForm, room_id: e.target.value})}
-                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
-                      disabled={!assetForm.floor_id}
-                    >
-                      <option value="">🚪 Selecione uma sala</option>
-                      {getRoomsForFloor(assetForm.floor_id).map(room => (
-                        <option key={room.id} value={room.id}>{room.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                
-                <div className="space-y-6">
-                  {/* SEÇÃO DE FOTO - FUNCIONAL E INTEGRADA COM DESIGN MELHORADO */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-4">📷 Foto do Ativo</label>
-                    <div className="space-y-4">
-                      {assetForm.photo ? (
-                        <div className="relative">
-                          <div className="w-full h-64 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl overflow-hidden border-4 border-white shadow-xl">
-                            <img 
-                              src={assetForm.photo} 
-                              alt="Foto do ativo" 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex space-x-3 mt-4">
-                            <button
-                              type="button"
-                              onClick={openPhotoOptions}
-                              className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-4 py-4 rounded-2xl flex items-center justify-center space-x-3 text-sm font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-                            >
-                              <Icons.Camera />
-                              <span>📷 Alterar Foto</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={removePhotoFromForm}
-                              className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-4 py-4 rounded-2xl flex items-center justify-center transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-                            >
-                              <Icons.Trash2 />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div 
-                          onClick={openPhotoOptions}
-                          className="w-full h-64 border-4 border-dashed border-purple-300 rounded-3xl flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all duration-200 bg-gradient-to-br from-purple-50/50 via-blue-50/50 to-cyan-50/50 backdrop-blur-sm group"
-                        >
-                          <div className="text-center p-8">
-                            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-lg">
-                              <Icons.Camera />
-                            </div>
-                            <p className="text-gray-700 font-bold text-lg mb-2">📷 Clique para adicionar foto</p>
-                            <p className="text-gray-600 font-medium mb-4">
-                              Tire uma foto ou escolha da galeria
-                            </p>
-                            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-2xl text-sm font-bold border border-purple-200">
-                              <Icons.Sparkles />
-                              <span className="ml-2">Recomendado</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">Valor (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={assetForm.value}
-                      onChange={(e) => setAssetForm({...assetForm, value: e.target.value})}
-                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
-                      placeholder="Ex: 2500.00"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">Fornecedor</label>
-                    <input
-                      type="text"
-                      value={assetForm.supplier}
-                      onChange={(e) => setAssetForm({...assetForm, supplier: e.target.value})}
-                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
-                      placeholder="Ex: Dell Brasil"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">Número de Série</label>
-                    <input
-                      type="text"
-                      value={assetForm.serial_number}
-                      onChange={(e) => setAssetForm({...assetForm, serial_number: e.target.value})}
-                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-mono"
-                      placeholder="Ex: DL24001"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-8">
-                <label className="block text-sm font-bold text-gray-700 mb-3">Descrição</label>
-                <textarea
-                  value={assetForm.description}
-                  onChange={(e) => setAssetForm({...assetForm, description: e.target.value})}
-                  rows={4}
-                  className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium resize-none"
-                  placeholder="Descrição detalhada do ativo..."
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-4 mt-10 pt-6 border-t border-gray-200">
-                <button
-                  onClick={() => {
-                    setShowAssetForm(false);
-                    setEditingAsset(null);
-                    resetAssetForm();
-                  }}
-                  className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 transition-all font-bold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSaveAsset}
-                  disabled={isLoading}
-                  className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-400 text-white rounded-2xl transition-all font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      <span>Salvando...</span>
-                    </div>
-                  ) : (
-                    editingAsset ? '✅ Atualizar Ativo' : '💾 Salvar Ativo'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de cadastro de sala melhorado */}
-      {showRoomForm && (
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-md shadow-2xl border border-white/20">
-            <div className="p-8">
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-green-800 to-gray-900 bg-clip-text text-transparent">
-                    {editingRoom ? '✏️ Editar Sala' : '🏢 Nova Sala'}
-                  </h3>
-                  <p className="text-gray-600 mt-2 font-medium">
-                    {editingRoom ? 'Atualize as informações da sala' : 'Adicione uma nova sala ao sistema'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowRoomForm(false);
-                    setEditingRoom(null);
-                    setRoomForm({ name: '', description: '', floor_id: '' });
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-2xl transition-colors"
-                >
-                  <Icons.X />
-                </button>
-              </div>
-              
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">Nome da Sala *</label>
-                  <input
-                    type="text"
-                    value={roomForm.name}
-                    onChange={(e) => setRoomForm({...roomForm, name: e.target.value})}
-                    className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
-                    placeholder="Ex: Sala de Reuniões A"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">Andar *</label>
-                  <select
-                    value={roomForm.floor_id}
-                    onChange={(e) => setRoomForm({...roomForm, floor_id: e.target.value})}
-                    className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
-                  >
-                    <option value="">🏢 Selecione um andar</option>
-                    {floors.map(floor => (
-                      <option key={floor.id} value={floor.id}>{floor.name}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">Descrição</label>
-                  <textarea
-                    value={roomForm.description}
-                    onChange={(e) => setRoomForm({...roomForm, description: e.target.value})}
-                    rows={4}
-                    className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium resize-none"
-                    placeholder="Descrição da sala..."
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200">
-                <button
-                  onClick={() => {
-                    setShowRoomForm(false);
-                    setEditingRoom(null);
-                    setRoomForm({ name: '', description: '', floor_id: '' });
-                  }}
-                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 transition-all font-bold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSaveRoom}
-                  disabled={isLoading}
-                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 text-white rounded-2xl transition-all font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      <span>Salvando...</span>
-                    </div>
-                  ) : (
-                    editingRoom ? '✅ Atualizar Sala' : '💾 Salvar Sala'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de detalhes do ativo melhorado */}
-      {showAssetDetail && (
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-6xl max-h-[95vh] overflow-y-auto shadow-2xl border border-white/20">
-            <div className="p-8">
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h3 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-gray-900 bg-clip-text text-transparent">
-                    🔍 Detalhes do Ativo
-                  </h3>
-                  <p className="text-gray-600 mt-2 font-medium">Informações completas do ativo</p>
-                </div>
-                <button
-                  onClick={() => setShowAssetDetail(null)}
-                  className="p-3 hover:bg-gray-100 rounded-2xl transition-colors"
-                >
-                  <Icons.X />
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-2xl border border-blue-100">
-                    <label className="block text-sm font-bold text-blue-700 mb-2">Nome</label>
-                    <p className="text-xl font-bold text-blue-900">{showAssetDetail.name}</p>
-                  </div>
-                  
-                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-2xl border border-purple-100">
-                    <label className="block text-sm font-bold text-purple-700 mb-2">Código</label>
-                    <p className="text-lg font-mono font-bold text-purple-900 bg-white/70 px-3 py-2 rounded-xl inline-block">
-                      {showAssetDetail.code}
-                    </p>
-                  </div>
-                  
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-100">
-                    <label className="block text-sm font-bold text-green-700 mb-3">Categoria</label>
-                    <span className="inline-block px-4 py-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 rounded-2xl text-sm font-bold border border-green-200">
-                      {showAssetDetail.category || 'Sem categoria'}
-                    </span>
-                  </div>
-                  
-                  <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-100">
-                    <label className="block text-sm font-bold text-orange-700 mb-3">Status</label>
-                    <StatusBadge status={showAssetDetail.status} />
-                  </div>
-                  
-                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-100">
-                    <label className="block text-sm font-bold text-indigo-700 mb-2">Localização</label>
-                    <div className="flex items-center space-x-2 text-indigo-900">
-                      <Icons.MapPin />
-                      <p className="font-bold text-lg">
-                        {getFloorName(showAssetDetail.floor_id)} - {getRoomName(showAssetDetail.room_id)}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-2xl border border-yellow-100">
-                    <label className="block text-sm font-bold text-yellow-700 mb-2">Valor</label>
-                    <div className="flex items-center space-x-2">
-                      <Icons.DollarSign />
-                      <p className="text-xl font-bold text-yellow-900">
-                        {showAssetDetail.value ? 
-                          `R$ ${parseFloat(showAssetDetail.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 
-                          'Não informado'
-                        }
-                      </p>
-                    </div>
-                  </div>
-
-                  {showAssetDetail.supplier && (
-                    <div className="bg-gradient-to-r from-teal-50 to-cyan-50 p-6 rounded-2xl border border-teal-100">
-                      <label className="block text-sm font-bold text-teal-700 mb-2">Fornecedor</label>
-                      <p className="text-lg font-bold text-teal-900">{showAssetDetail.supplier}</p>
-                    </div>
-                  )}
-
-                  {showAssetDetail.serial_number && (
-                    <div className="bg-gradient-to-r from-rose-50 to-pink-50 p-6 rounded-2xl border border-rose-100">
-                      <label className="block text-sm font-bold text-rose-700 mb-2">Número de Série</label>
-                      <p className="text-lg font-mono font-bold text-rose-900 bg-white/70 px-3 py-2 rounded-xl inline-block">
-                        {showAssetDetail.serial_number}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-4">📷 Foto do Ativo</label>
-                    <div className="w-full h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl overflow-hidden border-4 border-white shadow-xl">
-                      {showAssetDetail.photo ? (
-                        <img 
-                          src={showAssetDetail.photo} 
-                          alt={showAssetDetail.name} 
-                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
-                          <div className="text-center">
-                            <div className="w-16 h-16 bg-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                              <Icons.Camera />
-                            </div>
-                            <span className="text-gray-600 font-bold">Nenhuma foto disponível</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {showAssetDetail.description && (
-                    <div className="bg-gradient-to-r from-slate-50 to-gray-50 p-6 rounded-2xl border border-slate-200">
-                      <label className="block text-sm font-bold text-slate-700 mb-3">📝 Descrição</label>
-                      <p className="text-slate-900 font-medium leading-relaxed">{showAssetDetail.description}</p>
-                    </div>
-                  )}
-
-                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-2xl border border-gray-200">
-                    <label className="block text-sm font-bold text-gray-700 mb-4">🔧 Informações do Sistema</label>
-                    <div className="space-y-3 text-sm">
-                      <div className="flex items-center justify-between p-3 bg-white/80 rounded-xl">
-                        <span className="font-bold text-gray-600">Criado em:</span>
-                        <span className="font-mono text-gray-900">
-                          {new Date(showAssetDetail.created_at).toLocaleDateString('pt-BR')}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-white/80 rounded-xl">
-                        <span className="font-bold text-gray-600">Última atualização:</span>
-                        <span className="font-mono text-gray-900">
-                          {new Date(showAssetDetail.updated_at).toLocaleDateString('pt-BR')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-4 mt-10 pt-6 border-t border-gray-200">
-                <button
-                  onClick={() => {
-                    setShowAssetDetail(null);
-                    handleEditAsset(showAssetDetail);
-                  }}
-                  className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-2xl transition-all font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  <div className="flex items-center space-x-2">
-                    <Icons.Edit />
-                    <span>✏️ Editar Ativo</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setShowAssetDetail(null)}
-                  className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 transition-all font-bold"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// =================== COMPONENTE PRINCIPAL COM PROVIDER ===================
-const App = () => {
-  return (
-    <AuthProvider>
-      <AssetControlSystem />
-    </AuthProvider>
-  );
-};
-
-export default App;
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-gray-900 bg-clip-text text-transparent">
-              {isLogin ? '🔑 Bem-vindo de volta!' : '✨ Criar sua conta'}
-            </h2>
-            <p className="text-gray-600 mt-3 font-medium">
-              {isLogin ? 'Entre para acessar seus ativos' : 'Comece a gerenciar seus ativos agora'}
-            </p>
-          </div>
-
-          {message && (
-            <div className={`p-4 rounded-2xl mb-6 text-sm font-medium ${
-              message.includes('✅') 
-                ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border border-green-200' 
-                : 'bg-gradient-to-r from-red-50 to-pink-50 text-red-800 border border-red-200'
-            }`}>
-              {message}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {!isLogin && (
-              <>
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Nome Completo *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    minLength="2"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/70 backdrop-blur-sm font-medium placeholder-gray-400"
-                    placeholder="Seu nome completo"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Empresa (opcional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.company}
-                    onChange={(e) => setFormData({...formData, company: e.target.value})}
-                    className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/70 backdrop-blur-sm font-medium placeholder-gray-400"
-                    placeholder="Nome da sua empresa"
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">
-                E-mail *
-              </label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/70 backdrop-blur-sm font-medium placeholder-gray-400"
-                placeholder="seu@email.com"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">
-                Senha *
-              </label>
-              <input
-                type="password"
-                required
-                minLength="6"
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-                className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/70 backdrop-blur-sm font-medium placeholder-gray-400"
-                placeholder="Mínimo 6 caracteres"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 hover:from-purple-700 hover:via-blue-700 hover:to-cyan-700 disabled:from-gray-400 disabled:to-gray-400 text-white py-4 px-6 rounded-2xl font-bold transition-all transform hover:scale-105 shadow-xl hover:shadow-2xl"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Processando...</span>
-                </div>
-              ) : (
-                isLogin ? '🔑 Entrar na Conta' : '✨ Criar Conta Gratuita'
-              )}
-            </button>
-          </form>
-
-          <div className="mt-8 text-center">
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setMessage('');
-                setFormData({ email: '', password: '', name: '', company: '' });
-              }}
-              className="text-purple-600 hover:text-purple-700 font-semibold transition-colors hover:underline"
-            >
-              {isLogin ? '✨ Não tem conta? Criar agora' : '🔑 Já tem conta? Entrar'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// =================== COMPONENTE PRINCIPAL MELHORADO ===================
-const AssetControlSystem = () => {
-  const { user, profile, loading: authLoading, signOut } = useAuth();
+// =================== COMPONENTE PRINCIPAL ===================
+const DellLaptopControlSystem = () => {
+  const { user, profile, signOut } = useAuth();
   
   // Estados principais
   const [activeTab, setActiveTab] = useState('dashboard');
   const [floors, setFloors] = useState([]);
-  const [assets, setAssets] = useState([]);
-  const [showAssetForm, setShowAssetForm] = useState(false);
+  const [laptops, setLaptops] = useState([]);
+  const [showLaptopForm, setShowLaptopForm] = useState(false);
   const [showRoomForm, setShowRoomForm] = useState(false);
-  const [editingAsset, setEditingAsset] = useState(null);
+  const [editingLaptop, setEditingLaptop] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAssetDetail, setShowAssetDetail] = useState(null);
+  const [showLaptopDetail, setShowLaptopDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   
-  // Estados específicos para foto
+  // Estados para foto e análise de IA
   const [photoState, setPhotoState] = useState({
     showOptions: false,
     showPreview: false,
     capturedPhoto: null,
     isProcessing: false,
+    isAnalyzing: false,
     error: ''
   });
 
   // Estados dos formulários
-  const [assetForm, setAssetForm] = useState({
-    name: '',
-    code: '',
-    category: '',
-    description: '',
-    value: '',
-    status: 'Ativo',
+  const [laptopForm, setLaptopForm] = useState({
+    model: '',
+    serial_number: '',
+    service_tag: '',
+    processor: '',
+    ram: '',
+    storage: '',
+    graphics: '',
+    screen_size: '',
+    color: '',
+    warranty_end: '',
+    condition: 'Excelente',
+    condition_score: 100,
+    status: 'Disponível',
     floor_id: '',
     room_id: '',
     photo: null,
-    supplier: '',
-    serial_number: ''
+    damage_analysis: null,
+    purchase_date: '',
+    purchase_price: '',
+    assigned_user: '',
+    notes: ''
   });
 
   const [roomForm, setRoomForm] = useState({
@@ -1490,12 +702,26 @@ const AssetControlSystem = () => {
     floor_id: ''
   });
 
-  const categories = [
-    'Informática', 'Móveis', 'Equipamentos', 'Veículos', 
-    'Eletroeletrônicos', 'Ferramentas', 'Segurança', 'Outros'
+  // Modelos Dell disponíveis
+  const dellModels = [
+    'Dell Inspiron 15 3000',
+    'Dell Inspiron 15 5000',
+    'Dell Inspiron 15 7000',
+    'Dell XPS 13 9310',
+    'Dell XPS 13 9320',
+    'Dell XPS 15 9520',
+    'Dell Latitude 3420',
+    'Dell Latitude 5420',
+    'Dell Latitude 7420',
+    'Dell Vostro 3500',
+    'Dell Vostro 5402',
+    'Dell Alienware m15 R6',
+    'Dell Precision 3560',
+    'Dell Precision 5560'
   ];
 
-  const statuses = ['Ativo', 'Inativo', 'Manutenção', 'Descartado'];
+  const statuses = ['Disponível', 'Em Uso', 'Manutenção', 'Descartado'];
+  const conditions = ['Excelente', 'Bom', 'Regular', 'Ruim'];
 
   // =================== EFEITOS ===================
   useEffect(() => {
@@ -1508,21 +734,17 @@ const AssetControlSystem = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [floorsResult, assetsResult] = await Promise.all([
+      const [floorsResult, laptopsResult] = await Promise.all([
         dataService.floors.getAll(),
-        dataService.assets.getAll()
+        dataService.laptops.getAll()
       ]);
 
       if (floorsResult.success) {
         setFloors(floorsResult.data);
-      } else {
-        console.error('Erro ao carregar andares:', floorsResult.error);
       }
 
-      if (assetsResult.success) {
-        setAssets(assetsResult.data);
-      } else {
-        console.error('Erro ao carregar ativos:', assetsResult.error);
+      if (laptopsResult.success) {
+        setLaptops(laptopsResult.data);
       }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -1531,7 +753,7 @@ const AssetControlSystem = () => {
     }
   };
 
-  // =================== FUNÇÕES DE FOTO ===================
+  // =================== FUNÇÕES DE FOTO E IA ===================
   const openPhotoOptions = () => {
     setPhotoState(prev => ({
       ...prev,
@@ -1546,6 +768,7 @@ const AssetControlSystem = () => {
       showPreview: false,
       capturedPhoto: null,
       isProcessing: false,
+      isAnalyzing: false,
       error: ''
     });
   };
@@ -1558,10 +781,6 @@ const AssetControlSystem = () => {
     try {
       if (!file.type.startsWith('image/')) {
         throw new Error('Por favor, selecione apenas arquivos de imagem.');
-      }
-
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error('A imagem deve ter no máximo 10MB.');
       }
 
       const imageDataUrl = await new Promise((resolve, reject) => {
@@ -1675,10 +894,39 @@ const AssetControlSystem = () => {
     }
   };
 
-  const confirmPhoto = () => {
-    if (photoState.capturedPhoto) {
-      setAssetForm(prev => ({ ...prev, photo: photoState.capturedPhoto }));
+  const confirmPhotoWithAI = async () => {
+    if (!photoState.capturedPhoto) return;
+
+    setPhotoState(prev => ({ ...prev, isAnalyzing: true }));
+
+    try {
+      const analysisResult = await AIAnalysisService.analyzeLaptopDamage(photoState.capturedPhoto);
+      
+      if (analysisResult.success) {
+        setLaptopForm(prev => ({
+          ...prev,
+          photo: photoState.capturedPhoto,
+          damage_analysis: analysisResult.data,
+          condition: analysisResult.data.overall_condition,
+          condition_score: Math.max(0, 100 - analysisResult.data.damage_score)
+        }));
+      } else {
+        setLaptopForm(prev => ({ ...prev, photo: photoState.capturedPhoto }));
+      }
+      
       closeAllPhotoModals();
+    } catch (error) {
+      setPhotoState(prev => ({
+        ...prev,
+        error: 'Erro na análise de IA. Foto salva sem análise.',
+        isAnalyzing: false
+      }));
+      
+      setLaptopForm(prev => ({ ...prev, photo: photoState.capturedPhoto }));
+      
+      setTimeout(() => {
+        closeAllPhotoModals();
+      }, 2000);
     }
   };
 
@@ -1692,7 +940,152 @@ const AssetControlSystem = () => {
   };
 
   const removePhotoFromForm = () => {
-    setAssetForm(prev => ({ ...prev, photo: null }));
+    setLaptopForm(prev => ({ ...prev, photo: null, damage_analysis: null }));
+  };
+
+  // =================== FUNÇÕES DE LAPTOPS ===================
+  const handleSaveLaptop = async () => {
+    if (!laptopForm.model?.trim() || !laptopForm.serial_number?.trim()) {
+      alert('Por favor, preencha o modelo e número de série.');
+      return;
+    }
+    
+    if (!laptopForm.floor_id || !laptopForm.room_id) {
+      alert('Por favor, selecione o andar e a sala.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      // Verificar se número de série já existe
+      if (!editingLaptop) {
+        const serialCheck = await dataService.laptops.checkSerialExists(laptopForm.serial_number);
+        if (serialCheck.success && serialCheck.exists) {
+          alert('Já existe um laptop com este número de série.');
+          return;
+        }
+      }
+
+      const laptopData = {
+        model: laptopForm.model.trim(),
+        serial_number: laptopForm.serial_number.trim(),
+        service_tag: laptopForm.service_tag?.trim() || '',
+        processor: laptopForm.processor?.trim() || '',
+        ram: laptopForm.ram?.trim() || '',
+        storage: laptopForm.storage?.trim() || '',
+        graphics: laptopForm.graphics?.trim() || '',
+        screen_size: laptopForm.screen_size?.trim() || '',
+        color: laptopForm.color?.trim() || '',
+        warranty_end: laptopForm.warranty_end || null,
+        condition: laptopForm.condition || 'Excelente',
+        condition_score: laptopForm.condition_score || 100,
+        status: laptopForm.status || 'Disponível',
+        floor_id: parseInt(laptopForm.floor_id),
+        room_id: parseInt(laptopForm.room_id),
+        photo: laptopForm.photo || null,
+        damage_analysis: laptopForm.damage_analysis || null,
+        purchase_date: laptopForm.purchase_date || null,
+        purchase_price: laptopForm.purchase_price ? parseFloat(laptopForm.purchase_price) : null,
+        assigned_user: laptopForm.assigned_user?.trim() || null,
+        notes: laptopForm.notes?.trim() || null
+      };
+
+      let result;
+      if (editingLaptop) {
+        result = await dataService.laptops.update(editingLaptop.id, laptopData);
+      } else {
+        result = await dataService.laptops.create(laptopData);
+      }
+
+      if (result.success) {
+        await loadData();
+        resetLaptopForm();
+        setShowLaptopForm(false);
+        setEditingLaptop(null);
+      } else {
+        alert(`Erro ao ${editingLaptop ? 'atualizar' : 'criar'} laptop: ${result.error}`);
+      }
+    } catch (error) {
+      alert(`Erro ao ${editingLaptop ? 'atualizar' : 'criar'} laptop: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditLaptop = (laptop) => {
+    setEditingLaptop(laptop);
+    setLaptopForm({
+      model: laptop.model || '',
+      serial_number: laptop.serial_number || '',
+      service_tag: laptop.service_tag || '',
+      processor: laptop.processor || '',
+      ram: laptop.ram || '',
+      storage: laptop.storage || '',
+      graphics: laptop.graphics || '',
+      screen_size: laptop.screen_size || '',
+      color: laptop.color || '',
+      warranty_end: laptop.warranty_end || '',
+      condition: laptop.condition || 'Excelente',
+      condition_score: laptop.condition_score || 100,
+      status: laptop.status || 'Disponível',
+      floor_id: laptop.floor_id?.toString() || '',
+      room_id: laptop.room_id?.toString() || '',
+      photo: laptop.photo || null,
+      damage_analysis: laptop.damage_analysis || null,
+      purchase_date: laptop.purchase_date || '',
+      purchase_price: laptop.purchase_price || '',
+      assigned_user: laptop.assigned_user || '',
+      notes: laptop.notes || ''
+    });
+    setShowLaptopForm(true);
+  };
+
+  const handleDeleteLaptop = async (laptopId) => {
+    if (!confirm('Tem certeza que deseja excluir este laptop?')) return;
+
+    try {
+      setIsLoading(true);
+      
+      const result = await dataService.laptops.delete(laptopId);
+      
+      if (result.success) {
+        await loadData();
+      } else {
+        alert(`Erro ao excluir laptop: ${result.error}`);
+      }
+    } catch (error) {
+      alert(`Erro ao excluir laptop: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetLaptopForm = () => {
+    setLaptopForm({
+      model: '',
+      serial_number: '',
+      service_tag: '',
+      processor: '',
+      ram: '',
+      storage: '',
+      graphics: '',
+      screen_size: '',
+      color: '',
+      warranty_end: '',
+      condition: 'Excelente',
+      condition_score: 100,
+      status: 'Disponível',
+      floor_id: '',
+      room_id: '',
+      photo: null,
+      damage_analysis: null,
+      purchase_date: '',
+      purchase_price: '',
+      assigned_user: '',
+      notes: ''
+    });
+    closeAllPhotoModals();
   };
 
   // =================== FUNÇÕES DE SALAS ===================
@@ -1719,7 +1112,7 @@ const AssetControlSystem = () => {
       }
 
       if (result.success) {
-        await loadData(); // Recarregar dados
+        await loadData();
         setRoomForm({ name: '', description: '', floor_id: '' });
         setShowRoomForm(false);
         setEditingRoom(null);
@@ -1749,17 +1142,16 @@ const AssetControlSystem = () => {
     try {
       setIsLoading(true);
       
-      // Verificar se há ativos na sala
-      const assetsInRoom = assets.filter(asset => asset.room_id === roomId);
-      if (assetsInRoom.length > 0) {
-        alert(`Não é possível excluir esta sala pois existem ${assetsInRoom.length} ativo(s) cadastrado(s) nela.`);
+      const laptopsInRoom = laptops.filter(laptop => laptop.room_id === roomId);
+      if (laptopsInRoom.length > 0) {
+        alert(`Não é possível excluir esta sala pois existem ${laptopsInRoom.length} laptop(s) cadastrado(s) nela.`);
         return;
       }
 
       const result = await dataService.rooms.delete(roomId);
       
       if (result.success) {
-        await loadData(); // Recarregar dados
+        await loadData();
       } else {
         alert(`Erro ao excluir sala: ${result.error}`);
       }
@@ -1768,126 +1160,6 @@ const AssetControlSystem = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // =================== FUNÇÕES DE ATIVOS ===================
-  const handleSaveAsset = async () => {
-    if (!assetForm.name?.trim()) {
-      alert('Por favor, preencha o nome do ativo.');
-      return;
-    }
-    
-    if (!assetForm.code?.trim()) {
-      alert('Por favor, preencha o código do ativo.');
-      return;
-    }
-    
-    if (!assetForm.floor_id || !assetForm.room_id) {
-      alert('Por favor, selecione o andar e a sala.');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-
-      // Verificar se código já existe
-      if (!editingAsset) {
-        const codeCheck = await dataService.assets.checkCodeExists(assetForm.code);
-        if (codeCheck.success && codeCheck.exists) {
-          alert('Já existe um ativo com este código.');
-          return;
-        }
-      }
-
-      const assetData = {
-        name: assetForm.name.trim(),
-        code: assetForm.code.trim(),
-        category: assetForm.category || null,
-        description: assetForm.description?.trim() || null,
-        value: assetForm.value ? parseFloat(assetForm.value) : null,
-        status: assetForm.status || 'Ativo',
-        floor_id: parseInt(assetForm.floor_id),
-        room_id: parseInt(assetForm.room_id),
-        photo: assetForm.photo || null,
-        supplier: assetForm.supplier?.trim() || null,
-        serial_number: assetForm.serial_number?.trim() || null
-      };
-
-      let result;
-      if (editingAsset) {
-        result = await dataService.assets.update(editingAsset.id, assetData);
-      } else {
-        result = await dataService.assets.create(assetData);
-      }
-
-      if (result.success) {
-        await loadData(); // Recarregar dados
-        resetAssetForm();
-        setShowAssetForm(false);
-        setEditingAsset(null);
-      } else {
-        alert(`Erro ao ${editingAsset ? 'atualizar' : 'criar'} ativo: ${result.error}`);
-      }
-    } catch (error) {
-      alert(`Erro ao ${editingAsset ? 'atualizar' : 'criar'} ativo: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEditAsset = (asset) => {
-    setEditingAsset(asset);
-    setAssetForm({
-      name: asset.name,
-      code: asset.code,
-      category: asset.category || '',
-      description: asset.description || '',
-      value: asset.value || '',
-      status: asset.status || 'Ativo',
-      floor_id: asset.floor_id?.toString() || '',
-      room_id: asset.room_id?.toString() || '',
-      photo: asset.photo || null,
-      supplier: asset.supplier || '',
-      serial_number: asset.serial_number || ''
-    });
-    setShowAssetForm(true);
-  };
-
-  const handleDeleteAsset = async (assetId) => {
-    if (!confirm('Tem certeza que deseja excluir este ativo?')) return;
-
-    try {
-      setIsLoading(true);
-      
-      const result = await dataService.assets.delete(assetId);
-      
-      if (result.success) {
-        await loadData(); // Recarregar dados
-      } else {
-        alert(`Erro ao excluir ativo: ${result.error}`);
-      }
-    } catch (error) {
-      alert(`Erro ao excluir ativo: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resetAssetForm = () => {
-    setAssetForm({
-      name: '',
-      code: '',
-      category: '',
-      description: '',
-      value: '',
-      status: 'Ativo',
-      floor_id: '',
-      room_id: '',
-      photo: null,
-      supplier: '',
-      serial_number: ''
-    });
-    closeAllPhotoModals();
   };
 
   // =================== FUNÇÕES AUXILIARES ===================
@@ -1906,26 +1178,28 @@ const AssetControlSystem = () => {
     return floor ? (floor.rooms || []) : [];
   };
 
-  const filteredAssets = assets.filter(asset => {
-    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (asset.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredLaptops = laptops.filter(laptop => {
+    const matchesSearch = laptop.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         laptop.serial_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (laptop.assigned_user || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
   const getDashboardStats = () => {
-    const total = assets.length;
-    const active = assets.filter(a => a.status === 'Ativo').length;
-    const maintenance = assets.filter(a => a.status === 'Manutenção').length;
-    const inactive = assets.filter(a => a.status === 'Inativo').length;
-    const totalValue = assets.reduce((sum, asset) => sum + (parseFloat(asset.value) || 0), 0);
+    const total = laptops.length;
+    const available = laptops.filter(l => l.status === 'Disponível').length;
+    const inUse = laptops.filter(l => l.status === 'Em Uso').length;
+    const maintenance = laptops.filter(l => l.status === 'Manutenção').length;
+    const totalValue = laptops.reduce((sum, laptop) => sum + (parseFloat(laptop.purchase_price) || 0), 0);
+    const avgCondition = laptops.length > 0 ? laptops.reduce((sum, laptop) => sum + (laptop.condition_score || 0), 0) / laptops.length : 0;
 
     return {
       total,
-      active,
+      available,
+      inUse,
       maintenance,
-      inactive,
       totalValue,
+      avgCondition,
       totalRooms: floors.reduce((sum, floor) => sum + (floor.rooms?.length || 0), 0)
     };
   };
@@ -1934,13 +1208,13 @@ const AssetControlSystem = () => {
 
   const StatusBadge = ({ status }) => {
     const statusConfig = {
-      'Ativo': { color: 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 border-emerald-200', icon: Icons.CheckCircle },
+      'Disponível': { color: 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 border-emerald-200', icon: Icons.CheckCircle },
+      'Em Uso': { color: 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-blue-200', icon: Icons.User },
       'Manutenção': { color: 'bg-gradient-to-r from-orange-50 to-red-50 text-orange-700 border-orange-200', icon: Icons.Clock },
-      'Inativo': { color: 'bg-gradient-to-r from-gray-50 to-slate-50 text-gray-600 border-gray-200', icon: Icons.XCircle },
       'Descartado': { color: 'bg-gradient-to-r from-red-50 to-pink-50 text-red-600 border-red-200', icon: Icons.X }
     };
     
-    const config = statusConfig[status] || statusConfig['Ativo'];
+    const config = statusConfig[status] || statusConfig['Disponível'];
     const IconComponent = config.icon;
     
     return (
@@ -1951,135 +1225,55 @@ const AssetControlSystem = () => {
     );
   };
 
+  const ConditionBadge = ({ condition, score }) => {
+    const conditionConfig = {
+      'Excelente': { color: 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-green-200' },
+      'Bom': { color: 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border-blue-200' },
+      'Regular': { color: 'bg-gradient-to-r from-yellow-50 to-orange-50 text-yellow-700 border-yellow-200' },
+      'Ruim': { color: 'bg-gradient-to-r from-red-50 to-pink-50 text-red-700 border-red-200' }
+    };
+    
+    const config = conditionConfig[condition] || conditionConfig['Excelente'];
+    
+    return (
+      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border ${config.color} shadow-sm`}>
+        <span>{condition}</span>
+        {score && <span className="ml-1">({score}%)</span>}
+      </span>
+    );
+  };
+
   const handleLogout = async () => {
     if (confirm('Tem certeza que deseja sair?')) {
       const result = await signOut();
       if (result.success) {
         setFloors([]);
-        setAssets([]);
+        setLaptops([]);
         setActiveTab('dashboard');
       }
     }
   };
 
-  // =================== LOADING DE AUTENTICAÇÃO ===================
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl animate-pulse">
-            <Icons.Database />
-          </div>
-          <div className="space-y-2">
-            <div className="w-32 h-3 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full mx-auto animate-pulse"></div>
-            <div className="w-24 h-2 bg-gray-200 rounded-full mx-auto animate-pulse"></div>
-          </div>
-          <p className="text-gray-600 text-lg font-medium mt-4">Carregando sistema...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // =================== TELA DE LOGIN MELHORADA ===================
-  if (!user) {
-    return (
-      <>
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50 flex items-center justify-center p-4 relative overflow-hidden">
-          {/* Background Effects */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-40 -right-32 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
-            <div className="absolute -bottom-40 -left-32 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl"></div>
-          </div>
-          
-          <div className="max-w-md w-full relative z-10">
-            <div className="text-center mb-10">
-              <div className="w-24 h-24 bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500">
-                <Icons.Package />
-              </div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-gray-900 bg-clip-text text-transparent mb-3">
-                AssetManager Pro
-              </h1>
-              <p className="text-gray-600 text-lg font-medium">Sistema completo de controle de ativos</p>
-              <p className="text-gray-500 text-sm mt-2">com fotos e gestão inteligente</p>
-            </div>
-
-            <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20">
-              <h2 className="text-2xl font-bold text-center mb-8 text-gray-900">Bem-vindo! ✨</h2>
-              
-              <div className="space-y-4 mb-8">
-                <div className="flex items-center space-x-4 text-gray-700 group hover:text-purple-600 transition-colors">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Icons.Camera />
-                  </div>
-                  <span className="font-medium">📷 Fotos dos ativos com câmera</span>
-                </div>
-                <div className="flex items-center space-x-4 text-gray-700 group hover:text-purple-600 transition-colors">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Icons.MapPin />
-                  </div>
-                  <span className="font-medium">🏢 Gestão inteligente de localizações</span>
-                </div>
-                <div className="flex items-center space-x-4 text-gray-700 group hover:text-purple-600 transition-colors">
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Icons.BarChart3 />
-                  </div>
-                  <span className="font-medium">📊 Relatórios automáticos detalhados</span>
-                </div>
-                <div className="flex items-center space-x-4 text-gray-700 group hover:text-purple-600 transition-colors">
-                  <div className="w-10 h-10 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Icons.Shield />
-                  </div>
-                  <span className="font-medium">🔒 Dados seguros na nuvem</span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 hover:from-purple-700 hover:via-blue-700 hover:to-cyan-700 text-white py-4 px-6 rounded-2xl font-bold transition-all transform hover:scale-105 shadow-xl hover:shadow-2xl"
-              >
-                <div className="flex items-center justify-center space-x-2">
-                  <Icons.Sparkles />
-                  <span>Começar Agora</span>
-                  <Icons.Zap />
-                </div>
-              </button>
-
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-500 font-medium">
-                  <span className="text-green-600">✅ Gratuito para sempre</span> • 
-                  <span className="text-blue-600"> 🚀 Sem cartão de crédito</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
-      </>
-    );
-  }
-
-  // =================== SISTEMA PRINCIPAL MELHORADO ===================
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30">
-      {/* Header Melhorado */}
+      {/* Header Dell */}
       <div className="bg-white/90 backdrop-blur-xl shadow-lg border-b border-white/20 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3 md:space-x-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Icons.Package />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Icons.Laptop />
                 </div>
                 <div className="hidden sm:block">
-                  <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-gray-900 bg-clip-text text-transparent">
-                    AssetManager Pro
+                  <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 bg-clip-text text-transparent">
+                    Dell Laptop Manager
                   </h1>
-                  <p className="text-xs md:text-sm text-gray-500 font-medium">Sistema de Controle de Ativos</p>
+                  <p className="text-xs md:text-sm text-gray-500 font-medium">Sistema de Controle de Laptops</p>
                 </div>
                 <div className="sm:hidden">
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-purple-800 bg-clip-text text-transparent">
-                    AssetManager
+                  <h1 className="text-xl font-bold bg-gradient-to-r from-blue-900 to-indigo-800 bg-clip-text text-transparent">
+                    Dell Manager
                   </h1>
                 </div>
               </div>
@@ -2087,37 +1281,34 @@ const AssetControlSystem = () => {
             
             <div className="flex items-center space-x-3">
               <div className="hidden lg:flex items-center space-x-6 text-sm">
-                <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-100">
-                  <Icons.Package />
+                <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                  <Icons.Laptop />
                   <span className="font-semibold text-blue-700">{stats.total}</span>
-                  <span className="text-blue-600">ativos</span>
-                </div>
-                <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
-                  <Icons.Building />
-                  <span className="font-semibold text-purple-700">{stats.totalRooms}</span>
-                  <span className="text-purple-600">salas</span>
+                  <span className="text-blue-600">laptops</span>
                 </div>
                 <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                  <Icons.CheckCircle />
+                  <span className="font-semibold text-green-700">{stats.available}</span>
+                  <span className="text-green-600">disponíveis</span>
+                </div>
+                <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
                   <Icons.DollarSign />
-                  <span className="font-semibold text-green-700">
+                  <span className="font-semibold text-purple-700">
                     R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </span>
                 </div>
               </div>
               
-              {/* User Menu Melhorado */}
               <div className="flex items-center space-x-3">
                 <div className="hidden md:flex items-center space-x-3 px-4 py-2 bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl border border-gray-200">
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
                     <Icons.User />
                   </div>
                   <div className="text-left">
                     <p className="text-sm font-semibold text-gray-800">
-                      {profile?.name || user.email?.split('@')[0]}
+                      {profile?.name || 'Dell Admin'}
                     </p>
-                    {profile?.company && (
-                      <p className="text-xs text-gray-500">{profile.company}</p>
-                    )}
+                    <p className="text-xs text-gray-500">Dell Technologies</p>
                   </div>
                 </div>
                 
@@ -2135,8 +1326,8 @@ const AssetControlSystem = () => {
           
           <div className="flex space-x-2 mt-6 overflow-x-auto pb-2">
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: Icons.Home, shortLabel: 'Home', gradient: 'from-blue-500 to-cyan-500' },
-              { id: 'assets', label: 'Ativos', icon: Icons.Package, shortLabel: 'Ativos', gradient: 'from-purple-500 to-pink-500' },
+              { id: 'dashboard', label: 'Dashboard', icon: Icons.Home, shortLabel: 'Home', gradient: 'from-blue-500 to-indigo-500' },
+              { id: 'laptops', label: 'Laptops', icon: Icons.Laptop, shortLabel: 'Laptops', gradient: 'from-purple-500 to-pink-500' },
               { id: 'locations', label: 'Localizações', icon: Icons.Building, shortLabel: 'Local', gradient: 'from-green-500 to-emerald-500' },
               { id: 'reports', label: 'Relatórios', icon: Icons.BarChart3, shortLabel: 'Report', gradient: 'from-orange-500 to-red-500' }
             ].map(tab => (
@@ -2159,37 +1350,33 @@ const AssetControlSystem = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6 md:py-8">
-        {/* Dashboard Melhorado */}
+        {/* Dashboard */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-gray-900 bg-clip-text text-transparent">
-                  Dashboard
+                <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 bg-clip-text text-transparent">
+                  Dashboard Dell
                 </h2>
-                <p className="text-gray-600 mt-2">Visão geral dos seus ativos</p>
+                <p className="text-gray-600 mt-2">Visão geral dos laptops Dell</p>
               </div>
-              {profile && (
-                <div className="text-right bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/40">
-                  <p className="text-sm text-gray-600">Bem-vindo de volta,</p>
-                  <p className="font-bold text-lg text-gray-900">{profile.name}</p>
-                  {profile.company && (
-                    <p className="text-sm text-purple-600 font-medium">{profile.company}</p>
-                  )}
-                </div>
-              )}
+              <div className="text-right bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/40">
+                <p className="text-sm text-gray-600">Sistema Dell</p>
+                <p className="font-bold text-lg text-gray-900">Laptop Manager</p>
+                <p className="text-sm text-blue-600 font-medium">Controle Inteligente</p>
+              </div>
             </div>
             
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 md:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all group">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 md:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all group">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-blue-600 mb-2">Total de Ativos</p>
+                    <p className="text-sm font-medium text-blue-600 mb-2">Total Laptops</p>
                     <p className="text-3xl md:text-4xl font-bold text-blue-700">{stats.total}</p>
-                    <p className="text-xs text-blue-500 mt-1">itens cadastrados</p>
+                    <p className="text-xs text-blue-500 mt-1">equipamentos</p>
                   </div>
-                  <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Icons.Package />
+                  <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Icons.Laptop />
                   </div>
                 </div>
               </div>
@@ -2197,9 +1384,9 @@ const AssetControlSystem = () => {
               <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-6 md:p-8 rounded-3xl shadow-lg border border-emerald-100 hover:shadow-xl transition-all group">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-emerald-600 mb-2">Ativos Ativos</p>
-                    <p className="text-3xl md:text-4xl font-bold text-emerald-700">{stats.active}</p>
-                    <p className="text-xs text-emerald-500 mt-1">em funcionamento</p>
+                    <p className="text-sm font-medium text-emerald-600 mb-2">Disponíveis</p>
+                    <p className="text-3xl md:text-4xl font-bold text-emerald-700">{stats.available}</p>
+                    <p className="text-xs text-emerald-500 mt-1">prontos para uso</p>
                   </div>
                   <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-emerald-500 to-green-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Icons.CheckCircle />
@@ -2212,7 +1399,7 @@ const AssetControlSystem = () => {
                   <div>
                     <p className="text-sm font-medium text-orange-600 mb-2">Em Manutenção</p>
                     <p className="text-3xl md:text-4xl font-bold text-orange-700">{stats.maintenance}</p>
-                    <p className="text-xs text-orange-500 mt-1">necessitam atenção</p>
+                    <p className="text-xs text-orange-500 mt-1">em reparo</p>
                   </div>
                   <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Icons.Clock />
@@ -2223,14 +1410,14 @@ const AssetControlSystem = () => {
               <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 md:p-8 rounded-3xl shadow-lg border border-purple-100 hover:shadow-xl transition-all group col-span-2 lg:col-span-1">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-purple-600 mb-2">Valor Total</p>
+                    <p className="text-sm font-medium text-purple-600 mb-2">Condição Média</p>
                     <p className="text-2xl md:text-3xl font-bold text-purple-700">
-                      R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      {stats.avgCondition.toFixed(0)}%
                     </p>
-                    <p className="text-xs text-purple-500 mt-1">patrimônio total</p>
+                    <p className="text-xs text-purple-500 mt-1">estado geral</p>
                   </div>
                   <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Icons.DollarSign />
+                    <Icons.Shield />
                   </div>
                 </div>
               </div>
@@ -2244,17 +1431,17 @@ const AssetControlSystem = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
                   onClick={() => {
-                    setActiveTab('assets');
-                    setShowAssetForm(true);
+                    setActiveTab('laptops');
+                    setShowLaptopForm(true);
                   }}
-                  className="flex items-center space-x-4 p-6 bg-gradient-to-br from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 rounded-2xl transition-all group border border-blue-200 hover:shadow-lg"
+                  className="flex items-center space-x-4 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-2xl transition-all group border border-blue-200 hover:shadow-lg"
                 >
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Icons.Plus />
                   </div>
                   <div className="text-left">
-                    <p className="text-blue-600 font-bold text-lg">Adicionar Ativo</p>
-                    <p className="text-blue-500 text-sm">Cadastrar novo item</p>
+                    <p className="text-blue-600 font-bold text-lg">Adicionar Laptop</p>
+                    <p className="text-blue-500 text-sm">Cadastrar novo equipamento</p>
                   </div>
                 </button>
                 
@@ -2263,14 +1450,14 @@ const AssetControlSystem = () => {
                     setActiveTab('locations');
                     setShowRoomForm(true);
                   }}
-                  className="flex items-center space-x-4 p-6 bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 rounded-2xl transition-all group border border-purple-200 hover:shadow-lg"
+                  className="flex items-center space-x-4 p-6 bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 rounded-2xl transition-all group border border-green-200 hover:shadow-lg"
                 >
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Icons.Building />
                   </div>
                   <div className="text-left">
-                    <p className="text-purple-600 font-bold text-lg">Adicionar Sala</p>
-                    <p className="text-purple-500 text-sm">Nova localização</p>
+                    <p className="text-green-600 font-bold text-lg">Adicionar Sala</p>
+                    <p className="text-green-500 text-sm">Nova localização</p>
                   </div>
                 </button>
               </div>
@@ -2278,24 +1465,24 @@ const AssetControlSystem = () => {
           </div>
         )}
 
-        {/* Ativos Melhorado */}
-        {activeTab === 'assets' && (
+        {/* Laptops */}
+        {activeTab === 'laptops' && (
           <div className="space-y-6">
             <div className="flex flex-col space-y-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                  <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-gray-900 bg-clip-text text-transparent">
-                    Gestão de Ativos
+                  <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 bg-clip-text text-transparent">
+                    Gestão de Laptops Dell
                   </h2>
-                  <p className="text-gray-600 mt-2">Gerencie todos os seus ativos em um só lugar</p>
+                  <p className="text-gray-600 mt-2">Controle completo dos equipamentos Dell</p>
                 </div>
                 
                 <button
-                  onClick={() => setShowAssetForm(true)}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-4 rounded-2xl flex items-center justify-center space-x-3 text-sm font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                  onClick={() => setShowLaptopForm(true)}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-4 rounded-2xl flex items-center justify-center space-x-3 text-sm font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   <Icons.Plus />
-                  <span>Novo Ativo</span>
+                  <span>Novo Laptop</span>
                   <Icons.Sparkles />
                 </button>
               </div>
@@ -2307,10 +1494,10 @@ const AssetControlSystem = () => {
                   </div>
                   <input
                     type="text"
-                    placeholder="🔍 Buscar por nome, código ou descrição..."
+                    placeholder="🔍 Buscar por modelo, serial ou usuário..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-12 pr-6 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium placeholder-gray-500"
+                    className="w-full pl-12 pr-6 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium placeholder-gray-500"
                   />
                 </div>
               </div>
@@ -2319,61 +1506,72 @@ const AssetControlSystem = () => {
             <div className="space-y-6">
               {isLoading ? (
                 <div className="text-center py-16 bg-white/70 backdrop-blur-sm rounded-3xl border border-white/40">
-                  <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-6"></div>
-                  <p className="text-gray-500 font-medium">Carregando ativos...</p>
+                  <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
+                  <p className="text-gray-500 font-medium">Carregando laptops...</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredAssets.map(asset => (
-                    <div key={asset.id} className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/40 p-6 hover:shadow-xl transition-all group">
+                  {filteredLaptops.map(laptop => (
+                    <div key={laptop.id} className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/40 p-6 hover:shadow-xl transition-all group">
                       <div className="flex items-start space-x-4">
                         <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform">
-                          {asset.photo ? (
-                            <img src={asset.photo} alt={asset.name} className="w-full h-full object-cover" />
+                          {laptop.photo ? (
+                            <img src={laptop.photo} alt={laptop.model} className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
-                              <Icons.Package />
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-200 to-indigo-300 text-blue-700">
+                              <Icons.Laptop />
                             </div>
                           )}
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-gray-900 truncate mb-1">{asset.name}</h3>
+                          <h3 className="text-lg font-bold text-gray-900 truncate mb-1">{laptop.model}</h3>
                           <p className="text-sm text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded-lg inline-block mb-2">
-                            {asset.code}
+                            {laptop.serial_number}
                           </p>
-                          {asset.category && (
-                            <span className="inline-block px-3 py-1 text-xs font-semibold bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 rounded-full border border-blue-200 mb-3">
-                              {asset.category}
-                            </span>
+                          {laptop.service_tag && (
+                            <p className="text-xs text-blue-600 font-medium mb-2">
+                              Service Tag: {laptop.service_tag}
+                            </p>
                           )}
                           
-                          <div className="flex items-center justify-between">
-                            <StatusBadge status={asset.status} />
+                          <div className="flex items-center justify-between mb-2">
+                            <StatusBadge status={laptop.status} />
                           </div>
+                          
+                          <div className="flex items-center justify-between mb-3">
+                            <ConditionBadge condition={laptop.condition} score={laptop.condition_score} />
+                          </div>
+                          
+                          {laptop.assigned_user && (
+                            <div className="flex items-center space-x-2 text-sm text-gray-600 mb-2">
+                              <Icons.User />
+                              <span className="font-medium">{laptop.assigned_user}</span>
+                            </div>
+                          )}
                           
                           <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
                             <div className="flex items-center space-x-2 text-sm text-gray-600">
                               <Icons.MapPin />
-                              <span className="font-medium">{getFloorName(asset.floor_id)} - {getRoomName(asset.room_id)}</span>
+                              <span className="font-medium">{getFloorName(laptop.floor_id)} - {getRoomName(laptop.room_id)}</span>
                             </div>
                             <div className="flex items-center space-x-2">
                               <button
-                                onClick={() => setShowAssetDetail(asset)}
+                                onClick={() => setShowLaptopDetail(laptop)}
                                 className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all hover:scale-110"
                                 title="Ver detalhes"
                               >
                                 <Icons.Eye />
                               </button>
                               <button
-                                onClick={() => handleEditAsset(asset)}
+                                onClick={() => handleEditLaptop(laptop)}
                                 className="p-2 text-purple-600 hover:bg-purple-50 rounded-xl transition-all hover:scale-110"
                                 title="Editar"
                               >
                                 <Icons.Edit />
                               </button>
                               <button
-                                onClick={() => handleDeleteAsset(asset.id)}
+                                onClick={() => handleDeleteLaptop(laptop.id)}
                                 className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all hover:scale-110"
                                 title="Excluir"
                               >
@@ -2386,20 +1584,20 @@ const AssetControlSystem = () => {
                     </div>
                   ))}
                   
-                  {filteredAssets.length === 0 && !isLoading && (
+                  {filteredLaptops.length === 0 && !isLoading && (
                     <div className="col-span-full text-center py-16 bg-white/70 backdrop-blur-sm rounded-3xl border border-white/40">
-                      <div className="w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                        <Icons.Package />
+                      <div className="w-20 h-20 bg-gradient-to-br from-blue-200 to-indigo-300 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                        <Icons.Laptop />
                       </div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhum ativo encontrado</h3>
-                      <p className="text-gray-500 mb-6">Comece adicionando seu primeiro ativo</p>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhum laptop encontrado</h3>
+                      <p className="text-gray-500 mb-6">Comece adicionando seu primeiro laptop Dell</p>
                       <button
-                        onClick={() => setShowAssetForm(true)}
-                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                        onClick={() => setShowLaptopForm(true)}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
                       >
                         <div className="flex items-center space-x-2">
                           <Icons.Plus />
-                          <span>Adicionar Primeiro Ativo</span>
+                          <span>Adicionar Primeiro Laptop</span>
                         </div>
                       </button>
                     </div>
@@ -2410,15 +1608,15 @@ const AssetControlSystem = () => {
           </div>
         )}
 
-        {/* Localizações Melhorado */}
+        {/* Localizações */}
         {activeTab === 'locations' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-green-800 to-gray-900 bg-clip-text text-transparent">
+                <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-900 via-emerald-800 to-teal-900 bg-clip-text text-transparent">
                   Gestão de Localizações
                 </h2>
-                <p className="text-gray-600 mt-2">Organize seus espaços e localizações</p>
+                <p className="text-gray-600 mt-2">Organize espaços e localizações</p>
               </div>
               <button
                 onClick={() => setShowRoomForm(true)}
@@ -2447,15 +1645,15 @@ const AssetControlSystem = () => {
                   
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-100">
+                      <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
                         <Icons.Building />
                         <span className="text-sm font-bold text-blue-700">{floor.rooms?.length || 0}</span>
                         <span className="text-xs text-blue-600">sala(s)</span>
                       </div>
                       <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
-                        <Icons.Package />
-                        <span className="text-sm font-bold text-purple-700">{assets.filter(a => a.floor_id === floor.id).length}</span>
-                        <span className="text-xs text-purple-600">ativo(s)</span>
+                        <Icons.Laptop />
+                        <span className="text-sm font-bold text-purple-700">{laptops.filter(l => l.floor_id === floor.id).length}</span>
+                        <span className="text-xs text-purple-600">laptop(s)</span>
                       </div>
                     </div>
                     
@@ -2478,7 +1676,7 @@ const AssetControlSystem = () => {
                               )}
                               <div className="flex items-center space-x-2 mt-2">
                                 <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
-                                  {assets.filter(a => a.room_id === room.id).length} ativos
+                                  {laptops.filter(l => l.room_id === room.id).length} laptops
                                 </span>
                               </div>
                             </div>
@@ -2505,52 +1703,41 @@ const AssetControlSystem = () => {
                   </div>
                 </div>
               ))}
-              
-              {floors.length === 0 && !isLoading && (
-                <div className="col-span-full text-center py-16 bg-white/70 backdrop-blur-sm rounded-3xl border border-white/40">
-                  <div className="w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                    <Icons.Building />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhum andar encontrado</h3>
-                  <p className="text-gray-500 mb-2">Os andares padrão serão criados automaticamente</p>
-                  <p className="text-sm text-gray-400">quando você criar sua primeira sala</p>
-                </div>
-              )}
             </div>
           </div>
         )}
 
-        {/* Relatórios Melhorado */}
+        {/* Relatórios */}
         {activeTab === 'reports' && (
           <div className="space-y-8">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-orange-800 to-gray-900 bg-clip-text text-transparent">
-                Relatórios
+              <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-orange-900 via-red-800 to-pink-900 bg-clip-text text-transparent">
+                Relatórios Dell
               </h2>
-              <p className="text-gray-600 mt-2">Análise detalhada dos seus ativos</p>
+              <p className="text-gray-600 mt-2">Análise detalhada dos laptops Dell</p>
             </div>
             
             <div className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-lg border border-white/40">
               <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
                   <Icons.BarChart3 />
                 </div>
                 <span>Resumo por Status</span>
               </h3>
               <div className="space-y-6">
                 {statuses.map(status => {
-                  const count = assets.filter(a => a.status === status).length;
+                  const count = laptops.filter(l => l.status === status).length;
                   const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
                   return (
                     <div key={status} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl border border-gray-200">
                       <div className="flex items-center space-x-4">
                         <StatusBadge status={status} />
-                        <span className="font-semibold text-gray-700">{count} itens</span>
+                        <span className="font-semibold text-gray-700">{count} laptops</span>
                       </div>
                       <div className="flex items-center space-x-4">
                         <div className="w-32 md:w-48 h-3 bg-gray-200 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500"
+                            className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500"
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
@@ -2562,42 +1749,34 @@ const AssetControlSystem = () => {
               </div>
             </div>
 
-            {/* Relatório por Categoria Melhorado */}
             <div className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-lg border border-white/40">
               <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                  <Icons.Tag />
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                  <Icons.Shield />
                 </div>
-                <span>Resumo por Categoria</span>
+                <span>Análise de Condição</span>
               </h3>
               <div className="space-y-6">
-                {categories.map(category => {
-                  const count = assets.filter(a => a.category === category).length;
+                {conditions.map(condition => {
+                  const count = laptops.filter(l => l.condition === condition).length;
                   const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
-                  const value = assets
-                    .filter(a => a.category === category)
-                    .reduce((sum, asset) => sum + (parseFloat(asset.value) || 0), 0);
                   
                   if (count === 0) return null;
                   
                   return (
-                    <div key={category} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl border border-gray-200">
+                    <div key={condition} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl border border-gray-200">
                       <div className="flex items-center space-x-4">
-                        <span className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-xl border border-purple-200">
-                          {category}
-                        </span>
-                        <span className="text-sm font-semibold text-gray-600">{count} itens</span>
+                        <ConditionBadge condition={condition} />
+                        <span className="text-sm font-semibold text-gray-600">{count} laptops</span>
                       </div>
                       <div className="flex items-center space-x-4">
                         <div className="w-32 md:w-48 h-3 bg-gray-200 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-500"
+                            className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all duration-500"
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
-                        <span className="text-sm font-bold text-purple-600 w-24 text-right">
-                          R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                        </span>
+                        <span className="text-sm font-bold text-green-600 w-12 text-right">{percentage.toFixed(1)}%</span>
                       </div>
                     </div>
                   );
@@ -2607,3 +1786,922 @@ const AssetControlSystem = () => {
           </div>
         )}
       </div>
+
+      {/* MODAIS */}
+      
+      {/* Modal de Opções de Foto */}
+      {photoState.showOptions && (
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-white/20 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/30 to-pink-50/50 rounded-3xl"></div>
+            
+            <div className="relative z-10">
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+                  <Icons.Camera />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">📷 Capturar Foto</h3>
+                <p className="text-gray-600 font-medium">Como você gostaria de adicionar a foto do laptop?</p>
+              </div>
+              
+              <div className="space-y-4">
+                <button
+                  onClick={handleTakePhoto}
+                  className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white py-5 px-6 rounded-2xl flex items-center justify-center space-x-4 transition-all transform hover:scale-105 shadow-lg font-bold"
+                >
+                  <Icons.Camera />
+                  <div className="text-left">
+                    <div className="font-bold">📷 Tirar Foto</div>
+                    <div className="text-sm opacity-90">Usar câmera do dispositivo</div>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={handleSelectFromGallery}
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-5 px-6 rounded-2xl flex items-center justify-center space-x-4 transition-all transform hover:scale-105 shadow-lg font-bold"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21,15 16,10 5,21"></polyline>
+                  </svg>
+                  <div className="text-left">
+                    <div className="font-bold">🖼️ Galeria</div>
+                    <div className="text-sm opacity-90">Escolher foto existente</div>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={closeAllPhotoModals}
+                  className="w-full bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white py-4 px-6 rounded-2xl transition-all font-bold"
+                >
+                  ❌ Cancelar
+                </button>
+              </div>
+              
+              <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border border-blue-200">
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Icons.AlertCircle />
+                  </div>
+                  <div className="text-sm text-blue-800">
+                    <p className="font-bold">🤖 Análise com IA:</p>
+                    <p>A foto será automaticamente analisada para identificar danos no laptop Dell.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Preview da Foto com Análise de IA */}
+      {photoState.showPreview && photoState.capturedPhoto && (
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/90 via-purple-900/90 to-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">🖼️ Preview da Foto</h3>
+                <button
+                  onClick={closeAllPhotoModals}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <Icons.X />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="w-full bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden border-4 border-white shadow-xl">
+                  <img 
+                    src={photoState.capturedPhoto} 
+                    alt="Foto capturada" 
+                    className="w-full h-auto max-h-80 object-contain"
+                  />
+                </div>
+                
+                <div className="flex flex-col space-y-4">
+                  <button
+                    onClick={confirmPhotoWithAI}
+                    disabled={photoState.isAnalyzing}
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white px-6 py-5 rounded-2xl flex items-center justify-center space-x-3 transition-all transform hover:scale-105 shadow-lg font-bold"
+                  >
+                    {photoState.isAnalyzing ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <span>🤖 Analisando com IA...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Icons.Sparkles />
+                        <span>🤖 Analisar e Usar Foto</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={retakePhoto}
+                    disabled={photoState.isAnalyzing}
+                    className="w-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 disabled:from-gray-300 disabled:to-gray-400 text-white px-6 py-4 rounded-2xl flex items-center justify-center space-x-3 transition-all font-bold"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <polyline points="1,4 1,10 7,10"></polyline>
+                      <path d="M3.51,15a9,9,0,0,0,13.48,2.55"></path>
+                      <path d="M20.49,9A9,9,0,0,0,7,6.54L1,10"></path>
+                    </svg>
+                    <span>🔄 Tirar Outra Foto</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading de Processamento */}
+      {photoState.isProcessing && (
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[9999]">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-10 text-center shadow-2xl border border-white/20">
+            <div className="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-6"></div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">🔄 Processando Foto</h3>
+            <p className="text-gray-600 font-medium">Preparando imagem...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Erro de Foto */}
+      {photoState.error && (
+        <div className="fixed top-6 right-6 bg-gradient-to-r from-red-500 to-pink-500 text-white p-6 rounded-2xl shadow-2xl z-[9999] max-w-sm border border-red-400">
+          <div className="flex items-start space-x-3">
+            <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+              <Icons.AlertCircle />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-lg">❌ Erro</p>
+              <p className="text-sm opacity-90">{photoState.error}</p>
+            </div>
+            <button
+              onClick={() => setPhotoState(prev => ({ ...prev, error: '' }))}
+              className="ml-2 hover:bg-white/20 rounded-xl p-1 transition-colors"
+            >
+              <Icons.X />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Formulário de Laptop */}
+      {showLaptopForm && (
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-6xl max-h-[95vh] overflow-y-auto shadow-2xl border border-white/20">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 bg-clip-text text-transparent">
+                    {editingLaptop ? '✏️ Editar Laptop Dell' : '💻 Novo Laptop Dell'}
+                  </h3>
+                  <p className="text-gray-600 mt-2 font-medium">
+                    {editingLaptop ? 'Atualize as informações do laptop' : 'Cadastre um novo laptop Dell no sistema'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowLaptopForm(false);
+                    setEditingLaptop(null);
+                    resetLaptopForm();
+                  }}
+                  className="p-3 hover:bg-gray-100 rounded-2xl transition-colors"
+                >
+                  <Icons.X />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Coluna 1 - Informações básicas */}
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">Modelo Dell *</label>
+                    <select
+                      value={laptopForm.model}
+                      onChange={(e) => setLaptopForm({...laptopForm, model: e.target.value})}
+                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                    >
+                      <option value="">🖥️ Selecione o modelo</option>
+                      {dellModels.map(model => (
+                        <option key={model} value={model}>{model}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">Número de Série *</label>
+                    <input
+                      type="text"
+                      value={laptopForm.serial_number}
+                      onChange={(e) => setLaptopForm({...laptopForm, serial_number: e.target.value})}
+                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-mono"
+                      placeholder="Ex: DLXPS-001"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">Service Tag Dell</label>
+                    <input
+                      type="text"
+                      value={laptopForm.service_tag}
+                      onChange={(e) => setLaptopForm({...laptopForm, service_tag: e.target.value})}
+                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-mono"
+                      placeholder="Ex: BXPYQ3"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Processador</label>
+                      <input
+                        type="text"
+                        value={laptopForm.processor}
+                        onChange={(e) => setLaptopForm({...laptopForm, processor: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        placeholder="Ex: Intel Core i7"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Memória RAM</label>
+                      <input
+                        type="text"
+                        value={laptopForm.ram}
+                        onChange={(e) => setLaptopForm({...laptopForm, ram: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        placeholder="Ex: 16GB DDR4"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Armazenamento</label>
+                      <input
+                        type="text"
+                        value={laptopForm.storage}
+                        onChange={(e) => setLaptopForm({...laptopForm, storage: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        placeholder="Ex: 512GB SSD"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Tamanho da Tela</label>
+                      <input
+                        type="text"
+                        value={laptopForm.screen_size}
+                        onChange={(e) => setLaptopForm({...laptopForm, screen_size: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        placeholder="Ex: 15.6 polegadas"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">Placa Gráfica</label>
+                    <input
+                      type="text"
+                      value={laptopForm.graphics}
+                      onChange={(e) => setLaptopForm({...laptopForm, graphics: e.target.value})}
+                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      placeholder="Ex: Intel Iris Xe"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Cor</label>
+                      <input
+                        type="text"
+                        value={laptopForm.color}
+                        onChange={(e) => setLaptopForm({...laptopForm, color: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        placeholder="Ex: Preto"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Fim da Garantia</label>
+                      <input
+                        type="date"
+                        value={laptopForm.warranty_end}
+                        onChange={(e) => setLaptopForm({...laptopForm, warranty_end: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Coluna 2 - Foto, status e localização */}
+                <div className="space-y-6">
+                  {/* SEÇÃO DE FOTO COM ANÁLISE DE IA */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-4">📷 Foto do Laptop</label>
+                    <div className="space-y-4">
+                      {laptopForm.photo ? (
+                        <div className="relative">
+                          <div className="w-full h-64 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl overflow-hidden border-4 border-white shadow-xl">
+                            <img 
+                              src={laptopForm.photo} 
+                              alt="Foto do laptop" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          
+                          {/* Análise de IA */}
+                          {laptopForm.damage_analysis && (
+                            <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+                              <h4 className="font-bold text-blue-800 mb-2 flex items-center space-x-2">
+                                <Icons.Sparkles />
+                                <span>🤖 Análise de IA</span>
+                              </h4>
+                              <div className="text-sm text-blue-700">
+                                <p className="font-medium">Condição: {laptopForm.damage_analysis.overall_condition}</p>
+                                <p className="font-medium">Confiança: {laptopForm.damage_analysis.confidence}%</p>
+                                {laptopForm.damage_analysis.damages && laptopForm.damage_analysis.damages.length > 0 && (
+                                  <div className="mt-2">
+                                    <p className="font-medium">Danos identificados:</p>
+                                    <ul className="list-disc pl-4 space-y-1">
+                                      {laptopForm.damage_analysis.damages.map((damage, index) => (
+                                        <li key={index}>
+                                          <span className="font-medium">{damage.type}</span> em {damage.location} 
+                                          <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+                                            damage.severity === 'Leve' ? 'bg-yellow-100 text-yellow-800' :
+                                            damage.severity === 'Moderado' ? 'bg-orange-100 text-orange-800' :
+                                            'bg-red-100 text-red-800'
+                                          }`}>
+                                            {damage.severity}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="flex space-x-3 mt-4">
+                            <button
+                              type="button"
+                              onClick={openPhotoOptions}
+                              className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-4 rounded-2xl flex items-center justify-center space-x-3 text-sm font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                            >
+                              <Icons.Camera />
+                              <span>📷 Alterar Foto</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={removePhotoFromForm}
+                              className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-4 py-4 rounded-2xl flex items-center justify-center transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                            >
+                              <Icons.Trash2 />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div 
+                          onClick={openPhotoOptions}
+                          className="w-full h-64 border-4 border-dashed border-blue-300 rounded-3xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 bg-gradient-to-br from-blue-50/50 via-indigo-50/50 to-purple-50/50 backdrop-blur-sm group"
+                        >
+                          <div className="text-center p-8">
+                            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                              <Icons.Camera />
+                            </div>
+                            <p className="text-gray-700 font-bold text-lg mb-2">📷 Clique para capturar foto</p>
+                            <p className="text-gray-600 font-medium mb-4">
+                              Tire uma foto ou escolha da galeria
+                            </p>
+                            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-2xl text-sm font-bold border border-blue-200">
+                              <Icons.Sparkles />
+                              <span className="ml-2">🤖 Análise de IA automática</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Status</label>
+                      <select
+                        value={laptopForm.status}
+                        onChange={(e) => setLaptopForm({...laptopForm, status: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      >
+                        {statuses.map(status => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Condição</label>
+                      <select
+                        value={laptopForm.condition}
+                        onChange={(e) => setLaptopForm({...laptopForm, condition: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      >
+                        {conditions.map(condition => (
+                          <option key={condition} value={condition}>{condition}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Andar *</label>
+                      <select
+                        value={laptopForm.floor_id}
+                        onChange={(e) => setLaptopForm({...laptopForm, floor_id: e.target.value, room_id: ''})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      >
+                        <option value="">🏢 Selecione um andar</option>
+                        {floors.map(floor => (
+                          <option key={floor.id} value={floor.id}>{floor.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Sala *</label>
+                      <select
+                        value={laptopForm.room_id}
+                        onChange={(e) => setLaptopForm({...laptopForm, room_id: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        disabled={!laptopForm.floor_id}
+                      >
+                        <option value="">🚪 Selecione uma sala</option>
+                        {getRoomsForFloor(laptopForm.floor_id).map(room => (
+                          <option key={room.id} value={room.id}>{room.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Data da Compra</label>
+                      <input
+                        type="date"
+                        value={laptopForm.purchase_date}
+                        onChange={(e) => setLaptopForm({...laptopForm, purchase_date: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Valor de Compra (R$)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={laptopForm.purchase_price}
+                        onChange={(e) => setLaptopForm({...laptopForm, purchase_price: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        placeholder="Ex: 3500.00"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">Usuário Responsável</label>
+                    <input
+                      type="text"
+                      value={laptopForm.assigned_user}
+                      onChange={(e) => setLaptopForm({...laptopForm, assigned_user: e.target.value})}
+                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      placeholder="Ex: João Silva"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8">
+                <label className="block text-sm font-bold text-gray-700 mb-3">Observações</label>
+                <textarea
+                  value={laptopForm.notes}
+                  onChange={(e) => setLaptopForm({...laptopForm, notes: e.target.value})}
+                  rows={4}
+                  className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium resize-none"
+                  placeholder="Observações sobre o laptop..."
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-4 mt-10 pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowLaptopForm(false);
+                    setEditingLaptop(null);
+                    resetLaptopForm();
+                  }}
+                  className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 transition-all font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveLaptop}
+                  disabled={isLoading}
+                  className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white rounded-2xl transition-all font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>Salvando...</span>
+                    </div>
+                  ) : (
+                    editingLaptop ? '✅ Atualizar Laptop' : '💾 Salvar Laptop'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Formulário de Sala */}
+      {showRoomForm && (
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-md shadow-2xl border border-white/20">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-green-900 via-emerald-800 to-teal-900 bg-clip-text text-transparent">
+                    {editingRoom ? '✏️ Editar Sala' : '🏢 Nova Sala'}
+                  </h3>
+                  <p className="text-gray-600 mt-2 font-medium">
+                    {editingRoom ? 'Atualize as informações da sala' : 'Adicione uma nova sala ao sistema'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowRoomForm(false);
+                    setEditingRoom(null);
+                    setRoomForm({ name: '', description: '', floor_id: '' });
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-2xl transition-colors"
+                >
+                  <Icons.X />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">Nome da Sala *</label>
+                  <input
+                    type="text"
+                    value={roomForm.name}
+                    onChange={(e) => setRoomForm({...roomForm, name: e.target.value})}
+                    className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                    placeholder="Ex: Sala de TI"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">Andar *</label>
+                  <select
+                    value={roomForm.floor_id}
+                    onChange={(e) => setRoomForm({...roomForm, floor_id: e.target.value})}
+                    className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                  >
+                    <option value="">🏢 Selecione um andar</option>
+                    {floors.map(floor => (
+                      <option key={floor.id} value={floor.id}>{floor.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">Descrição</label>
+                  <textarea
+                    value={roomForm.description}
+                    onChange={(e) => setRoomForm({...roomForm, description: e.target.value})}
+                    rows={4}
+                    className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium resize-none"
+                    placeholder="Descrição da sala..."
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowRoomForm(false);
+                    setEditingRoom(null);
+                    setRoomForm({ name: '', description: '', floor_id: '' });
+                  }}
+                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 transition-all font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveRoom}
+                  disabled={isLoading}
+                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 text-white rounded-2xl transition-all font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>Salvando...</span>
+                    </div>
+                  ) : (
+                    editingRoom ? '✅ Atualizar Sala' : '💾 Salvar Sala'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalhes do Laptop */}
+      {showLaptopDetail && (
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-6xl max-h-[95vh] overflow-y-auto shadow-2xl border border-white/20">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 bg-clip-text text-transparent">
+                    💻 Detalhes do Laptop Dell
+                  </h3>
+                  <p className="text-gray-600 mt-2 font-medium">Informações completas do equipamento</p>
+                </div>
+                <button
+                  onClick={() => setShowLaptopDetail(null)}
+                  className="p-3 hover:bg-gray-100 rounded-2xl transition-colors"
+                >
+                  <Icons.X />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-2xl border border-blue-100">
+                    <label className="block text-sm font-bold text-blue-700 mb-2">Modelo</label>
+                    <p className="text-xl font-bold text-blue-900">{showLaptopDetail.model}</p>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-2xl border border-purple-100">
+                    <label className="block text-sm font-bold text-purple-700 mb-2">Número de Série</label>
+                    <p className="text-lg font-mono font-bold text-purple-900 bg-white/70 px-3 py-2 rounded-xl inline-block">
+                      {showLaptopDetail.serial_number}
+                    </p>
+                  </div>
+                  
+                  {showLaptopDetail.service_tag && (
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-100">
+                      <label className="block text-sm font-bold text-indigo-700 mb-2">Service Tag Dell</label>
+                      <p className="text-lg font-mono font-bold text-indigo-900 bg-white/70 px-3 py-2 rounded-xl inline-block">
+                        {showLaptopDetail.service_tag}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-100">
+                    <label className="block text-sm font-bold text-green-700 mb-3">Status</label>
+                    <StatusBadge status={showLaptopDetail.status} />
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-100">
+                    <label className="block text-sm font-bold text-orange-700 mb-3">Condição</label>
+                    <ConditionBadge condition={showLaptopDetail.condition} score={showLaptopDetail.condition_score} />
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-cyan-50 to-blue-50 p-6 rounded-2xl border border-cyan-100">
+                    <label className="block text-sm font-bold text-cyan-700 mb-2">Localização</label>
+                    <div className="flex items-center space-x-2 text-cyan-900">
+                      <Icons.MapPin />
+                      <p className="font-bold text-lg">
+                        {getFloorName(showLaptopDetail.floor_id)} - {getRoomName(showLaptopDetail.room_id)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {showLaptopDetail.assigned_user && (
+                    <div className="bg-gradient-to-r from-teal-50 to-cyan-50 p-6 rounded-2xl border border-teal-100">
+                      <label className="block text-sm font-bold text-teal-700 mb-2">Usuário Responsável</label>
+                      <div className="flex items-center space-x-2 text-teal-900">
+                        <Icons.User />
+                        <p className="font-bold text-lg">{showLaptopDetail.assigned_user}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {showLaptopDetail.purchase_price && (
+                    <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-2xl border border-yellow-100">
+                      <label className="block text-sm font-bold text-yellow-700 mb-2">Valor de Compra</label>
+                      <div className="flex items-center space-x-2">
+                        <Icons.DollarSign />
+                        <p className="text-xl font-bold text-yellow-900">
+                          R$ {parseFloat(showLaptopDetail.purchase_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-4">📷 Foto do Laptop</label>
+                    <div className="w-full h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl overflow-hidden border-4 border-white shadow-xl">
+                      {showLaptopDetail.photo ? (
+                        <img 
+                          src={showLaptopDetail.photo} 
+                          alt={showLaptopDetail.model} 
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-200 to-indigo-300 text-blue-700">
+                          <div className="text-center">
+                            <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                              <Icons.Laptop />
+                            </div>
+                            <span className="text-blue-800 font-bold">Nenhuma foto disponível</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Análise de Danos por IA */}
+                  {showLaptopDetail.damage_analysis && (
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-2xl border border-blue-200">
+                      <h4 className="text-lg font-bold text-blue-800 mb-4 flex items-center space-x-2">
+                        <Icons.Sparkles />
+                        <span>🤖 Análise de IA - Danos Identificados</span>
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-white/70 p-4 rounded-xl">
+                            <p className="text-sm font-bold text-blue-700">Condição Geral</p>
+                            <p className="text-lg font-bold text-blue-900">{showLaptopDetail.damage_analysis.overall_condition}</p>
+                          </div>
+                          <div className="bg-white/70 p-4 rounded-xl">
+                            <p className="text-sm font-bold text-blue-700">Pontuação de Danos</p>
+                            <p className="text-lg font-bold text-blue-900">{showLaptopDetail.damage_analysis.damage_score}%</p>
+                          </div>
+                        </div>
+                        
+                        {showLaptopDetail.damage_analysis.damages && showLaptopDetail.damage_analysis.damages.length > 0 && (
+                          <div>
+                            <p className="font-bold text-blue-800 mb-3">Danos Detectados:</p>
+                            <div className="space-y-2">
+                              {showLaptopDetail.damage_analysis.damages.map((damage, index) => (
+                                <div key={index} className="bg-white/70 p-3 rounded-xl">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p className="font-bold text-gray-800">{damage.type}</p>
+                                      <p className="text-sm text-gray-600">{damage.location}</p>
+                                      {damage.description && (
+                                        <p className="text-sm text-gray-500 mt-1">{damage.description}</p>
+                                      )}
+                                    </div>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                      damage.severity === 'Leve' ? 'bg-yellow-100 text-yellow-800' :
+                                      damage.severity === 'Moderado' ? 'bg-orange-100 text-orange-800' :
+                                      'bg-red-100 text-red-800'
+                                    }`}>
+                                      {damage.severity}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {showLaptopDetail.damage_analysis.recommendations && (
+                          <div>
+                            <p className="font-bold text-blue-800 mb-3">Recomendações:</p>
+                            <ul className="space-y-2">
+                              {showLaptopDetail.damage_analysis.recommendations.map((rec, index) => (
+                                <li key={index} className="bg-white/70 p-3 rounded-xl text-sm text-gray-700">
+                                  • {rec}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Especificações Técnicas */}
+                  <div className="bg-gradient-to-r from-slate-50 to-gray-50 p-6 rounded-2xl border border-slate-200">
+                    <h4 className="text-lg font-bold text-slate-700 mb-4 flex items-center space-x-2">
+                      <Icons.Cpu />
+                      <span>⚙️ Especificações Técnicas</span>
+                    </h4>
+                    <div className="grid grid-cols-1 gap-3">
+                      {showLaptopDetail.processor && (
+                        <div className="bg-white/70 p-3 rounded-xl">
+                          <p className="text-sm font-bold text-gray-600">Processador</p>
+                          <p className="text-gray-900 font-medium">{showLaptopDetail.processor}</p>
+                        </div>
+                      )}
+                      {showLaptopDetail.ram && (
+                        <div className="bg-white/70 p-3 rounded-xl">
+                          <p className="text-sm font-bold text-gray-600">Memória RAM</p>
+                          <p className="text-gray-900 font-medium">{showLaptopDetail.ram}</p>
+                        </div>
+                      )}
+                      {showLaptopDetail.storage && (
+                        <div className="bg-white/70 p-3 rounded-xl">
+                          <p className="text-sm font-bold text-gray-600">Armazenamento</p>
+                          <p className="text-gray-900 font-medium">{showLaptopDetail.storage}</p>
+                        </div>
+                      )}
+                      {showLaptopDetail.graphics && (
+                        <div className="bg-white/70 p-3 rounded-xl">
+                          <p className="text-sm font-bold text-gray-600">Placa Gráfica</p>
+                          <p className="text-gray-900 font-medium">{showLaptopDetail.graphics}</p>
+                        </div>
+                      )}
+                      {showLaptopDetail.screen_size && (
+                        <div className="bg-white/70 p-3 rounded-xl">
+                          <p className="text-sm font-bold text-gray-600">Tamanho da Tela</p>
+                          <p className="text-gray-900 font-medium">{showLaptopDetail.screen_size}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {showLaptopDetail.notes && (
+                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-6 rounded-2xl border border-amber-200">
+                      <label className="block text-sm font-bold text-amber-700 mb-3">📝 Observações</label>
+                      <p className="text-amber-900 font-medium leading-relaxed">{showLaptopDetail.notes}</p>
+                    </div>
+                  )}
+
+                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-2xl border border-gray-200">
+                    <label className="block text-sm font-bold text-gray-700 mb-4">🔧 Informações do Sistema</label>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between p-3 bg-white/80 rounded-xl">
+                        <span className="font-bold text-gray-600">Criado em:</span>
+                        <span className="font-mono text-gray-900">
+                          {new Date(showLaptopDetail.created_at).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-white/80 rounded-xl">
+                        <span className="font-bold text-gray-600">Última atualização:</span>
+                        <span className="font-mono text-gray-900">
+                          {new Date(showLaptopDetail.updated_at).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                      {showLaptopDetail.warranty_end && (
+                        <div className="flex items-center justify-between p-3 bg-white/80 rounded-xl">
+                          <span className="font-bold text-gray-600">Fim da garantia:</span>
+                          <span className="font-mono text-gray-900">
+                            {new Date(showLaptopDetail.warranty_end).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-4 mt-10 pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowLaptopDetail(null);
+                    handleEditLaptop(showLaptopDetail);
+                  }}
+                  className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl transition-all font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <div className="flex items-center space-x-2">
+                    <Icons.Edit />
+                    <span>✏️ Editar Laptop</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setShowLaptopDetail(null)}
+                  className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 transition-all font-bold"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// =================== COMPONENTE PRINCIPAL COM PROVIDER ===================
+const App = () => {
+  return (
+    <AuthProvider>
+      <DellLaptopControlSystem />
+    </AuthProvider>
+  );
+};
+
+export default App;
