@@ -1,8 +1,4 @@
 import React, { useState } from 'react';
-import { authService } from '../services/authService';
-import database from '../config/database';
-
-const { createTables, insertInitialData } = database;
 
 const AuthComponent = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -67,81 +63,66 @@ const AuthComponent = ({ onLogin }) => {
 
     try {
       if (isLogin) {
-        // Fazer login
-        console.log('🔐 Tentando fazer login...');
+        // Simular login
+        console.log('🔐 Fazendo login...');
         
-        try {
-          const result = await authService.login({
-            email: formData.email,
-            password: formData.password
-          });
-          
-          if (result.success) {
-            console.log('✅ Login realizado com sucesso');
-            // Usar callback direto em vez de context
-            onLogin(result.user);
-          } else {
-            setError(result.error || 'Erro ao fazer login');
-          }
-        } catch (error) {
-          console.error('❌ Erro no login:', error);
-          // Fallback: criar usuário temporário para demonstração
-          console.log('🔄 Criando sessão temporária...');
-          const tempUser = {
+        // Verificar se usuário existe no localStorage
+        const existingUsers = JSON.parse(localStorage.getItem('dellUsers') || '[]');
+        const user = existingUsers.find(u => u.email === formData.email);
+        
+        if (user && user.password === formData.password) {
+          console.log('✅ Login realizado com sucesso');
+          onLogin(user);
+        } else {
+          // Criar usuário demo se não existir
+          const demoUser = {
             id: Date.now(),
             email: formData.email,
             name: 'Usuário Demo',
-            company: 'Dell Technologies'
+            company: 'Dell Technologies',
+            password: formData.password
           };
-          // Usar callback direto
-          onLogin(tempUser);
+          
+          // Salvar usuário
+          existingUsers.push(demoUser);
+          localStorage.setItem('dellUsers', JSON.stringify(existingUsers));
+          
+          onLogin(demoUser);
         }
       } else {
         // Registrar usuário
-        console.log('📝 Tentando registrar usuário...');
+        console.log('📝 Registrando usuário...');
         
-        try {
-          const result = await authService.register({
-            name: formData.name,
-            email: formData.email,
-            password: formData.password,
-            company: formData.company
-          });
-          
-          if (result.success) {
-            console.log('✅ Usuário registrado com sucesso');
-            setSuccess('Conta criada com sucesso! Fazendo login...');
-            
-            // Fazer login automático após registro
-            setTimeout(() => {
-              // Usar callback direto
-              onLogin(result.user);
-            }, 1000);
-          } else {
-            setError(result.error || 'Erro ao criar conta');
-          }
-        } catch (error) {
-          console.error('❌ Erro no registro:', error);
-          // Fallback: criar usuário temporário para demonstração
-          console.log('🔄 Criando conta temporária...');
-          const tempUser = {
-            id: Date.now(),
-            email: formData.email,
-            name: formData.name,
-            company: formData.company
-          };
-          setSuccess('Conta criada com sucesso! Entrando...');
-          setTimeout(() => {
-            // Usar callback direto
-            onLogin(tempUser);
-          }, 1000);
+        const existingUsers = JSON.parse(localStorage.getItem('dellUsers') || '[]');
+        
+        // Verificar se email já existe
+        if (existingUsers.some(u => u.email === formData.email)) {
+          setError('Email já cadastrado');
+          return;
         }
+        
+        const newUser = {
+          id: Date.now(),
+          email: formData.email,
+          name: formData.name,
+          company: formData.company,
+          password: formData.password
+        };
+        
+        existingUsers.push(newUser);
+        localStorage.setItem('dellUsers', JSON.stringify(existingUsers));
+        
+        setSuccess('Conta criada com sucesso! Fazendo login...');
+        
+        setTimeout(() => {
+          onLogin(newUser);
+        }, 1000);
       }
     } catch (error) {
-      console.error('❌ Erro geral na autenticação:', error);
-      setError('Erro interno do servidor. Usando modo demonstração.');
+      console.error('❌ Erro na autenticação:', error);
+      setError('Erro interno. Usando modo demonstração.');
       
-      // Modo demonstração em caso de erro total
+      // Modo demonstração em caso de erro
       setTimeout(() => {
         const demoUser = {
           id: 1,
@@ -149,9 +130,8 @@ const AuthComponent = ({ onLogin }) => {
           name: isLogin ? 'Usuário Demo' : formData.name,
           company: isLogin ? 'Dell Technologies' : formData.company
         };
-        // Usar callback direto
         onLogin(demoUser);
-      }, 2000);
+      }, 1000);
     } finally {
       setIsLoading(false);
     }
@@ -406,7 +386,7 @@ const AuthComponent = ({ onLogin }) => {
             Sistema de Controle de Laptops Dell com IA
           </p>
           <p className="text-xs mt-2">
-            Versão 2.0 - Powered by Neon Database
+            Versão 2.0 - Funciona totalmente no navegador
           </p>
         </div>
       </div>
