@@ -265,6 +265,12 @@ const createTables = async () => {
   }
 };
 
+// Função para gerar ID compatível com INTEGER do PostgreSQL (máximo 2,147,483,647)
+const generateSafeId = () => {
+  // Gerar um número entre 1 e 2,000,000,000 (menor que o limite do INTEGER)
+  return Math.floor(Math.random() * 2000000000) + 1;
+};
+
 // Função para inserir dados iniciais
 const insertInitialData = async (userId) => {
   console.log('🔄 === STARTING INITIAL DATA INSERTION ===');
@@ -289,60 +295,48 @@ const insertInitialData = async (userId) => {
 
     console.log('📝 Inserting initial data...');
 
-    // Inserir andares
-    const floors = await sql`
-      INSERT INTO floors (name, description, user_id) 
+    // Gerar IDs seguros para os floors
+    const floor1Id = generateSafeId();
+    const floor2Id = generateSafeId();
+    const floor3Id = generateSafeId();
+
+    // Inserir andares com IDs específicos
+    await sql`
+      INSERT INTO floors (id, name, description, user_id) 
       VALUES 
-        ('Térreo', 'Recepção e atendimento', ${userId}),
-        ('1º Andar', 'Área administrativa', ${userId}),
-        ('2º Andar', 'Setor de TI', ${userId})
-      RETURNING id, name
+        (${floor1Id}, 'Térreo', 'Recepção e atendimento', ${userId}),
+        (${floor2Id}, '1º Andar', 'Área administrativa', ${userId}),
+        (${floor3Id}, '2º Andar', 'Setor de TI', ${userId})
     `;
 
-    console.log('🏢 Floors created:', floors.length);
-    floors.forEach(floor => console.log(`  - ${floor.name} (ID: ${floor.id})`));
+    console.log('🏢 Floors created with IDs:', [floor1Id, floor2Id, floor3Id]);
 
     // Inserir salas para cada andar
-    let totalRooms = 0;
-    for (const floor of floors) {
-      let rooms = [];
-      
-      if (floor.name === 'Térreo') {
-        rooms = await sql`
-          INSERT INTO rooms (name, description, floor_id, user_id)
-          VALUES 
-            ('Recepção', 'Área de atendimento ao cliente', ${floor.id}, ${userId}),
-            ('Sala de Espera', 'Área de espera para clientes', ${floor.id}, ${userId}),
-            ('Almoxarifado', 'Estoque de equipamentos', ${floor.id}, ${userId})
-          RETURNING id, name
-        `;
-      } else if (floor.name === '1º Andar') {
-        rooms = await sql`
-          INSERT INTO rooms (name, description, floor_id, user_id)
-          VALUES 
-            ('Escritório Admin', 'Administração geral', ${floor.id}, ${userId}),
-            ('Sala de Reuniões', 'Reuniões e apresentações', ${floor.id}, ${userId}),
-            ('RH', 'Recursos Humanos', ${floor.id}, ${userId})
-          RETURNING id, name
-        `;
-      } else if (floor.name === '2º Andar') {
-        rooms = await sql`
-          INSERT INTO rooms (name, description, floor_id, user_id)
-          VALUES 
-            ('Sala de TI', 'Departamento de Tecnologia', ${floor.id}, ${userId}),
-            ('Lab de Testes', 'Testes de equipamentos', ${floor.id}, ${userId}),
-            ('Suporte Técnico', 'Atendimento técnico', ${floor.id}, ${userId})
-          RETURNING id, name
-        `;
-      }
-      
-      totalRooms += rooms.length;
-      console.log(`🚪 Rooms created for ${floor.name}:`, rooms.length);
-      rooms.forEach(room => console.log(`    - ${room.name} (ID: ${room.id})`));
+    const roomsData = [
+      // Térreo
+      [generateSafeId(), 'Recepção', 'Área de atendimento ao cliente', floor1Id, userId],
+      [generateSafeId(), 'Sala de Espera', 'Área de espera para clientes', floor1Id, userId],
+      [generateSafeId(), 'Almoxarifado', 'Estoque de equipamentos', floor1Id, userId],
+      // 1º Andar
+      [generateSafeId(), 'Escritório Admin', 'Administração geral', floor2Id, userId],
+      [generateSafeId(), 'Sala de Reuniões', 'Reuniões e apresentações', floor2Id, userId],
+      [generateSafeId(), 'RH', 'Recursos Humanos', floor2Id, userId],
+      // 2º Andar
+      [generateSafeId(), 'Sala de TI', 'Departamento de Tecnologia', floor3Id, userId],
+      [generateSafeId(), 'Lab de Testes', 'Testes de equipamentos', floor3Id, userId],
+      [generateSafeId(), 'Suporte Técnico', 'Atendimento técnico', floor3Id, userId]
+    ];
+
+    // Inserir todas as salas
+    for (const [roomId, name, description, floorId, userId] of roomsData) {
+      await sql`
+        INSERT INTO rooms (id, name, description, floor_id, user_id)
+        VALUES (${roomId}, ${name}, ${description}, ${floorId}, ${userId})
+      `;
     }
 
     console.log(`✅ Initial data inserted successfully!`);
-    console.log(`📊 Summary: ${floors.length} floors, ${totalRooms} rooms`);
+    console.log(`📊 Summary: 3 floors, ${roomsData.length} rooms`);
     return true;
   } catch (error) {
     console.error('❌ Error inserting initial data:', error);
