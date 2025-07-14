@@ -429,7 +429,19 @@ const DellLaptopControlSystem = () => {
       }
 
       if (statsResult.success) {
-        setStatistics(statsResult.data);
+        // Garantir que todos os valores sejam números
+        const safeStats = {
+          total_laptops: parseInt(statsResult.data.total_laptops) || 0,
+          available_laptops: parseInt(statsResult.data.available_laptops) || 0,
+          in_use_laptops: parseInt(statsResult.data.in_use_laptops) || 0,
+          maintenance_laptops: parseInt(statsResult.data.maintenance_laptops) || 0,
+          discarded_laptops: parseInt(statsResult.data.discarded_laptops) || 0,
+          total_value: parseFloat(statsResult.data.total_value) || 0,
+          avg_condition: parseFloat(statsResult.data.avg_condition) || 0,
+          total_floors: parseInt(statsResult.data.total_floors) || 0,
+          total_rooms: parseInt(statsResult.data.total_rooms) || 0
+        };
+        setStatistics(safeStats);
       }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -951,18 +963,18 @@ const DellLaptopControlSystem = () => {
               <div className="hidden lg:flex items-center space-x-6 text-sm">
                 <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
                   <Icons.Laptop />
-                  <span className="font-semibold text-blue-700">{statistics.total_laptops || 0}</span>
+                  <span className="font-semibold text-blue-700">{parseInt(statistics.total_laptops) || 0}</span>
                   <span className="text-blue-600">laptops</span>
                 </div>
                 <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
                   <Icons.CheckCircle />
-                  <span className="font-semibold text-green-700">{statistics.available_laptops || 0}</span>
+                  <span className="font-semibold text-green-700">{parseInt(statistics.available_laptops) || 0}</span>
                   <span className="text-green-600">disponíveis</span>
                 </div>
                 <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
                   <Icons.DollarSign />
                   <span className="font-semibold text-purple-700">
-                    R$ {(statistics.total_value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    R$ {(parseFloat(statistics.total_value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </span>
                 </div>
               </div>
@@ -1040,7 +1052,7 @@ const DellLaptopControlSystem = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-blue-600 mb-2">Total Laptops</p>
-                    <p className="text-3xl md:text-4xl font-bold text-blue-700">{statistics.total_laptops || 0}</p>
+                    <p className="text-3xl md:text-4xl font-bold text-blue-700">{parseInt(statistics.total_laptops) || 0}</p>
                     <p className="text-xs text-blue-500 mt-1">equipamentos</p>
                   </div>
                   <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1053,7 +1065,7 @@ const DellLaptopControlSystem = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-emerald-600 mb-2">Disponíveis</p>
-                    <p className="text-3xl md:text-4xl font-bold text-emerald-700">{statistics.available_laptops || 0}</p>
+                    <p className="text-3xl md:text-4xl font-bold text-emerald-700">{parseInt(statistics.available_laptops) || 0}</p>
                     <p className="text-xs text-emerald-500 mt-1">prontos para uso</p>
                   </div>
                   <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-emerald-500 to-green-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1066,7 +1078,7 @@ const DellLaptopControlSystem = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-orange-600 mb-2">Em Manutenção</p>
-                    <p className="text-3xl md:text-4xl font-bold text-orange-700">{statistics.maintenance_laptops || 0}</p>
+                    <p className="text-3xl md:text-4xl font-bold text-orange-700">{parseInt(statistics.maintenance_laptops) || 0}</p>
                     <p className="text-xs text-orange-500 mt-1">em reparo</p>
                   </div>
                   <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1080,7 +1092,7 @@ const DellLaptopControlSystem = () => {
                   <div>
                     <p className="text-sm font-medium text-purple-600 mb-2">Condição Média</p>
                     <p className="text-2xl md:text-3xl font-bold text-purple-700">
-                      {(statistics.avg_condition || 0).toFixed(0)}%
+                      {parseFloat(statistics.avg_condition || 0).toFixed(0)}%
                     </p>
                     <p className="text-xs text-purple-500 mt-1">estado geral</p>
                   </div>
@@ -1395,7 +1407,7 @@ const DellLaptopControlSystem = () => {
               <div className="space-y-6">
                 {statuses.map(status => {
                   const count = laptops.filter(l => l.status === status).length;
-                  const percentage = (statistics.total_laptops || 0) > 0 ? (count / (statistics.total_laptops || 1)) * 100 : 0;
+                  const percentage = (parseInt(statistics.total_laptops) || 0) > 0 ? (count / (parseInt(statistics.total_laptops) || 1)) * 100 : 0;
                   return (
                     <div key={status} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl border border-gray-200">
                       <div className="flex items-center space-x-4">
@@ -1427,7 +1439,7 @@ const DellLaptopControlSystem = () => {
               <div className="space-y-6">
                 {conditions.map(condition => {
                   const count = laptops.filter(l => l.condition === condition).length;
-                  const percentage = (statistics.total_laptops || 0) > 0 ? (count / (statistics.total_laptops || 1)) * 100 : 0;
+                  const percentage = (parseInt(statistics.total_laptops) || 0) > 0 ? (count / (parseInt(statistics.total_laptops) || 1)) * 100 : 0;
                   
                   if (count === 0) return null;
                   
