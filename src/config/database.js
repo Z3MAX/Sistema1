@@ -26,12 +26,26 @@ possibleVars.forEach(varName => {
 });
 
 // Tentar obter a URL do banco (prioridade para VITE_ em builds)
-const DATABASE_URL = 
+let DATABASE_URL = 
   import.meta.env.VITE_DATABASE_URL || 
   import.meta.env.NETLIFY_DATABASE_URL ||
   import.meta.env.VITE_NEON_DATABASE_URL || 
   import.meta.env.DATABASE_URL ||
   import.meta.env.NEON_DATABASE_URL;
+
+// Limpar a URL se estiver com prefixo psql
+if (DATABASE_URL) {
+  // Remover prefixo psql ' e sufixo '
+  DATABASE_URL = DATABASE_URL.replace(/^psql\s*['"]?/, '').replace(/['"]?$/, '');
+  
+  // Garantir que começa com postgresql://
+  if (!DATABASE_URL.startsWith('postgresql://')) {
+    console.warn('⚠️ Connection string não começa com postgresql://, tentando corrigir...');
+    if (DATABASE_URL.includes('postgresql://')) {
+      DATABASE_URL = DATABASE_URL.substring(DATABASE_URL.indexOf('postgresql://'));
+    }
+  }
+}
 
 console.log('🔗 Selected DATABASE_URL:', DATABASE_URL ? '✅ ENCONTRADA' : '❌ NÃO ENCONTRADA');
 
