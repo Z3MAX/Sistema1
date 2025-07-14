@@ -181,7 +181,6 @@ const AIAnalysisService = {
 const Icons = {
   Laptop: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h2a2 2 0 002-2z" />
       <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
       <line x1="8" y1="21" x2="16" y2="21"></line>
       <line x1="12" y1="17" x2="12" y2="21"></line>
@@ -292,32 +291,9 @@ const Icons = {
       <line x1="1" y1="14" x2="4" y2="14"></line>
     </svg>
   ),
-  HardDrive: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <line x1="22" y1="12" x2="2" y2="12"></line>
-      <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"></path>
-      <line x1="6" y1="16" x2="6.01" y2="16"></line>
-      <line x1="10" y1="16" x2="10.01" y2="16"></line>
-    </svg>
-  ),
-  Monitor: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-      <line x1="8" y1="21" x2="16" y2="21"></line>
-      <line x1="12" y1="17" x2="12" y2="21"></line>
-    </svg>
-  ),
   User: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  ),
-  Calendar: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-      <line x1="16" y1="2" x2="16" y2="6"></line>
-      <line x1="8" y1="2" x2="8" y2="6"></line>
-      <line x1="3" y1="10" x2="21" y2="10"></line>
     </svg>
   ),
   LogOut: () => (
@@ -1142,3 +1118,524 @@ const DellLaptopControlSystem = () => {
             </div>
           </div>
         )}
+
+        {/* Laptops */}
+        {activeTab === 'laptops' && (
+          <div className="space-y-6">
+            <div className="flex flex-col space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 bg-clip-text text-transparent">
+                    Gestão de Laptops Dell
+                  </h2>
+                  <p className="text-gray-600 mt-2">Controle completo dos equipamentos Dell</p>
+                </div>
+                
+                <button
+                  onClick={() => setShowLaptopForm(true)}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-4 rounded-2xl flex items-center justify-center space-x-3 text-sm font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <Icons.Plus />
+                  <span>Novo Laptop</span>
+                  <Icons.Sparkles />
+                </button>
+              </div>
+
+              <div className="bg-white/70 backdrop-blur-sm p-6 rounded-3xl shadow-lg border border-white/40">
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <Icons.Search />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="🔍 Buscar por modelo, serial ou usuário..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-12 pr-6 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium placeholder-gray-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {isLoading ? (
+                <div className="text-center py-16 bg-white/70 backdrop-blur-sm rounded-3xl border border-white/40">
+                  <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
+                  <p className="text-gray-500 font-medium">Carregando laptops...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredLaptops.map(laptop => (
+                    <div key={laptop.id} className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/40 p-6 hover:shadow-xl transition-all group">
+                      <div className="flex items-start space-x-4">
+                        <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform">
+                          {laptop.photo ? (
+                            <img src={laptop.photo} alt={laptop.model} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-200 to-indigo-300 text-blue-700">
+                              <Icons.Laptop />
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-gray-900 truncate mb-1">{laptop.model}</h3>
+                          <p className="text-sm text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded-lg inline-block mb-2">
+                            {laptop.serial_number}
+                          </p>
+                          {laptop.service_tag && (
+                            <p className="text-xs text-blue-600 font-medium mb-2">
+                              Service Tag: {laptop.service_tag}
+                            </p>
+                          )}
+                          
+                          <div className="flex items-center justify-between mb-2">
+                            <StatusBadge status={laptop.status} />
+                          </div>
+                          
+                          <div className="flex items-center justify-between mb-3">
+                            <ConditionBadge condition={laptop.condition} score={laptop.condition_score} />
+                          </div>
+                          
+                          {laptop.assigned_user && (
+                            <div className="flex items-center space-x-2 text-sm text-gray-600 mb-2">
+                              <Icons.User />
+                              <span className="font-medium">{laptop.assigned_user}</span>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                            <div className="flex items-center space-x-2 text-sm text-gray-600">
+                              <Icons.MapPin />
+                              <span className="font-medium">{getFloorName(laptop.floor_id)} - {getRoomName(laptop.room_id)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => setShowLaptopDetail(laptop)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all hover:scale-110"
+                                title="Ver detalhes"
+                              >
+                                <Icons.Eye />
+                              </button>
+                              <button
+                                onClick={() => handleEditLaptop(laptop)}
+                                className="p-2 text-purple-600 hover:bg-purple-50 rounded-xl transition-all hover:scale-110"
+                                title="Editar"
+                              >
+                                <Icons.Edit />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteLaptop(laptop.id)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all hover:scale-110"
+                                title="Excluir"
+                              >
+                                <Icons.Trash2 />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {filteredLaptops.length === 0 && !isLoading && (
+                    <div className="col-span-full text-center py-16 bg-white/70 backdrop-blur-sm rounded-3xl border border-white/40">
+                      <div className="w-20 h-20 bg-gradient-to-br from-blue-200 to-indigo-300 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                        <Icons.Laptop />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhum laptop encontrado</h3>
+                      <p className="text-gray-500 mb-6">Comece adicionando seu primeiro laptop Dell</p>
+                      <button
+                        onClick={() => setShowLaptopForm(true)}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Icons.Plus />
+                          <span>Adicionar Primeiro Laptop</span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Localizações */}
+        {activeTab === 'locations' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-900 via-emerald-800 to-teal-900 bg-clip-text text-transparent">
+                  Gestão de Localizações
+                </h2>
+                <p className="text-gray-600 mt-2">Organize espaços e localizações</p>
+              </div>
+              <button
+                onClick={() => setShowRoomForm(true)}
+                className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-4 rounded-2xl flex items-center justify-center space-x-3 font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <Icons.Plus />
+                <span>Nova Sala</span>
+                <Icons.Building />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {floors.map(floor => (
+                <div key={floor.id} className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/40 overflow-hidden hover:shadow-xl transition-all group">
+                  <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 px-6 py-6">
+                    <h3 className="font-bold text-white text-xl flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                        <Icons.Building />
+                      </div>
+                      <span>{floor.name}</span>
+                    </h3>
+                    {floor.description && (
+                      <p className="text-green-100 text-sm mt-2 font-medium">{floor.description}</p>
+                    )}
+                  </div>
+                  
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                        <Icons.Building />
+                        <span className="text-sm font-bold text-blue-700">{floor.rooms?.length || 0}</span>
+                        <span className="text-xs text-blue-600">sala(s)</span>
+                      </div>
+                      <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
+                        <Icons.Laptop />
+                        <span className="text-sm font-bold text-purple-700">{laptops.filter(l => l.floor_id === floor.id).length}</span>
+                        <span className="text-xs text-purple-600">laptop(s)</span>
+                      </div>
+                    </div>
+                    
+                    {!floor.rooms || floor.rooms.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                          <Icons.Building />
+                        </div>
+                        <p className="text-gray-500 font-medium">Nenhuma sala cadastrada</p>
+                        <p className="text-gray-400 text-sm mt-1">Adicione salas para este andar</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {floor.rooms.map(room => (
+                          <div key={room.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl border border-gray-200 hover:shadow-md transition-all group">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-gray-900 truncate">{room.name}</div>
+                              {room.description && (
+                                <div className="text-sm text-gray-500 mt-1 truncate">{room.description}</div>
+                              )}
+                              <div className="flex items-center space-x-2 mt-2">
+                                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                                  {laptops.filter(l => l.room_id === room.id).length} laptops
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex space-x-2 ml-4 flex-shrink-0">
+                              <button
+                                onClick={() => handleEditRoom(room)}
+                                className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all hover:scale-110"
+                                title="Editar sala"
+                              >
+                                <Icons.Edit />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRoom(room.id)}
+                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all hover:scale-110"
+                                title="Excluir sala"
+                              >
+                                <Icons.Trash2 />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Relatórios */}
+        {activeTab === 'reports' && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-orange-900 via-red-800 to-pink-900 bg-clip-text text-transparent">
+                Relatórios Dell
+              </h2>
+              <p className="text-gray-600 mt-2">Análise detalhada dos laptops Dell</p>
+            </div>
+            
+            <div className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-lg border border-white/40">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
+                  <Icons.BarChart3 />
+                </div>
+                <span>Resumo por Status</span>
+              </h3>
+              <div className="space-y-6">
+                {statuses.map(status => {
+                  const count = laptops.filter(l => l.status === status).length;
+                  const percentage = (statistics.total_laptops || 0) > 0 ? (count / (statistics.total_laptops || 1)) * 100 : 0;
+                  return (
+                    <div key={status} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl border border-gray-200">
+                      <div className="flex items-center space-x-4">
+                        <StatusBadge status={status} />
+                        <span className="font-semibold text-gray-700">{count} laptops</span>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="w-32 md:w-48 h-3 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-bold text-gray-600 w-12 text-right">{percentage.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-lg border border-white/40">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                  <Icons.Shield />
+                </div>
+                <span>Análise de Condição</span>
+              </h3>
+              <div className="space-y-6">
+                {conditions.map(condition => {
+                  const count = laptops.filter(l => l.condition === condition).length;
+                  const percentage = (statistics.total_laptops || 0) > 0 ? (count / (statistics.total_laptops || 1)) * 100 : 0;
+                  
+                  if (count === 0) return null;
+                  
+                  return (
+                    <div key={condition} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl border border-gray-200">
+                      <div className="flex items-center space-x-4">
+                        <ConditionBadge condition={condition} />
+                        <span className="text-sm font-semibold text-gray-600">{count} laptops</span>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="w-32 md:w-48 h-3 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all duration-500"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-bold text-green-600 w-12 text-right">{percentage.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* MODAIS */}
+      
+      {/* Modal de Opções de Foto */}
+      {photoState.showOptions && (
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-white/20 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/30 to-pink-50/50 rounded-3xl"></div>
+            
+            <div className="relative z-10">
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+                  <Icons.Camera />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">📷 Capturar Foto</h3>
+                <p className="text-gray-600 font-medium">Como você gostaria de adicionar a foto do laptop?</p>
+              </div>
+              
+              <div className="space-y-4">
+                <button
+                  onClick={handleTakePhoto}
+                  className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white py-5 px-6 rounded-2xl flex items-center justify-center space-x-4 transition-all transform hover:scale-105 shadow-lg font-bold"
+                >
+                  <Icons.Camera />
+                  <div className="text-left">
+                    <div className="font-bold">📷 Tirar Foto</div>
+                    <div className="text-sm opacity-90">Usar câmera do dispositivo</div>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={handleSelectFromGallery}
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-5 px-6 rounded-2xl flex items-center justify-center space-x-4 transition-all transform hover:scale-105 shadow-lg font-bold"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21,15 16,10 5,21"></polyline>
+                  </svg>
+                  <div className="text-left">
+                    <div className="font-bold">🖼️ Galeria</div>
+                    <div className="text-sm opacity-90">Escolher foto existente</div>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={closeAllPhotoModals}
+                  className="w-full bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white py-4 px-6 rounded-2xl transition-all font-bold"
+                >
+                  ❌ Cancelar
+                </button>
+              </div>
+              
+              <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border border-blue-200">
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Icons.AlertCircle />
+                  </div>
+                  <div className="text-sm text-blue-800">
+                    <p className="font-bold">🤖 Análise com IA:</p>
+                    <p>A foto será automaticamente analisada para identificar danos no laptop Dell.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Preview da Foto com Análise de IA */}
+      {photoState.showPreview && photoState.capturedPhoto && (
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/90 via-purple-900/90 to-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">🖼️ Preview da Foto</h3>
+                <button
+                  onClick={closeAllPhotoModals}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <Icons.X />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="w-full bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden border-4 border-white shadow-xl">
+                  <img 
+                    src={photoState.capturedPhoto} 
+                    alt="Foto capturada" 
+                    className="w-full h-auto max-h-80 object-contain"
+                  />
+                </div>
+                
+                <div className="flex flex-col space-y-4">
+                  <button
+                    onClick={confirmPhotoWithAI}
+                    disabled={photoState.isAnalyzing}
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white px-6 py-5 rounded-2xl flex items-center justify-center space-x-3 transition-all transform hover:scale-105 shadow-lg font-bold"
+                  >
+                    {photoState.isAnalyzing ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <span>🤖 Analisando com IA...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Icons.Sparkles />
+                        <span>🤖 Analisar e Usar Foto</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={retakePhoto}
+                    disabled={photoState.isAnalyzing}
+                    className="w-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 disabled:from-gray-300 disabled:to-gray-400 text-white px-6 py-4 rounded-2xl flex items-center justify-center space-x-3 transition-all font-bold"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <polyline points="1,4 1,10 7,10"></polyline>
+                      <path d="M3.51,15a9,9,0,0,0,13.48,2.55"></path>
+                      <path d="M20.49,9A9,9,0,0,0,7,6.54L1,10"></path>
+                    </svg>
+                    <span>🔄 Tirar Outra Foto</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading de Processamento */}
+      {photoState.isProcessing && (
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[9999]">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-10 text-center shadow-2xl border border-white/20">
+            <div className="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-6"></div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">🔄 Processando Foto</h3>
+            <p className="text-gray-600 font-medium">Preparando imagem...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Erro de Foto */}
+      {photoState.error && (
+        <div className="fixed top-6 right-6 bg-gradient-to-r from-red-500 to-pink-500 text-white p-6 rounded-2xl shadow-2xl z-[9999] max-w-sm border border-red-400">
+          <div className="flex items-start space-x-3">
+            <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+              <Icons.AlertCircle />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-lg">❌ Erro</p>
+              <p className="text-sm opacity-90">{photoState.error}</p>
+            </div>
+            <button
+              onClick={() => setPhotoState(prev => ({ ...prev, error: '' }))}
+              className="ml-2 hover:bg-white/20 rounded-xl p-1 transition-colors"
+            >
+              <Icons.X />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Formulários e outros modais já inclusos... */}
+    </div>
+  );
+};
+
+// =================== COMPONENTE PRINCIPAL COM PROVIDER ===================
+const App = () => {
+  const { user, loading, isInitialized } = useAuth();
+
+  if (loading || !isInitialized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-8"></div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Inicializando Sistema</h2>
+          <p className="text-gray-600">Conectando com o banco de dados...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <AuthProvider>
+      {user ? (
+        <DellLaptopControlSystem />
+      ) : (
+        <AuthComponent onLogin={(userData) => {
+          const { login } = useAuth();
+          login(userData);
+        }} />
+      )}
+    </AuthProvider>
+  );
+};
+
+export default App;
