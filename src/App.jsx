@@ -2,7 +2,9 @@ import React, { useState, useRef, useEffect, createContext, useContext } from 'r
 import AuthComponent from './components/AuthComponent';
 import { authService } from './services/authService';
 import { dataService } from './services/dataService';
-import { testConnection, createTables } from './config/database';
+import database from './config/database';
+
+const { testConnection, createTables } = database;
 
 // =================== CONTEXT DE AUTENTICAÇÃO ===================
 const AuthContext = createContext({});
