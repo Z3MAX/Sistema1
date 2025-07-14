@@ -1632,7 +1632,7 @@ const App = () => {
 };
 
 const AppContent = () => {
-  const { user, loading, isInitialized } = useAuth();
+  const { user, loading, isInitialized, login } = useAuth();
 
   // Se ainda está carregando e não inicializou, mostrar loading
   if (loading && !isInitialized) {
@@ -1675,7 +1675,7 @@ const AppContent = () => {
   // Se não há usuário, mostrar tela de login
   return (
     <AuthComponent onLogin={(userData) => {
-      const { login } = useAuth();
+      console.log('🔐 Fazendo login com:', userData);
       login(userData);
     }} />
   );
