@@ -29,31 +29,50 @@ const AuthProvider = ({ children }) => {
   const initializeApp = async () => {
     try {
       setLoading(true);
+      console.log('🚀 Iniciando aplicação...');
       
       // Testar conexão com o banco
+      console.log('🔄 Tentando conectar com o banco...');
       const connected = await testConnection();
+      
       if (!connected) {
-        throw new Error('Falha na conexão com o banco de dados');
+        console.warn('⚠️ Falha na conexão com o banco, mas continuando...');
+        // Não bloquear a aplicação se o banco não conectar
+        setIsInitialized(true);
+        setLoading(false);
+        return;
       }
       
       // Criar tabelas se necessário
+      console.log('🔄 Criando tabelas...');
       await createTables();
       
       // Verificar se há usuário salvo no localStorage
+      console.log('🔄 Verificando usuário salvo...');
       const savedUser = localStorage.getItem('dellLaptopUser');
       if (savedUser) {
-        const userData = JSON.parse(savedUser);
-        const currentUser = await authService.getUserById(userData.id);
-        if (currentUser) {
-          setUser(currentUser);
-        } else {
+        try {
+          const userData = JSON.parse(savedUser);
+          console.log('👤 Usuário encontrado no localStorage:', userData.email);
+          const currentUser = await authService.getUserById(userData.id);
+          if (currentUser) {
+            setUser(currentUser);
+            console.log('✅ Usuário logado automaticamente');
+          } else {
+            console.log('🗑️ Usuário não encontrado no banco, removendo do localStorage');
+            localStorage.removeItem('dellLaptopUser');
+          }
+        } catch (error) {
+          console.error('❌ Erro ao verificar usuário salvo:', error);
           localStorage.removeItem('dellLaptopUser');
         }
       }
       
       setIsInitialized(true);
+      console.log('✅ Aplicação inicializada com sucesso!');
     } catch (error) {
-      console.error('Erro ao inicializar aplicação:', error);
+      console.error('❌ Erro ao inicializar aplicação:', error);
+      // Mesmo com erro, permitir que a aplicação continue
       setIsInitialized(true);
     } finally {
       setLoading(false);
