@@ -1630,6 +1630,477 @@ const DellLaptopControlSystem = () => {
       )}
 
       {/* Formulários e outros modais já inclusos... */}
+
+      {/* Modal de Formulário de Laptop */}
+      {showLaptopForm && (
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-6xl max-h-[95vh] overflow-y-auto shadow-2xl border border-white/20">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 bg-clip-text text-transparent">
+                    {editingLaptop ? '✏️ Editar Laptop Dell' : '💻 Novo Laptop Dell'}
+                  </h3>
+                  <p className="text-gray-600 mt-2 font-medium">
+                    {editingLaptop ? 'Atualize as informações do laptop' : 'Cadastre um novo laptop Dell no sistema'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowLaptopForm(false);
+                    setEditingLaptop(null);
+                    resetLaptopForm();
+                  }}
+                  className="p-3 hover:bg-gray-100 rounded-2xl transition-colors"
+                >
+                  <Icons.X />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Coluna 1 - Informações básicas */}
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">Modelo Dell *</label>
+                    <select
+                      value={laptopForm.model}
+                      onChange={(e) => setLaptopForm({...laptopForm, model: e.target.value})}
+                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                    >
+                      <option value="">🖥️ Selecione o modelo</option>
+                      {dellModels.map(model => (
+                        <option key={model} value={model}>{model}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">Número de Série *</label>
+                    <input
+                      type="text"
+                      value={laptopForm.serial_number}
+                      onChange={(e) => setLaptopForm({...laptopForm, serial_number: e.target.value})}
+                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-mono"
+                      placeholder="Ex: DLXPS-001"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">Service Tag Dell</label>
+                    <input
+                      type="text"
+                      value={laptopForm.service_tag}
+                      onChange={(e) => setLaptopForm({...laptopForm, service_tag: e.target.value})}
+                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-mono"
+                      placeholder="Ex: BXPYQ3"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Processador</label>
+                      <input
+                        type="text"
+                        value={laptopForm.processor}
+                        onChange={(e) => setLaptopForm({...laptopForm, processor: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        placeholder="Ex: Intel Core i7"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Memória RAM</label>
+                      <input
+                        type="text"
+                        value={laptopForm.ram}
+                        onChange={(e) => setLaptopForm({...laptopForm, ram: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        placeholder="Ex: 16GB DDR4"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Armazenamento</label>
+                      <input
+                        type="text"
+                        value={laptopForm.storage}
+                        onChange={(e) => setLaptopForm({...laptopForm, storage: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        placeholder="Ex: 512GB SSD"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Tamanho da Tela</label>
+                      <input
+                        type="text"
+                        value={laptopForm.screen_size}
+                        onChange={(e) => setLaptopForm({...laptopForm, screen_size: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        placeholder="Ex: 15.6 polegadas"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">Placa Gráfica</label>
+                    <input
+                      type="text"
+                      value={laptopForm.graphics}
+                      onChange={(e) => setLaptopForm({...laptopForm, graphics: e.target.value})}
+                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      placeholder="Ex: Intel Iris Xe"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Cor</label>
+                      <input
+                        type="text"
+                        value={laptopForm.color}
+                        onChange={(e) => setLaptopForm({...laptopForm, color: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        placeholder="Ex: Preto"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Fim da Garantia</label>
+                      <input
+                        type="date"
+                        value={laptopForm.warranty_end}
+                        onChange={(e) => setLaptopForm({...laptopForm, warranty_end: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Coluna 2 - Foto, status e localização */}
+                <div className="space-y-6">
+                  {/* SEÇÃO DE FOTO COM ANÁLISE DE IA */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-4">📷 Foto do Laptop</label>
+                    <div className="space-y-4">
+                      {laptopForm.photo ? (
+                        <div className="relative">
+                          <div className="w-full h-64 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl overflow-hidden border-4 border-white shadow-xl">
+                            <img 
+                              src={laptopForm.photo} 
+                              alt="Foto do laptop" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          
+                          {/* Análise de IA */}
+                          {laptopForm.damage_analysis && (
+                            <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+                              <h4 className="font-bold text-blue-800 mb-2 flex items-center space-x-2">
+                                <Icons.Sparkles />
+                                <span>🤖 Análise de IA</span>
+                              </h4>
+                              <div className="text-sm text-blue-700">
+                                <p className="font-medium">Condição: {laptopForm.damage_analysis.overall_condition}</p>
+                                <p className="font-medium">Confiança: {laptopForm.damage_analysis.confidence}%</p>
+                                {laptopForm.damage_analysis.damages && laptopForm.damage_analysis.damages.length > 0 && (
+                                  <div className="mt-2">
+                                    <p className="font-medium">Danos identificados:</p>
+                                    <ul className="list-disc pl-4 space-y-1">
+                                      {laptopForm.damage_analysis.damages.map((damage, index) => (
+                                        <li key={index}>
+                                          <span className="font-medium">{damage.type}</span> em {damage.location} 
+                                          <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+                                            damage.severity === 'Leve' ? 'bg-yellow-100 text-yellow-800' :
+                                            damage.severity === 'Moderado' ? 'bg-orange-100 text-orange-800' :
+                                            'bg-red-100 text-red-800'
+                                          }`}>
+                                            {damage.severity}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="flex space-x-3 mt-4">
+                            <button
+                              type="button"
+                              onClick={openPhotoOptions}
+                              className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-4 rounded-2xl flex items-center justify-center space-x-3 text-sm font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                            >
+                              <Icons.Camera />
+                              <span>📷 Alterar Foto</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={removePhotoFromForm}
+                              className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-4 py-4 rounded-2xl flex items-center justify-center transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                            >
+                              <Icons.Trash2 />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div 
+                          onClick={openPhotoOptions}
+                          className="w-full h-64 border-4 border-dashed border-blue-300 rounded-3xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 bg-gradient-to-br from-blue-50/50 via-indigo-50/50 to-purple-50/50 backdrop-blur-sm group"
+                        >
+                          <div className="text-center p-8">
+                            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                              <Icons.Camera />
+                            </div>
+                            <p className="text-gray-700 font-bold text-lg mb-2">📷 Clique para capturar foto</p>
+                            <p className="text-gray-600 font-medium mb-4">
+                              Tire uma foto ou escolha da galeria
+                            </p>
+                            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-2xl text-sm font-bold border border-blue-200">
+                              <Icons.Sparkles />
+                              <span className="ml-2">🤖 Análise de IA automática</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Status</label>
+                      <select
+                        value={laptopForm.status}
+                        onChange={(e) => setLaptopForm({...laptopForm, status: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      >
+                        {statuses.map(status => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Condição</label>
+                      <select
+                        value={laptopForm.condition}
+                        onChange={(e) => setLaptopForm({...laptopForm, condition: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      >
+                        {conditions.map(condition => (
+                          <option key={condition} value={condition}>{condition}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Andar *</label>
+                      <select
+                        value={laptopForm.floor_id}
+                        onChange={(e) => setLaptopForm({...laptopForm, floor_id: e.target.value, room_id: ''})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      >
+                        <option value="">🏢 Selecione um andar</option>
+                        {floors.map(floor => (
+                          <option key={floor.id} value={floor.id}>{floor.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Sala *</label>
+                      <select
+                        value={laptopForm.room_id}
+                        onChange={(e) => setLaptopForm({...laptopForm, room_id: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        disabled={!laptopForm.floor_id}
+                      >
+                        <option value="">🚪 Selecione uma sala</option>
+                        {getRoomsForFloor(laptopForm.floor_id).map(room => (
+                          <option key={room.id} value={room.id}>{room.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Data da Compra</label>
+                      <input
+                        type="date"
+                        value={laptopForm.purchase_date}
+                        onChange={(e) => setLaptopForm({...laptopForm, purchase_date: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-3">Valor de Compra (R$)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={laptopForm.purchase_price}
+                        onChange={(e) => setLaptopForm({...laptopForm, purchase_price: e.target.value})}
+                        className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                        placeholder="Ex: 3500.00"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">Usuário Responsável</label>
+                    <input
+                      type="text"
+                      value={laptopForm.assigned_user}
+                      onChange={(e) => setLaptopForm({...laptopForm, assigned_user: e.target.value})}
+                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                      placeholder="Ex: João Silva"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8">
+                <label className="block text-sm font-bold text-gray-700 mb-3">Observações</label>
+                <textarea
+                  value={laptopForm.notes}
+                  onChange={(e) => setLaptopForm({...laptopForm, notes: e.target.value})}
+                  rows={4}
+                  className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium resize-none"
+                  placeholder="Observações sobre o laptop..."
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-4 mt-10 pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowLaptopForm(false);
+                    setEditingLaptop(null);
+                    resetLaptopForm();
+                  }}
+                  className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 transition-all font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveLaptop}
+                  disabled={isLoading}
+                  className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white rounded-2xl transition-all font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>Salvando...</span>
+                    </div>
+                  ) : (
+                    editingLaptop ? '✅ Atualizar Laptop' : '💾 Salvar Laptop'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Formulário de Sala */}
+      {showRoomForm && (
+        <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-md shadow-2xl border border-white/20">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-green-900 via-emerald-800 to-teal-900 bg-clip-text text-transparent">
+                    {editingRoom ? '✏️ Editar Sala' : '🏢 Nova Sala'}
+                  </h3>
+                  <p className="text-gray-600 mt-2 font-medium">
+                    {editingRoom ? 'Atualize as informações da sala' : 'Adicione uma nova sala ao sistema'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowRoomForm(false);
+                    setEditingRoom(null);
+                    setRoomForm({ name: '', description: '', floor_id: '' });
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-2xl transition-colors"
+                >
+                  <Icons.X />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">Nome da Sala *</label>
+                  <input
+                    type="text"
+                    value={roomForm.name}
+                    onChange={(e) => setRoomForm({...roomForm, name: e.target.value})}
+                    className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                    placeholder="Ex: Sala de TI"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">Andar *</label>
+                  <select
+                    value={roomForm.floor_id}
+                    onChange={(e) => setRoomForm({...roomForm, floor_id: e.target.value})}
+                    className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                  >
+                    <option value="">🏢 Selecione um andar</option>
+                    {floors.map(floor => (
+                      <option key={floor.id} value={floor.id}>{floor.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">Descrição</label>
+                  <textarea
+                    value={roomForm.description}
+                    onChange={(e) => setRoomForm({...roomForm, description: e.target.value})}
+                    rows={4}
+                    className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium resize-none"
+                    placeholder="Descrição da sala..."
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowRoomForm(false);
+                    setEditingRoom(null);
+                    setRoomForm({ name: '', description: '', floor_id: '' });
+                  }}
+                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 transition-all font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveRoom}
+                  disabled={isLoading}
+                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 text-white rounded-2xl transition-all font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>Salvando...</span>
+                    </div>
+                  ) : (
+                    editingRoom ? '✅ Atualizar Sala' : '💾 Salvar Sala'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
