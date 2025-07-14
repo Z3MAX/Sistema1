@@ -1,34 +1,44 @@
+// src/config/database.js
 import { neon } from '@neondatabase/serverless';
 
 // Configuração do banco de dados Neon
-const DATABASE_URL = import.meta.env.VITE_DATABASE_URL || 'postgresql://neondb_owner:npg_AmSW1I0hOzHD@ep-plain-credit-aeb3lbiz-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require';
+const DATABASE_URL = import.meta.env.VITE_DATABASE_URL;
 
-// Inicializar conexão
-const sql = neon(DATABASE_URL);
+// Verificar se a URL do banco está disponível
+if (!DATABASE_URL) {
+  console.warn('⚠️ VITE_DATABASE_URL não encontrada, funcionando em modo offline');
+}
+
+// Inicializar conexão apenas se houver URL
+const sql = DATABASE_URL ? neon(DATABASE_URL) : null;
 
 // Função para testar a conexão
 const testConnection = async () => {
+  if (!sql) {
+    console.log('📱 Modo offline - usando localStorage');
+    return false;
+  }
+
   try {
     console.log('🔄 Testando conexão com o banco de dados...');
-    console.log('📍 URL do banco:', DATABASE_URL.replace(/:[^:]*@/, ':***@')); // Oculta senha no log
     
     const result = await sql`SELECT 1 as test`;
     console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
-    console.log('📊 Resultado do teste:', result);
     return true;
   } catch (error) {
     console.error('❌ Erro ao conectar com o banco de dados:', error);
-    console.error('🔍 Detalhes do erro:', {
-      message: error.message,
-      code: error.code,
-      stack: error.stack
-    });
+    console.log('📱 Continuando em modo offline...');
     return false;
   }
 };
 
 // Função para criar as tabelas necessárias
 const createTables = async () => {
+  if (!sql) {
+    console.log('📱 Modo offline - tabelas não são necessárias');
+    return false;
+  }
+
   try {
     console.log('🔄 Iniciando criação de tabelas...');
     
@@ -120,17 +130,17 @@ const createTables = async () => {
     return true;
   } catch (error) {
     console.error('❌ Erro ao criar tabelas:', error);
-    console.error('🔍 Detalhes do erro:', {
-      message: error.message,
-      code: error.code,
-      stack: error.stack
-    });
-    throw error;
+    return false;
   }
 };
 
 // Função para inserir dados iniciais
 const insertInitialData = async (userId) => {
+  if (!sql) {
+    console.log('📱 Modo offline - dados iniciais gerenciados pelo localStorage');
+    return false;
+  }
+
   try {
     console.log('🔄 Verificando dados iniciais para usuário:', userId);
     
@@ -141,7 +151,7 @@ const insertInitialData = async (userId) => {
 
     if (existingFloors.length > 0) {
       console.log('ℹ️ Dados iniciais já existem para este usuário');
-      return;
+      return true;
     }
 
     console.log('📝 Inserindo dados iniciais...');
@@ -170,24 +180,26 @@ const insertInitialData = async (userId) => {
     `;
 
     console.log('✅ Dados iniciais inseridos com sucesso!');
+    return true;
   } catch (error) {
     console.error('❌ Erro ao inserir dados iniciais:', error);
-    console.error('🔍 Detalhes do erro:', {
-      message: error.message,
-      code: error.code,
-      stack: error.stack
-    });
-    throw error;
+    return false;
   }
 };
 
+// Função para verificar se o banco está disponível
+const isDatabaseAvailable = () => {
+  return sql !== null;
+};
+
 // Exportar tudo usando named exports
-export { sql, testConnection, createTables, insertInitialData };
+export { sql, testConnection, createTables, insertInitialData, isDatabaseAvailable };
 
 // Exportação padrão para compatibilidade
 export default {
   sql,
   testConnection,
   createTables,
-  insertInitialData
+  insertInitialData,
+  isDatabaseAvailable
 };
