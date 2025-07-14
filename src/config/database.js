@@ -154,7 +154,7 @@ const createTables = async () => {
       {
         name: 'users',
         sql: `CREATE TABLE IF NOT EXISTS users (
-          id SERIAL PRIMARY KEY,
+          id BIGSERIAL PRIMARY KEY,
           name VARCHAR(255) NOT NULL,
           email VARCHAR(255) UNIQUE NOT NULL,
           password_hash VARCHAR(255) NOT NULL,
@@ -167,10 +167,10 @@ const createTables = async () => {
       {
         name: 'floors',
         sql: `CREATE TABLE IF NOT EXISTS floors (
-          id SERIAL PRIMARY KEY,
+          id BIGSERIAL PRIMARY KEY,
           name VARCHAR(255) NOT NULL,
           description TEXT,
-          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`
@@ -178,11 +178,11 @@ const createTables = async () => {
       {
         name: 'rooms',
         sql: `CREATE TABLE IF NOT EXISTS rooms (
-          id SERIAL PRIMARY KEY,
+          id BIGSERIAL PRIMARY KEY,
           name VARCHAR(255) NOT NULL,
           description TEXT,
-          floor_id INTEGER REFERENCES floors(id) ON DELETE CASCADE,
-          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          floor_id BIGINT REFERENCES floors(id) ON DELETE CASCADE,
+          user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`
@@ -190,7 +190,7 @@ const createTables = async () => {
       {
         name: 'laptops',
         sql: `CREATE TABLE IF NOT EXISTS laptops (
-          id SERIAL PRIMARY KEY,
+          id BIGSERIAL PRIMARY KEY,
           model VARCHAR(255) NOT NULL,
           serial_number VARCHAR(255) NOT NULL,
           service_tag VARCHAR(255),
@@ -204,15 +204,15 @@ const createTables = async () => {
           condition VARCHAR(50) DEFAULT 'Excelente',
           condition_score INTEGER DEFAULT 100,
           status VARCHAR(50) DEFAULT 'Disponível',
-          floor_id INTEGER REFERENCES floors(id) ON DELETE SET NULL,
-          room_id INTEGER REFERENCES rooms(id) ON DELETE SET NULL,
+          floor_id BIGINT REFERENCES floors(id) ON DELETE SET NULL,
+          room_id BIGINT REFERENCES rooms(id) ON DELETE SET NULL,
           photo TEXT,
           damage_analysis JSONB,
           purchase_date DATE,
           purchase_price DECIMAL(10,2),
           assigned_user VARCHAR(255),
           notes TEXT,
-          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           UNIQUE(serial_number, user_id)
