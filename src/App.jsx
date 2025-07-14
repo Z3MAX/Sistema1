@@ -1,3 +1,5 @@
+// Arquivo src/App.jsx completo com modificações para modelo padrão Dell Latitude 5330
+
 import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import AuthComponent from './components/AuthComponent';
 import { authService } from './services/authService';
@@ -31,20 +33,18 @@ const AuthProvider = ({ children }) => {
     setLoading(true);
     
     try {
-      // Verificar usuário salvo primeiro (sem depender do banco)
       const savedUser = localStorage.getItem('dellLaptopUser');
       if (savedUser) {
         try {
           const userData = JSON.parse(savedUser);
           console.log('👤 Usuário encontrado no localStorage:', userData.email);
-          setUser(userData); // Setar o usuário diretamente do localStorage
+          setUser(userData);
         } catch (error) {
           console.error('❌ Erro ao ler usuário do localStorage:', error);
           localStorage.removeItem('dellLaptopUser');
         }
       }
 
-      // Tentar inicializar banco em background (sem bloquear a UI)
       setTimeout(async () => {
         try {
           console.log('🔄 Tentando conectar com o banco em background...');
@@ -60,12 +60,11 @@ const AuthProvider = ({ children }) => {
         } catch (error) {
           console.error('❌ Erro na inicialização do banco:', error);
         }
-      }, 100); // Executar após 100ms para não bloquear a UI
+      }, 100);
 
     } catch (error) {
       console.error('❌ Erro na inicialização:', error);
     } finally {
-      // Sempre finalizar o loading
       setLoading(false);
       setIsInitialized(true);
       console.log('✅ Aplicação pronta para uso!');
@@ -112,10 +111,8 @@ const AuthProvider = ({ children }) => {
 // =================== SIMULAÇÃO DE ANÁLISE DE IA ===================
 const AIAnalysisService = {
   async analyzeLaptopDamage(imageData) {
-    // Simular processamento de IA
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Análise simulada baseada em diferentes cenários
     const scenarios = [
       {
         overall_condition: 'Excelente',
@@ -141,42 +138,9 @@ const AIAnalysisService = {
           'Considerar limpeza profunda do teclado',
           'Usar capa protetora para evitar mais riscos'
         ]
-      },
-      {
-        overall_condition: 'Regular',
-        damage_score: 45,
-        confidence: 89,
-        damages: [
-          { type: 'Riscos profundos', location: 'Tampa', severity: 'Moderado', description: 'Riscos visíveis na tampa traseira' },
-          { type: 'Desgaste acentuado', location: 'Teclado', severity: 'Moderado', description: 'Várias teclas com desgaste visível' },
-          { type: 'Manchas na tela', location: 'Tela', severity: 'Leve', description: 'Algumas manchas na tela LCD' }
-        ],
-        recommendations: [
-          'Laptop precisa de atenção',
-          'Agendar limpeza profissional',
-          'Verificar funcionamento do teclado',
-          'Considerar substituição da tela se manchas piorarem'
-        ]
-      },
-      {
-        overall_condition: 'Ruim',
-        damage_score: 70,
-        confidence: 85,
-        damages: [
-          { type: 'Trincas', location: 'Tela', severity: 'Grave', description: 'Trincas visíveis na tela LCD' },
-          { type: 'Danos estruturais', location: 'Carcaça', severity: 'Grave', description: 'Danos na estrutura da carcaça' },
-          { type: 'Teclas faltando', location: 'Teclado', severity: 'Grave', description: 'Algumas teclas estão faltando' }
-        ],
-        recommendations: [
-          'Laptop necessita reparo urgente',
-          'Substituição da tela necessária',
-          'Verificação completa da estrutura',
-          'Considerar se vale a pena o reparo'
-        ]
       }
     ];
     
-    // Selecionar cenário aleatório para demonstração
     const randomScenario = scenarios[Math.floor(Math.random() * scenarios.length)];
     
     return {
@@ -184,12 +148,60 @@ const AIAnalysisService = {
       data: {
         analysis_id: Date.now().toString(),
         timestamp: new Date().toISOString(),
-        model_detected: 'Dell Inspiron/XPS Series',
+        model_detected: 'Dell Latitude 5330',
         ...randomScenario
       }
     };
   }
 };
+
+// =================== CONFIGURAÇÕES DE MODELOS DELL ===================
+const DEFAULT_DELL_MODEL = 'Dell Latitude 5330';
+
+// Configurações de modelos com especificações predefinidas
+let dellModelsConfig = {
+  'Dell Latitude 5330': {
+    processor: 'Intel Core i7 vPro',
+    ram: '16GB DDR4',
+    storage: '512GB SSD',
+    graphics: 'Intel Iris Xe (Integrada)',
+    screen_size: '13.3 polegadas',
+    color: 'Preto'
+  },
+  'Dell Inspiron 15 3000': {
+    processor: 'Intel Core i5',
+    ram: '8GB DDR4',
+    storage: '256GB SSD',
+    graphics: 'Intel UHD Graphics',
+    screen_size: '15.6 polegadas',
+    color: 'Preto'
+  },
+  'Dell XPS 13 9320': {
+    processor: 'Intel Core i7',
+    ram: '16GB LPDDR5',
+    storage: '1TB SSD',
+    graphics: 'Intel Iris Xe',
+    screen_size: '13.4 polegadas',
+    color: 'Platinum Silver'
+  }
+};
+
+// Lista inicial de modelos Dell
+const initialDellModels = [
+  'Dell Latitude 5330', // Modelo padrão
+  'Dell Inspiron 15 3000',
+  'Dell Inspiron 15 5000',
+  'Dell XPS 13 9320',
+  'Dell XPS 15 9520',
+  'Dell Latitude 3420',
+  'Dell Latitude 5420',
+  'Dell Latitude 7420',
+  'Dell Vostro 3500',
+  'Dell Vostro 5402',
+  'Dell Alienware m15 R6',
+  'Dell Precision 3560',
+  'Dell Precision 5560'
+];
 
 // =================== ÍCONES SVG ===================
 const Icons = {
@@ -291,20 +303,6 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
-  Cpu: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-      <rect x="9" y="9" width="6" height="6"></rect>
-      <line x1="9" y1="1" x2="9" y2="4"></line>
-      <line x1="15" y1="1" x2="15" y2="4"></line>
-      <line x1="9" y1="20" x2="9" y2="23"></line>
-      <line x1="15" y1="20" x2="15" y2="23"></line>
-      <line x1="20" y1="9" x2="23" y2="9"></line>
-      <line x1="20" y1="14" x2="23" y2="14"></line>
-      <line x1="1" y1="9" x2="4" y2="9"></line>
-      <line x1="1" y1="14" x2="4" y2="14"></line>
-    </svg>
-  ),
   User: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -333,11 +331,24 @@ const DellLaptopControlSystem = () => {
   const [statistics, setStatistics] = useState({});
   const [showLaptopForm, setShowLaptopForm] = useState(false);
   const [showRoomForm, setShowRoomForm] = useState(false);
+  const [showCustomModelForm, setShowCustomModelForm] = useState(false);
   const [editingLaptop, setEditingLaptop] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showLaptopDetail, setShowLaptopDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Estados para modelos Dell
+  const [dellModels, setDellModels] = useState(initialDellModels);
+  const [customModel, setCustomModel] = useState({
+    name: '',
+    processor: '',
+    ram: '',
+    storage: '',
+    graphics: '',
+    screen_size: '',
+    color: ''
+  });
   
   // Estados para foto e análise de IA
   const [photoState, setPhotoState] = useState({
@@ -351,15 +362,15 @@ const DellLaptopControlSystem = () => {
 
   // Estados dos formulários
   const [laptopForm, setLaptopForm] = useState({
-    model: '',
+    model: DEFAULT_DELL_MODEL,
     serial_number: '',
     service_tag: '',
-    processor: '',
-    ram: '',
-    storage: '',
-    graphics: '',
-    screen_size: '',
-    color: '',
+    processor: dellModelsConfig[DEFAULT_DELL_MODEL].processor,
+    ram: dellModelsConfig[DEFAULT_DELL_MODEL].ram,
+    storage: dellModelsConfig[DEFAULT_DELL_MODEL].storage,
+    graphics: dellModelsConfig[DEFAULT_DELL_MODEL].graphics,
+    screen_size: dellModelsConfig[DEFAULT_DELL_MODEL].screen_size,
+    color: dellModelsConfig[DEFAULT_DELL_MODEL].color,
     warranty_end: '',
     condition: 'Excelente',
     condition_score: 100,
@@ -380,24 +391,6 @@ const DellLaptopControlSystem = () => {
     floor_id: ''
   });
 
-  // Modelos Dell disponíveis
-  const dellModels = [
-    'Dell Inspiron 15 3000',
-    'Dell Inspiron 15 5000',
-    'Dell Inspiron 15 7000',
-    'Dell XPS 13 9310',
-    'Dell XPS 13 9320',
-    'Dell XPS 15 9520',
-    'Dell Latitude 3420',
-    'Dell Latitude 5420',
-    'Dell Latitude 7420',
-    'Dell Vostro 3500',
-    'Dell Vostro 5402',
-    'Dell Alienware m15 R6',
-    'Dell Precision 3560',
-    'Dell Precision 5560'
-  ];
-
   const statuses = ['Disponível', 'Em Uso', 'Manutenção', 'Descartado'];
   const conditions = ['Excelente', 'Bom', 'Regular', 'Ruim'];
 
@@ -407,6 +400,30 @@ const DellLaptopControlSystem = () => {
       loadData();
     }
   }, [user]);
+
+  // Carregar modelos customizados do localStorage
+  useEffect(() => {
+    const savedModels = localStorage.getItem('customDellModels');
+    const savedConfig = localStorage.getItem('dellModelsConfig');
+    
+    if (savedModels) {
+      try {
+        const parsedModels = JSON.parse(savedModels);
+        setDellModels(parsedModels);
+      } catch (error) {
+        console.error('Erro ao carregar modelos salvos:', error);
+      }
+    }
+
+    if (savedConfig) {
+      try {
+        const parsedConfig = JSON.parse(savedConfig);
+        Object.assign(dellModelsConfig, parsedConfig);
+      } catch (error) {
+        console.error('Erro ao carregar configurações de modelos:', error);
+      }
+    }
+  }, []);
 
   // =================== FUNÇÕES DE DADOS ===================
   const loadData = async () => {
@@ -429,7 +446,6 @@ const DellLaptopControlSystem = () => {
       }
 
       if (statsResult.success) {
-        // Garantir que todos os valores sejam números
         const safeStats = {
           total_laptops: parseInt(statsResult.data.total_laptops) || 0,
           available_laptops: parseInt(statsResult.data.available_laptops) || 0,
@@ -448,6 +464,102 @@ const DellLaptopControlSystem = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // =================== FUNÇÕES PARA MODELOS DELL ===================
+  
+  // Função para aplicar especificações automáticas quando o modelo é selecionado
+  const handleModelChange = (selectedModel) => {
+    const modelConfig = dellModelsConfig[selectedModel];
+    
+    if (modelConfig) {
+      setLaptopForm(prev => ({
+        ...prev,
+        model: selectedModel,
+        processor: modelConfig.processor,
+        ram: modelConfig.ram,
+        storage: modelConfig.storage,
+        graphics: modelConfig.graphics,
+        screen_size: modelConfig.screen_size,
+        color: modelConfig.color
+      }));
+    } else {
+      setLaptopForm(prev => ({
+        ...prev,
+        model: selectedModel
+      }));
+    }
+  };
+
+  // Função para adicionar novo modelo customizado
+  const handleAddCustomModel = () => {
+    if (!customModel.name.trim()) {
+      alert('Por favor, digite o nome do modelo.');
+      return;
+    }
+
+    if (dellModels.includes(customModel.name)) {
+      alert('Este modelo já existe na lista.');
+      return;
+    }
+
+    const newModels = [...dellModels, customModel.name];
+    setDellModels(newModels);
+
+    if (customModel.processor || customModel.ram || customModel.storage) {
+      dellModelsConfig[customModel.name] = {
+        processor: customModel.processor || '',
+        ram: customModel.ram || '',
+        storage: customModel.storage || '',
+        graphics: customModel.graphics || '',
+        screen_size: customModel.screen_size || '',
+        color: customModel.color || ''
+      };
+    }
+
+    localStorage.setItem('customDellModels', JSON.stringify(newModels));
+    localStorage.setItem('dellModelsConfig', JSON.stringify(dellModelsConfig));
+
+    setCustomModel({
+      name: '',
+      processor: '',
+      ram: '',
+      storage: '',
+      graphics: '',
+      screen_size: '',
+      color: ''
+    });
+    setShowCustomModelForm(false);
+
+    alert('Modelo adicionado com sucesso!');
+  };
+
+  // Função para resetar formulário com valores padrão
+  const resetLaptopForm = () => {
+    setLaptopForm({
+      model: DEFAULT_DELL_MODEL,
+      serial_number: '',
+      service_tag: '',
+      processor: dellModelsConfig[DEFAULT_DELL_MODEL].processor,
+      ram: dellModelsConfig[DEFAULT_DELL_MODEL].ram,
+      storage: dellModelsConfig[DEFAULT_DELL_MODEL].storage,
+      graphics: dellModelsConfig[DEFAULT_DELL_MODEL].graphics,
+      screen_size: dellModelsConfig[DEFAULT_DELL_MODEL].screen_size,
+      color: dellModelsConfig[DEFAULT_DELL_MODEL].color,
+      warranty_end: '',
+      condition: 'Excelente',
+      condition_score: 100,
+      status: 'Disponível',
+      floor_id: '',
+      room_id: '',
+      photo: null,
+      damage_analysis: null,
+      purchase_date: '',
+      purchase_price: '',
+      assigned_user: '',
+      notes: ''
+    });
+    closeAllPhotoModals();
   };
 
   // =================== FUNÇÕES DE FOTO E IA ===================
@@ -655,7 +767,6 @@ const DellLaptopControlSystem = () => {
     try {
       setIsLoading(true);
 
-      // Verificar se número de série já existe
       if (!editingLaptop) {
         const serialCheck = await dataService.laptops.checkSerialExists(
           laptopForm.serial_number, 
@@ -759,33 +870,6 @@ const DellLaptopControlSystem = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const resetLaptopForm = () => {
-    setLaptopForm({
-      model: '',
-      serial_number: '',
-      service_tag: '',
-      processor: '',
-      ram: '',
-      storage: '',
-      graphics: '',
-      screen_size: '',
-      color: '',
-      warranty_end: '',
-      condition: 'Excelente',
-      condition_score: 100,
-      status: 'Disponível',
-      floor_id: '',
-      room_id: '',
-      photo: null,
-      damage_analysis: null,
-      purchase_date: '',
-      purchase_price: '',
-      assigned_user: '',
-      notes: ''
-    });
-    closeAllPhotoModals();
   };
 
   // =================== FUNÇÕES DE SALAS ===================
@@ -934,6 +1018,190 @@ const DellLaptopControlSystem = () => {
     }
   };
 
+  // =================== MODAL DE MODELO CUSTOMIZADO ===================
+  const CustomModelModal = () => (
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 via-purple-900/80 to-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-2xl shadow-2xl border border-white/20">
+        <div className="p-8">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 bg-clip-text text-transparent">
+                ➕ Adicionar Novo Modelo Dell
+              </h3>
+              <p className="text-gray-600 mt-2 font-medium">
+                Cadastre um novo modelo com especificações personalizadas
+              </p>
+            </div>
+            <button
+              onClick={() => setShowCustomModelForm(false)}
+              className="p-2 hover:bg-gray-100 rounded-2xl transition-colors"
+            >
+              <Icons.X />
+            </button>
+          </div>
+          
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-3">Nome do Modelo *</label>
+              <input
+                type="text"
+                value={customModel.name}
+                onChange={(e) => setCustomModel({...customModel, name: e.target.value})}
+                className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                placeholder="Ex: Dell Latitude 7330"
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-3">Processador</label>
+                <input
+                  type="text"
+                  value={customModel.processor}
+                  onChange={(e) => setCustomModel({...customModel, processor: e.target.value})}
+                  className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                  placeholder="Ex: Intel Core i7"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-3">Memória RAM</label>
+                <input
+                  type="text"
+                  value={customModel.ram}
+                  onChange={(e) => setCustomModel({...customModel, ram: e.target.value})}
+                  className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                  placeholder="Ex: 16GB DDR4"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-3">Armazenamento</label>
+                <input
+                  type="text"
+                  value={customModel.storage}
+                  onChange={(e) => setCustomModel({...customModel, storage: e.target.value})}
+                  className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                  placeholder="Ex: 512GB SSD"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-3">Placa Gráfica</label>
+                <input
+                  type="text"
+                  value={customModel.graphics}
+                  onChange={(e) => setCustomModel({...customModel, graphics: e.target.value})}
+                  className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                  placeholder="Ex: Intel Iris Xe"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-3">Tamanho da Tela</label>
+                <input
+                  type="text"
+                  value={customModel.screen_size}
+                  onChange={(e) => setCustomModel({...customModel, screen_size: e.target.value})}
+                  className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                  placeholder="Ex: 13.3 polegadas"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-3">Cor</label>
+                <input
+                  type="text"
+                  value={customModel.color}
+                  onChange={(e) => setCustomModel({...customModel, color: e.target.value})}
+                  className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+                  placeholder="Ex: Preto"
+                />
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-2xl border border-blue-200">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Icons.AlertCircle />
+                </div>
+                <div className="text-sm text-blue-800">
+                  <p className="font-bold">ℹ️ Informação:</p>
+                  <p>As especificações são opcionais, mas quando preenchidas, serão automaticamente aplicadas ao selecionar este modelo.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200">
+            <button
+              onClick={() => setShowCustomModelForm(false)}
+              className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 transition-all font-bold"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleAddCustomModel}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl transition-all font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              ➕ Adicionar Modelo
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // =================== SEÇÃO DE MODELO NO FORMULÁRIO ===================
+  const ModelSection = () => (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-bold text-gray-700 mb-3">Modelo Dell *</label>
+        <div className="flex space-x-2">
+          <select
+            value={laptopForm.model}
+            onChange={(e) => handleModelChange(e.target.value)}
+            className="flex-1 px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
+          >
+            <option value="">🖥️ Selecione o modelo</option>
+            {dellModels.map(model => (
+              <option key={model} value={model}>
+                {model}
+                {model === DEFAULT_DELL_MODEL && ' (Padrão)'}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setShowCustomModelForm(true)}
+            className="px-4 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-2xl transition-all font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
+            title="Adicionar novo modelo"
+          >
+            ➕
+          </button>
+        </div>
+      </div>
+      
+      {laptopForm.model === DEFAULT_DELL_MODEL && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-2xl border border-blue-200">
+          <div className="flex items-start space-x-3">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <Icons.CheckCircle />
+            </div>
+            <div className="text-sm text-blue-800">
+              <p className="font-bold">✅ Dell Latitude 5330 (Modelo Padrão)</p>
+              <p>Especificações preenchidas automaticamente: Intel Core i7 vPro, 16GB DDR4, 512GB SSD, 13.3", Placa Integrada</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30">
       {/* Header Dell */}
@@ -1043,7 +1311,7 @@ const DellLaptopControlSystem = () => {
               <div className="text-right bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/40">
                 <p className="text-sm text-gray-600">Sistema Dell</p>
                 <p className="font-bold text-lg text-gray-900">Laptop Manager</p>
-                <p className="text-sm text-blue-600 font-medium">Neon Database</p>
+                <p className="text-sm text-blue-600 font-medium">Latitude 5330 Padrão</p>
               </div>
             </div>
             
@@ -1121,7 +1389,7 @@ const DellLaptopControlSystem = () => {
                   </div>
                   <div className="text-left">
                     <p className="text-blue-600 font-bold text-lg">Adicionar Laptop</p>
-                    <p className="text-blue-500 text-sm">Cadastrar novo equipamento</p>
+                    <p className="text-blue-500 text-sm">Cadastrar Dell Latitude 5330</p>
                   </div>
                 </button>
                 
@@ -1629,7 +1897,8 @@ const DellLaptopControlSystem = () => {
         </div>
       )}
 
-      {/* Formulários e outros modais já inclusos... */}
+      {/* Modal de Modelo Customizado */}
+      {showCustomModelForm && <CustomModelModal />}
 
       {/* Modal de Formulário de Laptop */}
       {showLaptopForm && (
@@ -1660,19 +1929,7 @@ const DellLaptopControlSystem = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Coluna 1 - Informações básicas */}
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">Modelo Dell *</label>
-                    <select
-                      value={laptopForm.model}
-                      onChange={(e) => setLaptopForm({...laptopForm, model: e.target.value})}
-                      className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm font-medium"
-                    >
-                      <option value="">🖥️ Selecione o modelo</option>
-                      {dellModels.map(model => (
-                        <option key={model} value={model}>{model}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <ModelSection />
                   
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-3">Número de Série *</label>
@@ -2117,7 +2374,6 @@ const App = () => {
 const AppContent = () => {
   const { user, loading, isInitialized, login } = useAuth();
 
-  // Se ainda está carregando e não inicializou, mostrar loading
   if (loading && !isInitialized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
@@ -2138,7 +2394,6 @@ const AppContent = () => {
     );
   }
 
-  // Se inicializou mas ainda está carregando algo específico
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
@@ -2150,12 +2405,10 @@ const AppContent = () => {
     );
   }
 
-  // Se há usuário logado, mostrar sistema principal
   if (user) {
     return <DellLaptopControlSystem />;
   }
 
-  // Se não há usuário, mostrar tela de login
   return (
     <AuthComponent onLogin={(userData) => {
       console.log('🔐 Fazendo login com:', userData);
