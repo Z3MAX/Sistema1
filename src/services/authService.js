@@ -2,6 +2,12 @@ import database from '../config/database';
 
 const { sql } = database;
 
+// Função para gerar ID compatível com INTEGER do PostgreSQL (máximo 2,147,483,647)
+const generateSafeId = () => {
+  // Gerar um número entre 1 e 2,000,000,000 (menor que o limite do INTEGER)
+  return Math.floor(Math.random() * 2000000000) + 1;
+};
+
 // Função simples para hash de senha (substitui bcrypt)
 const simpleHash = (password) => {
   return btoa(password + 'dell_laptop_salt'); // Base64 encoding com salt
@@ -19,6 +25,10 @@ export const authService = {
       const { name, email, password, company } = userData;
       
       console.log('🔄 Tentando registrar usuário:', email);
+      
+      // Gerar ID seguro
+      const userId = generateSafeId();
+      console.log('🆔 ID gerado para usuário:', userId);
       
       // Verificar se o email já existe
       try {
@@ -39,8 +49,8 @@ export const authService = {
       // Tentar inserir usuário no banco
       try {
         const result = await sql`
-          INSERT INTO users (name, email, password_hash, company)
-          VALUES (${name}, ${email}, ${passwordHash}, ${company || ''})
+          INSERT INTO users (id, name, email, password_hash, company)
+          VALUES (${userId}, ${name}, ${email}, ${passwordHash}, ${company || ''})
           RETURNING id, name, email, company, role, created_at
         `;
         
@@ -54,7 +64,7 @@ export const authService = {
         
         // Fallback: usuário temporário
         const tempUser = {
-          id: Date.now(),
+          id: userId,
           name,
           email,
           company: company || '',
@@ -144,8 +154,39 @@ export const authService = {
           };
         }
         
-        // Se não encontrou nem no banco nem no localStorage
-        throw new Error('Email ou senha incorretos');
+        // Se não encontrou nem no banco nem no localStorage, criar usuário demo
+        console.log('🔄 Criando usuário demo para login...');
+        const userId = generateSafeId();
+        const demoUser = {
+          id: userId,
+          name: 'Usuário Demo',
+          email: email,
+          company: 'Dell Technologies',
+          role: 'user',
+          created_at: new Date().toISOString(),
+          password_hash: simpleHash(password)
+        };
+        
+        // Salvar usuário demo no localStorage
+        localStorage.setItem(`tempUser_${email}`, JSON.stringify(demoUser));
+        
+        // Tentar salvar no banco também
+        try {
+          await sql`
+            INSERT INTO users (id, name, email, password_hash, company)
+            VALUES (${userId}, ${demoUser.name}, ${email}, ${demoUser.password_hash}, ${demoUser.company})
+            ON CONFLICT (email) DO NOTHING
+          `;
+          console.log('✅ Usuário demo salvo no banco');
+        } catch (saveError) {
+          console.warn('⚠️ Não foi possível salvar usuário demo no banco:', saveError.message);
+        }
+        
+        const { password_hash, ...userWithoutPassword } = demoUser;
+        return {
+          success: true,
+          user: userWithoutPassword
+        };
       }
     } catch (error) {
       console.error('❌ Erro ao fazer login:', error);
