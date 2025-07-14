@@ -1,7 +1,15 @@
 import database from '../config/database';
-import bcrypt from 'bcryptjs';
 
 const { sql } = database;
+
+// Função simples para hash de senha (substitui bcrypt)
+const simpleHash = (password) => {
+  return btoa(password + 'dell_laptop_salt'); // Base64 encoding com salt
+};
+
+const verifyPassword = (password, hash) => {
+  return simpleHash(password) === hash;
+};
 
 // Serviço de autenticação
 export const authService = {
@@ -26,8 +34,7 @@ export const authService = {
       }
       
       // Criptografar senha
-      const saltRounds = 10;
-      const passwordHash = await bcrypt.hash(password, saltRounds);
+      const passwordHash = simpleHash(password);
       
       // Tentar inserir usuário no banco
       try {
@@ -93,7 +100,7 @@ export const authService = {
           console.log('👤 Usuário encontrado no banco');
           
           // Verificar senha
-          const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+          const isPasswordValid = verifyPassword(password, user.password_hash);
           
           if (!isPasswordValid) {
             throw new Error('Email ou senha incorretos');
@@ -121,7 +128,7 @@ export const authService = {
           console.log('👤 Usuário temporário encontrado');
           
           // Verificar senha
-          const isPasswordValid = await bcrypt.compare(password, tempUser.password_hash);
+          const isPasswordValid = verifyPassword(password, tempUser.password_hash);
           
           if (!isPasswordValid) {
             throw new Error('Email ou senha incorretos');
@@ -296,15 +303,14 @@ export const authService = {
       }
       
       // Verificar senha atual
-      const isOldPasswordValid = await bcrypt.compare(oldPassword, currentPasswordHash);
+      const isOldPasswordValid = verifyPassword(oldPassword, currentPasswordHash);
       
       if (!isOldPasswordValid) {
         throw new Error('Senha atual incorreta');
       }
       
       // Criptografar nova senha
-      const saltRounds = 10;
-      const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
+      const newPasswordHash = simpleHash(newPassword);
       
       // Tentar atualizar no banco
       try {
