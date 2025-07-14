@@ -9,11 +9,20 @@ const sql = neon(DATABASE_URL);
 // Função para testar a conexão
 const testConnection = async () => {
   try {
+    console.log('🔄 Testando conexão com o banco de dados...');
+    console.log('📍 URL do banco:', DATABASE_URL.replace(/:[^:]*@/, ':***@')); // Oculta senha no log
+    
     const result = await sql`SELECT 1 as test`;
     console.log('✅ Conexão com o banco de dados estabelecida com sucesso!');
+    console.log('📊 Resultado do teste:', result);
     return true;
   } catch (error) {
     console.error('❌ Erro ao conectar com o banco de dados:', error);
+    console.error('🔍 Detalhes do erro:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     return false;
   }
 };
@@ -21,7 +30,10 @@ const testConnection = async () => {
 // Função para criar as tabelas necessárias
 const createTables = async () => {
   try {
+    console.log('🔄 Iniciando criação de tabelas...');
+    
     // Criar tabela de usuários
+    console.log('📝 Criando tabela users...');
     await sql`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -36,6 +48,7 @@ const createTables = async () => {
     `;
 
     // Criar tabela de andares
+    console.log('📝 Criando tabela floors...');
     await sql`
       CREATE TABLE IF NOT EXISTS floors (
         id SERIAL PRIMARY KEY,
@@ -48,6 +61,7 @@ const createTables = async () => {
     `;
 
     // Criar tabela de salas
+    console.log('📝 Criando tabela rooms...');
     await sql`
       CREATE TABLE IF NOT EXISTS rooms (
         id SERIAL PRIMARY KEY,
@@ -61,6 +75,7 @@ const createTables = async () => {
     `;
 
     // Criar tabela de laptops
+    console.log('📝 Criando tabela laptops...');
     await sql`
       CREATE TABLE IF NOT EXISTS laptops (
         id SERIAL PRIMARY KEY,
@@ -93,6 +108,7 @@ const createTables = async () => {
     `;
 
     // Criar índices para melhor performance
+    console.log('📝 Criando índices...');
     await sql`CREATE INDEX IF NOT EXISTS idx_laptops_user_id ON laptops(user_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_laptops_serial ON laptops(serial_number)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_laptops_status ON laptops(status)`;
@@ -104,6 +120,11 @@ const createTables = async () => {
     return true;
   } catch (error) {
     console.error('❌ Erro ao criar tabelas:', error);
+    console.error('🔍 Detalhes do erro:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     throw error;
   }
 };
@@ -111,15 +132,19 @@ const createTables = async () => {
 // Função para inserir dados iniciais
 const insertInitialData = async (userId) => {
   try {
+    console.log('🔄 Verificando dados iniciais para usuário:', userId);
+    
     // Verificar se já existem dados para este usuário
     const existingFloors = await sql`
       SELECT id FROM floors WHERE user_id = ${userId}
     `;
 
     if (existingFloors.length > 0) {
-      console.log('Dados iniciais já existem para este usuário');
+      console.log('ℹ️ Dados iniciais já existem para este usuário');
       return;
     }
+
+    console.log('📝 Inserindo dados iniciais...');
 
     // Inserir andares padrão
     const floor1 = await sql`
@@ -147,6 +172,11 @@ const insertInitialData = async (userId) => {
     console.log('✅ Dados iniciais inseridos com sucesso!');
   } catch (error) {
     console.error('❌ Erro ao inserir dados iniciais:', error);
+    console.error('🔍 Detalhes do erro:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     throw error;
   }
 };
