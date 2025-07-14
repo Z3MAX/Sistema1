@@ -1,5 +1,7 @@
-import { sql } from '../config/database';
+import database from '../config/database';
 import bcrypt from 'bcryptjs';
+
+const { sql } = database;
 
 // Serviço de autenticação
 export const authService = {
