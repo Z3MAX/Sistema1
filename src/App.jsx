@@ -28,7 +28,7 @@ const AuthProvider = ({ children }) => {
   }, []);
 
   const initializeApp = async () => {
-    console.log('🚀 === INICIANDO APLICAÇÃO DELL LAPTOP MANAGER COMPARTILHADO ===');
+    console.log('🚀 === INICIANDO APLICAÇÃO DELL LAPTOP MANAGER ===');
     setLoading(true);
     
     try {
@@ -70,14 +70,9 @@ const AuthProvider = ({ children }) => {
             const connected = await testConnection();
             
             if (connected) {
-              console.log('✅ Conectado ao Neon! Criando estrutura compartilhada...');
+              console.log('✅ Conectado ao Neon! Criando estrutura...');
               await createTables();
-              console.log('✅ Estrutura criada! Inserindo dados iniciais compartilhados...');
-              
-              // Inserir dados iniciais compartilhados (SEM userId)
-              await insertInitialData();
-              console.log('✅ Sistema totalmente inicializado com dados compartilhados!');
-              console.log('🌍 Todos os usuários verão os mesmos dados!');
+              console.log('✅ Sistema totalmente inicializado com Neon!');
             } else {
               console.log('⚠️ Neon não conectado, funcionando em modo offline');
             }
@@ -95,7 +90,7 @@ const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
       setIsInitialized(true);
-      console.log('✅ Aplicação Dell Laptop Manager COMPARTILHADO pronta para uso!');
+      console.log('✅ Aplicação Dell Laptop Manager pronta para uso!');
     }
   };
 
@@ -106,7 +101,13 @@ const AuthProvider = ({ children }) => {
       setUser(userData);
       localStorage.setItem('dellLaptopUser', JSON.stringify(userData));
       
-      console.log('✅ Login realizado - acesso aos dados compartilhados!');
+      // Verificar se dados iniciais existem para este usuário
+      const floorsResult = await dataService.floors.getAll();
+      if (floorsResult.success && floorsResult.data.length === 0) {
+        console.log('📝 Dados iniciais verificados para usuário:', userData.email);
+      }
+      
+      console.log('✅ Login realizado com sucesso!');
       return { success: true };
     } catch (error) {
       console.error('❌ Erro ao fazer login:', error);
@@ -226,7 +227,7 @@ const AIAnalysisService = {
   }
 };
 
-// =================== ÍCONES SVG (mantidos iguais) ===================
+// =================== ÍCONES SVG ===================
 const Icons = {
   Laptop: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -447,29 +448,28 @@ const DellLaptopControlSystem = () => {
     }
   }, [user]);
 
-  // =================== FUNÇÕES DE DADOS COMPARTILHADOS ===================
+  // =================== FUNÇÕES DE DADOS ===================
   const loadData = async () => {
     if (!user) return;
     
     setIsLoading(true);
     try {
-      console.log('🔄 Carregando dados COMPARTILHADOS...');
+      console.log('🔄 Carregando dados para usuário:', user.email);
       
-      // Carregar dados SEM filtro por usuário
       const [floorsResult, laptopsResult, statsResult] = await Promise.all([
-        dataService.floors.getAll(), // Removido userId
-        dataService.laptops.getAll(), // Removido userId
-        dataService.getStatistics() // Removido userId
+        dataService.floors.getAll(),
+        dataService.laptops.getAll(),
+        dataService.getStatistics()
       ]);
 
       if (floorsResult.success) {
         setFloors(floorsResult.data);
-        console.log('✅ Floors COMPARTILHADOS carregados:', floorsResult.data.length);
+        console.log('✅ Floors carregados:', floorsResult.data.length);
       }
 
       if (laptopsResult.success) {
         setLaptops(laptopsResult.data);
-        console.log('✅ Laptops COMPARTILHADOS carregados:', laptopsResult.data.length);
+        console.log('✅ Laptops carregados:', laptopsResult.data.length);
       }
 
       if (statsResult.success) {
@@ -485,16 +485,16 @@ const DellLaptopControlSystem = () => {
           total_rooms: parseInt(statsResult.data.total_rooms) || 0
         };
         setStatistics(safeStats);
-        console.log('✅ Estatísticas COMPARTILHADAS carregadas:', safeStats);
+        console.log('✅ Estatísticas carregadas:', safeStats);
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar dados compartilhados:', error);
+      console.error('❌ Erro ao carregar dados:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // =================== FUNÇÕES DE FOTO E IA (mantidas iguais) ===================
+  // =================== FUNÇÕES DE FOTO E IA ===================
   const openPhotoOptions = () => {
     setPhotoState(prev => ({
       ...prev,
@@ -684,7 +684,7 @@ const DellLaptopControlSystem = () => {
     setLaptopForm(prev => ({ ...prev, photo: null, damage_analysis: null }));
   };
 
-  // =================== FUNÇÕES DE LAPTOPS COMPARTILHADOS ===================
+  // =================== FUNÇÕES DE LAPTOPS ===================
   const handleSaveLaptop = async () => {
     if (!laptopForm.model?.trim() || !laptopForm.serial_number?.trim()) {
       alert('Por favor, preencha o modelo e número de série.');
@@ -699,10 +699,10 @@ const DellLaptopControlSystem = () => {
     try {
       setIsLoading(true);
 
-      // Verificar se número de série já existe (SEM filtro por usuário)
+      // Verificar se número de série já existe
       if (!editingLaptop) {
         const serialCheck = await dataService.laptops.checkSerialExists(
-          laptopForm.serial_number // Removido userId
+          laptopForm.serial_number
         );
         if (serialCheck.success && serialCheck.exists) {
           alert('Já existe um laptop com este número de série.');
@@ -746,7 +746,7 @@ const DellLaptopControlSystem = () => {
         resetLaptopForm();
         setShowLaptopForm(false);
         setEditingLaptop(null);
-        alert(`Laptop ${editingLaptop ? 'atualizado' : 'criado'} com sucesso! Agora é visível para todos os usuários.`);
+        alert(`Laptop ${editingLaptop ? 'atualizado' : 'criado'} com sucesso!`);
       } else {
         alert(`Erro ao ${editingLaptop ? 'atualizar' : 'criar'} laptop: ${result.error}`);
       }
@@ -786,7 +786,7 @@ const DellLaptopControlSystem = () => {
   };
 
   const handleDeleteLaptop = async (laptopId) => {
-    if (!confirm('Tem certeza que deseja excluir este laptop? Esta ação afetará todos os usuários.')) return;
+    if (!confirm('Tem certeza que deseja excluir este laptop?')) return;
 
     try {
       setIsLoading(true);
@@ -833,7 +833,7 @@ const DellLaptopControlSystem = () => {
     closeAllPhotoModals();
   };
 
-  // =================== FUNÇÕES DE SALAS COMPARTILHADAS ===================
+  // =================== FUNÇÕES DE SALAS ===================
   const handleSaveRoom = async () => {
     if (!roomForm.name?.trim() || !roomForm.floor_id) {
       alert('Por favor, preencha todos os campos obrigatórios.');
@@ -861,7 +861,7 @@ const DellLaptopControlSystem = () => {
         setRoomForm({ name: '', description: '', floor_id: '' });
         setShowRoomForm(false);
         setEditingRoom(null);
-        alert(`Sala ${editingRoom ? 'atualizada' : 'criada'} com sucesso! Agora é visível para todos os usuários.`);
+        alert(`Sala ${editingRoom ? 'atualizada' : 'criada'} com sucesso!`);
       } else {
         alert(`Erro ao ${editingRoom ? 'atualizar' : 'criar'} sala: ${result.error}`);
       }
@@ -883,7 +883,7 @@ const DellLaptopControlSystem = () => {
   };
 
   const handleDeleteRoom = async (roomId) => {
-    if (!confirm('Tem certeza que deseja excluir esta sala? Esta ação afetará todos os usuários.')) return;
+    if (!confirm('Tem certeza que deseja excluir esta sala?')) return;
 
     try {
       setIsLoading(true);
@@ -983,11 +983,8 @@ const DellLaptopControlSystem = () => {
         <span className={`text-xs font-medium ${
           isConnected ? 'text-green-700' : 'text-gray-600'
         }`}>
-          {isConnected ? 'Neon Compartilhado' : 'Offline'}
+          {isConnected ? 'Neon' : 'Offline'}
         </span>
-        {status.shared && (
-          <Icons.Users className="w-3 h-3 text-green-600" />
-        )}
       </div>
     );
   };
@@ -1019,7 +1016,7 @@ const DellLaptopControlSystem = () => {
                   <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 bg-clip-text text-transparent">
                     Dell Laptop Manager
                   </h1>
-                  <p className="text-xs md:text-sm text-gray-500 font-medium">Sistema Compartilhado</p>
+                  <p className="text-xs md:text-sm text-gray-500 font-medium">Sistema Corporativo</p>
                 </div>
                 <div className="sm:hidden">
                   <h1 className="text-xl font-bold bg-gradient-to-r from-blue-900 to-indigo-800 bg-clip-text text-transparent">
@@ -1107,13 +1104,9 @@ const DellLaptopControlSystem = () => {
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 bg-clip-text text-transparent">
-                  Dashboard Compartilhado
+                  Dashboard
                 </h2>
-                <p className="text-gray-600 mt-2">Dados compartilhados entre todos os usuários</p>
-                <div className="flex items-center space-x-2 mt-2">
-                  <Icons.Users className="w-4 h-4 text-green-600" />
-                  <span className="text-sm text-green-600 font-medium">Sistema Colaborativo</span>
-                </div>
+                <p className="text-gray-600 mt-2">Visão geral do sistema</p>
               </div>
               <div className="text-right bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/40">
                 <p className="text-sm text-gray-600">Sistema Dell</p>
@@ -1184,16 +1177,7 @@ const DellLaptopControlSystem = () => {
               <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <Icons.Zap />
                 <span>Ações Rápidas</span>
-                <Icons.Users className="w-5 h-5 text-green-600" />
               </h3>
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-2xl mb-6 border border-green-200">
-                <div className="flex items-center space-x-2">
-                  <Icons.AlertCircle className="w-5 h-5 text-green-600" />
-                  <p className="text-sm text-green-700 font-medium">
-                    Sistema Colaborativo: Todos os laptops e salas que você criar serão visíveis para todos os usuários do sistema!
-                  </p>
-                </div>
-              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
                   onClick={() => {
@@ -1207,7 +1191,7 @@ const DellLaptopControlSystem = () => {
                   </div>
                   <div className="text-left">
                     <p className="text-blue-600 font-bold text-lg">Adicionar Laptop</p>
-                    <p className="text-blue-500 text-sm">Visível para todos</p>
+                    <p className="text-blue-500 text-sm">Cadastrar novo equipamento</p>
                   </div>
                 </button>
                 
@@ -1223,7 +1207,7 @@ const DellLaptopControlSystem = () => {
                   </div>
                   <div className="text-left">
                     <p className="text-green-600 font-bold text-lg">Adicionar Sala</p>
-                    <p className="text-green-500 text-sm">Compartilhada</p>
+                    <p className="text-green-500 text-sm">Cadastrar nova localização</p>
                   </div>
                 </button>
               </div>
@@ -1237,13 +1221,9 @@ const DellLaptopControlSystem = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-900 via-pink-800 to-indigo-900 bg-clip-text text-transparent">
-                  Laptops Compartilhados
+                  Laptops
                 </h2>
-                <p className="text-gray-600 mt-2">Equipamentos visíveis para todos os usuários</p>
-                <div className="flex items-center space-x-2 mt-2">
-                  <Icons.Users className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm text-purple-600 font-medium">Sistema Colaborativo</span>
-                </div>
+                <p className="text-gray-600 mt-2">Gerenciar equipamentos</p>
               </div>
               <button
                 onClick={() => {
@@ -1356,7 +1336,7 @@ const DellLaptopControlSystem = () => {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhum laptop encontrado</h3>
                 <p className="text-gray-600 mb-6">
-                  {searchTerm ? 'Tente ajustar os filtros de pesquisa' : 'Seja o primeiro a adicionar um laptop compartilhado'}
+                  {searchTerm ? 'Tente ajustar os filtros de pesquisa' : 'Seja o primeiro a adicionar um laptop'}
                 </p>
                 <button
                   onClick={() => {
@@ -1378,13 +1358,9 @@ const DellLaptopControlSystem = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h2 className="text-3xl font-bold bg-gradient-to-r from-green-900 via-emerald-800 to-teal-900 bg-clip-text text-transparent">
-                  Localizações Compartilhadas
+                  Localizações
                 </h2>
-                <p className="text-gray-600 mt-2">Andares e salas visíveis para todos</p>
-                <div className="flex items-center space-x-2 mt-2">
-                  <Icons.Users className="w-4 h-4 text-green-600" />
-                  <span className="text-sm text-green-600 font-medium">Sistema Colaborativo</span>
-                </div>
+                <p className="text-gray-600 mt-2">Gerenciar andares e salas</p>
               </div>
               <button
                 onClick={() => {
@@ -1460,7 +1436,7 @@ const DellLaptopControlSystem = () => {
                   <Icons.Building className="w-12 h-12 text-green-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhuma localização encontrada</h3>
-                <p className="text-gray-600 mb-6">Os andares e salas compartilhados aparecerão aqui</p>
+                <p className="text-gray-600 mb-6">Os andares e salas aparecerão aqui</p>
               </div>
             )}
           </div>
@@ -1471,13 +1447,9 @@ const DellLaptopControlSystem = () => {
           <div className="space-y-6">
             <div>
               <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-900 via-red-800 to-pink-900 bg-clip-text text-transparent">
-                Relatórios Globais
+                Relatórios
               </h2>
-              <p className="text-gray-600 mt-2">Análises e estatísticas de todos os equipamentos</p>
-              <div className="flex items-center space-x-2 mt-2">
-                <Icons.Users className="w-4 h-4 text-orange-600" />
-                <span className="text-sm text-orange-600 font-medium">Dados Consolidados</span>
-              </div>
+              <p className="text-gray-600 mt-2">Análises e estatísticas</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1559,7 +1531,7 @@ const DellLaptopControlSystem = () => {
                   {editingLaptop ? 'Editar Laptop' : 'Novo Laptop'}
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  {editingLaptop ? 'Alterações visíveis para todos' : 'Será visível para todos os usuários'}
+                  {editingLaptop ? 'Atualizar informações' : 'Cadastrar novo equipamento'}
                 </p>
               </div>
               <button
@@ -1872,7 +1844,7 @@ const DellLaptopControlSystem = () => {
                   {editingRoom ? 'Editar Sala' : 'Nova Sala'}
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  {editingRoom ? 'Alterações visíveis para todos' : 'Será visível para todos os usuários'}
+                  {editingRoom ? 'Atualizar informações' : 'Cadastrar nova sala'}
                 </p>
               </div>
               <button
@@ -2287,7 +2259,7 @@ const AppContent = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
         <div className="text-center bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-white/40">
           <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-8"></div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Inicializando Sistema Dell Compartilhado</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Inicializando Sistema Dell</h2>
           <p className="text-gray-600 mb-6">Preparando aplicação...</p>
           
           {connectionStatus && (
@@ -2297,9 +2269,6 @@ const AppContent = () => {
                 <span className="text-sm font-medium text-blue-700">
                   {connectionStatus.hasUrl ? 'Conectando ao Neon...' : 'Modo Offline'}
                 </span>
-                {connectionStatus.shared && (
-                  <Icons.Users className="w-4 h-4 text-green-600" />
-                )}
               </div>
             </div>
           )}
@@ -2340,53 +2309,4 @@ const AppContent = () => {
   );
 };
 
-export default App;-blur-sm rounded-2xl p-6 border border-white/40">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-900">Distribuição por Status</h3>
-                  <Icons.BarChart3 className="text-orange-600" />
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Disponível:</span>
-                    <span className="font-bold text-green-600">{statistics.available_laptops || 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Em Uso:</span>
-                    <span className="font-bold text-blue-600">{statistics.in_use_laptops || 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Manutenção:</span>
-                    <span className="font-bold text-orange-600">{statistics.maintenance_laptops || 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Descartado:</span>
-                    <span className="font-bold text-red-600">{statistics.discarded_laptops || 0}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-900">Valor Total</h3>
-                  <Icons.DollarSign className="text-purple-600" />
-                </div>
-                <div className="space-y-3">
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-purple-600">
-                      R$ {(statistics.total_value || 0).toLocaleString('pt-BR')}
-                    </p>
-                    <p className="text-sm text-gray-600">Investimento total</p>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Valor médio:</span>
-                    <span className="font-bold text-purple-600">
-                      R$ {statistics.total_laptops > 0 ? 
-                        ((statistics.total_value || 0) / statistics.total_laptops).toLocaleString('pt-BR') : 
-                        '0'
-                      }
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white/70 backdrop
+export default App;
