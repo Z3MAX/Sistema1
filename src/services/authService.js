@@ -46,15 +46,20 @@ const handleDatabaseError = (operation, error) => {
 export const authService = {
   // Registrar novo usuário
   async register(userData) {
-    console.log('🔄 Registrando usuário no banco:', userData.email);
+    console.log('🔄 === INICIANDO REGISTRO DE USUÁRIO ===');
+    console.log('📧 Email:', userData.email);
+    console.log('👤 Nome:', userData.name);
+    console.log('🏢 Empresa:', userData.company);
     
     try {
       const { name, email, password, company } = userData;
       
       // Verificar se o email já existe
+      console.log('🔍 Verificando se email já existe...');
       const existingUser = await sql`
         SELECT id FROM users WHERE email = ${email}
       `;
+      console.log('📊 Resultado da verificação:', existingUser.length, 'usuários encontrados');
       
       if (existingUser.length > 0) {
         console.log('⚠️ Email já existe no banco');
@@ -62,19 +67,52 @@ export const authService = {
       }
       
       // Criptografar senha
+      console.log('🔐 Criptografando senha...');
       const passwordHash = simpleHash(password);
+      console.log('✅ Senha criptografada');
       
       // Inserir usuário no banco (deixar PostgreSQL auto-gerar ID)
+      console.log('📝 Inserindo usuário no banco...');
+      console.log('📋 Dados para inserção:', {
+        name: name,
+        email: email,
+        company: company || '',
+        passwordHash: passwordHash ? '[HASH_GERADO]' : '[ERRO_NO_HASH]'
+      });
+      
       const result = await sql`
         INSERT INTO users (name, email, password_hash, company)
         VALUES (${name}, ${email}, ${passwordHash}, ${company || ''})
         RETURNING id, name, email, company, role, created_at
       `;
       
-      console.log('✅ Usuário registrado no banco com ID:', result[0].id);
+      console.log('✅ USUÁRIO INSERIDO COM SUCESSO!');
+      console.log('📊 Resultado da inserção:', result);
+      console.log('🆔 ID gerado:', result[0].id);
+      console.log('👤 Nome salvo:', result[0].name);
+      console.log('📧 Email salvo:', result[0].email);
+      console.log('🏢 Empresa salva:', result[0].company);
+      
+      // Verificar se realmente inseriu
+      console.log('🔍 Verificando se usuário foi realmente inserido...');
+      const verification = await sql`
+        SELECT id, name, email, company FROM users WHERE email = ${email}
+      `;
+      console.log('📊 Verificação:', verification.length, 'usuários encontrados');
+      if (verification.length > 0) {
+        console.log('✅ CONFIRMADO: Usuário existe no banco!');
+        console.log('📋 Dados verificados:', verification[0]);
+      } else {
+        console.error('❌ ERRO: Usuário não foi encontrado após inserção!');
+      }
+      
       return { success: true, user: result[0] };
       
     } catch (error) {
+      console.error('❌ ERRO CRÍTICO NO REGISTRO:', error);
+      console.error('❌ Tipo do erro:', error.constructor.name);
+      console.error('❌ Mensagem:', error.message);
+      console.error('❌ Stack:', error.stack);
       return handleDatabaseError('register', error);
     }
   },
