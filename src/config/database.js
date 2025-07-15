@@ -1,4 +1,4 @@
-// src/config/database.js - SOMENTE NEON DATABASE (SEM MODO OFFLINE)
+// src/config/database.js - VERSÃO CORRIGIDA COM COLUNAS CREATED_BY
 import { neon } from '@neondatabase/serverless';
 
 console.log('🔍 === INICIALIZANDO CONEXÃO EXCLUSIVA COM NEON ===');
@@ -128,7 +128,7 @@ const testConnection = async () => {
   }
 };
 
-// Função para criar tabelas (OBRIGATÓRIA)
+// Função para criar tabelas (OBRIGATÓRIA) - VERSÃO CORRIGIDA
 const createTables = async () => {
   console.log('🔄 Criando estrutura OBRIGATÓRIA do banco...');
   
@@ -185,7 +185,7 @@ const createTables = async () => {
       )
     `;
     
-    // Criar tabela laptops
+    // Criar tabela laptops - VERSÃO CORRIGIDA COM TODAS AS COLUNAS
     console.log('📝 Criando tabela laptops...');
     await sql`
       CREATE TABLE IF NOT EXISTS laptops (
@@ -212,11 +212,41 @@ const createTables = async () => {
         assigned_user VARCHAR(255),
         notes TEXT,
         user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+        created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+        last_updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(serial_number, user_id)
       )
     `;
+    
+    // Verificar se as colunas created_by e last_updated_by existem e adicionar se necessário
+    console.log('📝 Verificando colunas created_by e last_updated_by...');
+    
+    const existingColumns = await sql`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'laptops'
+      AND column_name IN ('created_by', 'last_updated_by')
+    `;
+    
+    const existingColumnNames = existingColumns.map(col => col.column_name);
+    
+    if (!existingColumnNames.includes('created_by')) {
+      console.log('📝 Adicionando coluna created_by...');
+      await sql`
+        ALTER TABLE laptops 
+        ADD COLUMN created_by BIGINT REFERENCES users(id) ON DELETE SET NULL
+      `;
+    }
+    
+    if (!existingColumnNames.includes('last_updated_by')) {
+      console.log('📝 Adicionando coluna last_updated_by...');
+      await sql`
+        ALTER TABLE laptops 
+        ADD COLUMN last_updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL
+      `;
+    }
     
     // Criar índices para performance
     console.log('📝 Criando índices...');
@@ -229,7 +259,9 @@ const createTables = async () => {
       'CREATE INDEX IF NOT EXISTS idx_laptops_serial ON laptops(serial_number)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_status ON laptops(status)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_floor_id ON laptops(floor_id)',
-      'CREATE INDEX IF NOT EXISTS idx_laptops_room_id ON laptops(room_id)'
+      'CREATE INDEX IF NOT EXISTS idx_laptops_room_id ON laptops(room_id)',
+      'CREATE INDEX IF NOT EXISTS idx_laptops_created_by ON laptops(created_by)',
+      'CREATE INDEX IF NOT EXISTS idx_laptops_last_updated_by ON laptops(last_updated_by)'
     ];
     
     for (const indexSql of indexes) {
@@ -270,7 +302,7 @@ const createTables = async () => {
   }
 };
 
-// Função para inserir dados iniciais (OBRIGATÓRIA)
+// Função para inserir dados iniciais (OBRIGATÓRIA) - VERSÃO CORRIGIDA
 const insertInitialData = async (userId) => {
   console.log('🔄 Inserindo dados iniciais OBRIGATÓRIOS para usuário:', userId);
   
