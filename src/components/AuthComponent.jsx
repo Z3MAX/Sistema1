@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { authService } from '../services/authService';
 
 const AuthComponent = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -63,75 +64,45 @@ const AuthComponent = ({ onLogin }) => {
 
     try {
       if (isLogin) {
-        // Simular login
+        // Fazer login no banco
         console.log('🔐 Fazendo login...');
         
-        // Verificar se usuário existe no localStorage
-        const existingUsers = JSON.parse(localStorage.getItem('dellUsers') || '[]');
-        const user = existingUsers.find(u => u.email === formData.email);
+        const loginResult = await authService.login({
+          email: formData.email,
+          password: formData.password
+        });
         
-        if (user && user.password === formData.password) {
+        if (loginResult.success) {
           console.log('✅ Login realizado com sucesso');
-          onLogin(user);
+          onLogin(loginResult.user);
         } else {
-          // Criar usuário demo se não existir
-          const demoUser = {
-            id: Date.now(),
-            email: formData.email,
-            name: 'Usuário Demo',
-            company: 'Dell Technologies',
-            password: formData.password
-          };
-          
-          // Salvar usuário
-          existingUsers.push(demoUser);
-          localStorage.setItem('dellUsers', JSON.stringify(existingUsers));
-          
-          onLogin(demoUser);
+          setError(loginResult.error || 'Email ou senha incorretos');
         }
       } else {
-        // Registrar usuário
+        // Registrar usuário no banco
         console.log('📝 Registrando usuário...');
         
-        const existingUsers = JSON.parse(localStorage.getItem('dellUsers') || '[]');
-        
-        // Verificar se email já existe
-        if (existingUsers.some(u => u.email === formData.email)) {
-          setError('Email já cadastrado');
-          return;
-        }
-        
-        const newUser = {
-          id: Date.now(),
-          email: formData.email,
+        const registerResult = await authService.register({
           name: formData.name,
+          email: formData.email,
           company: formData.company,
           password: formData.password
-        };
+        });
         
-        existingUsers.push(newUser);
-        localStorage.setItem('dellUsers', JSON.stringify(existingUsers));
-        
-        setSuccess('Conta criada com sucesso! Fazendo login...');
-        
-        setTimeout(() => {
-          onLogin(newUser);
-        }, 1000);
+        if (registerResult.success) {
+          setSuccess('Conta criada com sucesso! Fazendo login...');
+          
+          setTimeout(() => {
+            onLogin(registerResult.user);
+          }, 1000);
+        } else {
+          setError(registerResult.error || 'Erro ao criar conta');
+          return;
+        }
       }
     } catch (error) {
       console.error('❌ Erro na autenticação:', error);
-      setError('Erro interno. Usando modo demonstração.');
-      
-      // Modo demonstração em caso de erro
-      setTimeout(() => {
-        const demoUser = {
-          id: 1,
-          email: formData.email,
-          name: isLogin ? 'Usuário Demo' : formData.name,
-          company: isLogin ? 'Dell Technologies' : formData.company
-        };
-        onLogin(demoUser);
-      }, 1000);
+      setError('Erro interno. Verifique sua conexão e tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -383,10 +354,10 @@ const AuthComponent = ({ onLogin }) => {
         {/* Informações sobre o sistema */}
         <div className="text-center mt-8 text-gray-600">
           <p className="text-sm">
-            Sistema de Controle de Laptops Dell com IA
+            Sistema de Controle de Laptops Dell - Versão Banco Neon
           </p>
           <p className="text-xs mt-2">
-            Versão 2.0 - Funciona totalmente no navegador
+            Versão 3.0 - 100% integrado com banco de dados
           </p>
         </div>
       </div>
