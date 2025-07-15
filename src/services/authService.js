@@ -64,7 +64,7 @@ export const authService = {
       // Criptografar senha
       const passwordHash = simpleHash(password);
       
-      // Inserir usuário no banco
+      // Inserir usuário no banco (deixar PostgreSQL auto-gerar ID)
       const result = await sql`
         INSERT INTO users (name, email, password_hash, company)
         VALUES (${name}, ${email}, ${passwordHash}, ${company || ''})
