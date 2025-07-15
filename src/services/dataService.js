@@ -1,4 +1,4 @@
-// src/services/dataService.js - VERSÃO ATUALIZADA SEM FLOORS/ROOMS
+// src/services/dataService.js - VERSÃO CORRIGIDA
 import database from '../config/database';
 
 const { sql } = database;
@@ -27,6 +27,10 @@ const handleDatabaseError = (operation, error) => {
     console.error('🔧 DIAGNÓSTICO: Violação de foreign key');
   } else if (error.message.includes('not found') || error.message.includes('does not exist')) {
     console.error('🔧 DIAGNÓSTICO: Registro não encontrado');
+  } else if (error.message.includes('column') && error.message.includes('does not exist')) {
+    console.error('🔧 DIAGNÓSTICO: Coluna não existe na tabela');
+  } else if (error.message.includes('syntax error')) {
+    console.error('🔧 DIAGNÓSTICO: Erro de sintaxe SQL');
   }
   
   return {
@@ -63,6 +67,11 @@ export const dataService = {
 
     async create(laptopData, userId) {
       console.log('🔄 Criando laptop COMPARTILHADO:', laptopData.model);
+      console.log('🔍 Dados recebidos:', {
+        model: laptopData.model,
+        service_tag: laptopData.service_tag,
+        userId: userId
+      });
       
       try {
         const {
@@ -72,29 +81,72 @@ export const dataService = {
           assigned_user, notes
         } = laptopData;
         
+        // Verificar se todos os campos obrigatórios estão presentes
+        if (!model || !service_tag || !userId) {
+          throw new Error('Campos obrigatórios não preenchidos: model, service_tag, userId');
+        }
+        
+        console.log('📝 Executando INSERT com dados:', {
+          model,
+          service_tag,
+          processor: processor || null,
+          ram: ram || null,
+          storage: storage || null,
+          graphics: graphics || null,
+          screen_size: screen_size || null,
+          color: color || null,
+          warranty_end: warranty_end || null,
+          condition: condition || 'Excelente',
+          condition_score: condition_score || 100,
+          status: status || 'Disponível',
+          photo: photo || null,
+          damage_analysis: damage_analysis ? 'JSON_PROVIDED' : null,
+          purchase_date: purchase_date || null,
+          purchase_price: purchase_price || null,
+          assigned_user: assigned_user || null,
+          notes: notes || null,
+          userId: userId
+        });
+        
         const result = await sql`
           INSERT INTO laptops (
             model, service_tag, processor, ram, storage, graphics,
             screen_size, color, warranty_end, condition, condition_score, status,
             photo, damage_analysis, purchase_date, purchase_price,
-            assigned_user, notes, created_by, last_updated_by
+            assigned_user, notes, user_id, created_by, last_updated_by
           )
           VALUES (
-            ${model}, ${service_tag}, ${processor || null},
-            ${ram || null}, ${storage || null}, ${graphics || null}, ${screen_size || null},
-            ${color || null}, ${warranty_end || null}, ${condition}, ${condition_score},
-            ${status}, ${photo || null},
+            ${model}, 
+            ${service_tag}, 
+            ${processor || null},
+            ${ram || null}, 
+            ${storage || null}, 
+            ${graphics || null}, 
+            ${screen_size || null},
+            ${color || null}, 
+            ${warranty_end || null}, 
+            ${condition || 'Excelente'}, 
+            ${condition_score || 100},
+            ${status || 'Disponível'}, 
+            ${photo || null},
             ${damage_analysis ? JSON.stringify(damage_analysis) : null},
-            ${purchase_date || null}, ${purchase_price || null}, ${assigned_user || null},
-            ${notes || null}, ${userId}, ${userId}
+            ${purchase_date || null}, 
+            ${purchase_price || null}, 
+            ${assigned_user || null},
+            ${notes || null}, 
+            ${userId}, 
+            ${userId}, 
+            ${userId}
           )
           RETURNING *
         `;
         
-        console.log('✅ Laptop COMPARTILHADO criado com ID:', result[0].id);
+        console.log('✅ Laptop COMPARTILHADO criado com sucesso! ID:', result[0].id);
         console.log('🌍 Visível para TODOS os usuários!');
         return { success: true, data: result[0] };
+        
       } catch (error) {
+        console.error('❌ Erro detalhado ao criar laptop:', error);
         if (error.message.includes('duplicate key') || error.message.includes('unique')) {
           return { success: false, error: 'Service tag já existe' };
         }
@@ -115,16 +167,26 @@ export const dataService = {
         
         const result = await sql`
           UPDATE laptops 
-          SET model = ${model}, service_tag = ${service_tag},
-              processor = ${processor || null}, ram = ${ram || null}, storage = ${storage || null},
-              graphics = ${graphics || null}, screen_size = ${screen_size || null},
-              color = ${color || null}, warranty_end = ${warranty_end || null},
-              condition = ${condition}, condition_score = ${condition_score}, status = ${status},
+          SET model = ${model}, 
+              service_tag = ${service_tag},
+              processor = ${processor || null}, 
+              ram = ${ram || null}, 
+              storage = ${storage || null},
+              graphics = ${graphics || null}, 
+              screen_size = ${screen_size || null},
+              color = ${color || null}, 
+              warranty_end = ${warranty_end || null},
+              condition = ${condition || 'Excelente'}, 
+              condition_score = ${condition_score || 100}, 
+              status = ${status || 'Disponível'},
               photo = ${photo || null},
               damage_analysis = ${damage_analysis ? JSON.stringify(damage_analysis) : null},
-              purchase_date = ${purchase_date || null}, purchase_price = ${purchase_price || null},
-              assigned_user = ${assigned_user || null}, notes = ${notes || null},
-              last_updated_by = ${userId}, updated_at = CURRENT_TIMESTAMP
+              purchase_date = ${purchase_date || null}, 
+              purchase_price = ${purchase_price || null},
+              assigned_user = ${assigned_user || null}, 
+              notes = ${notes || null},
+              last_updated_by = ${userId}, 
+              updated_at = CURRENT_TIMESTAMP
           WHERE id = ${id}
           RETURNING *
         `;
@@ -274,12 +336,13 @@ export const dataService = {
 };
 
 // Log final
-console.log('✅ === dataService CONFIGURADO SEM FLOORS/ROOMS ===');
+console.log('✅ === dataService CONFIGURADO SEM FLOORS/ROOMS - VERSÃO CORRIGIDA ===');
 console.log('✅ Todas as operações usam service_tag como campo principal');
 console.log('✅ Floors e rooms removidos completamente');
+console.log('✅ Logging detalhado para debug');
 console.log('✅ Dados compartilhados entre todos os usuários');
 console.log('❌ localStorage: DESABILITADO');
 console.log('❌ Modo offline: DESABILITADO');
-console.log('====================================================');
+console.log('================================================================');
 
 export default dataService;
