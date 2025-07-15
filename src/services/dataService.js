@@ -1,4 +1,4 @@
-// src/services/dataService.js - SOMENTE NEON DATABASE (SEM LOCALSTORAGE)
+// src/services/dataService.js - DADOS COMPARTILHADOS ENTRE TODOS OS USUÁRIOS
 import database from '../config/database';
 
 const { sql } = database;
@@ -10,7 +10,7 @@ if (!sql) {
   throw new Error('ERRO CRÍTICO: dataService não pode funcionar sem conexão com o banco Neon');
 }
 
-console.log('✅ dataService inicializado com conexão Neon obrigatória');
+console.log('✅ dataService inicializado com conexão Neon COMPARTILHADA');
 
 // Função para tratar erros de banco
 const handleDatabaseError = (operation, error) => {
@@ -36,12 +36,12 @@ const handleDatabaseError = (operation, error) => {
   };
 };
 
-// Serviço de dados que funciona APENAS com banco Neon
+// Serviço de dados COMPARTILHADOS entre todos os usuários
 export const dataService = {
-  // ===== FLOORS =====
+  // ===== FLOORS (COMPARTILHADOS) =====
   floors: {
-    async getAll(userId) {
-      console.log('🔄 Buscando andares no banco para usuário:', userId);
+    async getAll() {
+      console.log('🔄 Buscando TODOS os andares compartilhados...');
       
       try {
         const floors = await sql`
@@ -65,12 +65,11 @@ export const dataService = {
                  ) as rooms
           FROM floors f
           LEFT JOIN rooms r ON f.id = r.floor_id
-          WHERE f.user_id = ${userId}
           GROUP BY f.id
           ORDER BY f.name
         `;
         
-        console.log(`✅ ${floors.length} andares encontrados no banco`);
+        console.log(`✅ ${floors.length} andares COMPARTILHADOS encontrados`);
         return { success: true, data: floors };
       } catch (error) {
         return handleDatabaseError('floors.getAll', error);
@@ -78,21 +77,22 @@ export const dataService = {
     },
 
     async create(floorData, userId) {
-      console.log('🔄 Criando andar no banco:', floorData.name);
+      console.log('🔄 Criando andar COMPARTILHADO:', floorData.name);
       
       try {
         const { name, description } = floorData;
         
         const result = await sql`
-          INSERT INTO floors (name, description, user_id)
-          VALUES (${name}, ${description || ''}, ${userId})
+          INSERT INTO floors (name, description)
+          VALUES (${name}, ${description || ''})
           RETURNING *
         `;
         
         // Adicionar array vazio de rooms para compatibilidade
         const floor = { ...result[0], rooms: [] };
         
-        console.log('✅ Andar criado no banco com ID:', floor.id);
+        console.log('✅ Andar COMPARTILHADO criado com ID:', floor.id);
+        console.log('🌍 Visível para TODOS os usuários!');
         return { success: true, data: floor };
       } catch (error) {
         return handleDatabaseError('floors.create', error);
@@ -100,7 +100,7 @@ export const dataService = {
     },
 
     async update(id, updates, userId) {
-      console.log('🔄 Atualizando andar no banco. ID:', id);
+      console.log('🔄 Atualizando andar COMPARTILHADO. ID:', id);
       
       try {
         const { name, description } = updates;
@@ -108,15 +108,15 @@ export const dataService = {
         const result = await sql`
           UPDATE floors 
           SET name = ${name}, description = ${description || ''}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${id} AND user_id = ${userId}
+          WHERE id = ${id}
           RETURNING *
         `;
         
         if (result.length === 0) {
-          throw new Error('Andar não encontrado ou não pertence ao usuário');
+          throw new Error('Andar não encontrado');
         }
         
-        console.log('✅ Andar atualizado no banco');
+        console.log('✅ Andar COMPARTILHADO atualizado');
         return { success: true, data: result[0] };
       } catch (error) {
         return handleDatabaseError('floors.update', error);
@@ -124,20 +124,20 @@ export const dataService = {
     },
 
     async delete(id, userId) {
-      console.log('🔄 Deletando andar do banco. ID:', id);
+      console.log('🔄 Deletando andar COMPARTILHADO. ID:', id);
       
       try {
         const result = await sql`
           DELETE FROM floors 
-          WHERE id = ${id} AND user_id = ${userId}
+          WHERE id = ${id}
           RETURNING id
         `;
         
         if (result.length === 0) {
-          throw new Error('Andar não encontrado ou não pertence ao usuário');
+          throw new Error('Andar não encontrado');
         }
         
-        console.log('✅ Andar deletado do banco');
+        console.log('✅ Andar COMPARTILHADO deletado');
         return { success: true };
       } catch (error) {
         return handleDatabaseError('floors.delete', error);
@@ -145,21 +145,22 @@ export const dataService = {
     }
   },
 
-  // ===== ROOMS =====
+  // ===== ROOMS (COMPARTILHADAS) =====
   rooms: {
     async create(roomData, userId) {
-      console.log('🔄 Criando sala no banco:', roomData.name);
+      console.log('🔄 Criando sala COMPARTILHADA:', roomData.name);
       
       try {
         const { name, description, floor_id } = roomData;
         
         const result = await sql`
-          INSERT INTO rooms (name, description, floor_id, user_id)
-          VALUES (${name}, ${description || ''}, ${floor_id}, ${userId})
+          INSERT INTO rooms (name, description, floor_id)
+          VALUES (${name}, ${description || ''}, ${floor_id})
           RETURNING *
         `;
         
-        console.log('✅ Sala criada no banco com ID:', result[0].id);
+        console.log('✅ Sala COMPARTILHADA criada com ID:', result[0].id);
+        console.log('🌍 Visível para TODOS os usuários!');
         return { success: true, data: result[0] };
       } catch (error) {
         return handleDatabaseError('rooms.create', error);
@@ -167,7 +168,7 @@ export const dataService = {
     },
 
     async update(id, updates, userId) {
-      console.log('🔄 Atualizando sala no banco. ID:', id);
+      console.log('🔄 Atualizando sala COMPARTILHADA. ID:', id);
       
       try {
         const { name, description, floor_id } = updates;
@@ -175,15 +176,15 @@ export const dataService = {
         const result = await sql`
           UPDATE rooms 
           SET name = ${name}, description = ${description || ''}, floor_id = ${floor_id}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${id} AND user_id = ${userId}
+          WHERE id = ${id}
           RETURNING *
         `;
         
         if (result.length === 0) {
-          throw new Error('Sala não encontrada ou não pertence ao usuário');
+          throw new Error('Sala não encontrada');
         }
         
-        console.log('✅ Sala atualizada no banco');
+        console.log('✅ Sala COMPARTILHADA atualizada');
         return { success: true, data: result[0] };
       } catch (error) {
         return handleDatabaseError('rooms.update', error);
@@ -191,20 +192,20 @@ export const dataService = {
     },
 
     async delete(id, userId) {
-      console.log('🔄 Deletando sala do banco. ID:', id);
+      console.log('🔄 Deletando sala COMPARTILHADA. ID:', id);
       
       try {
         const result = await sql`
           DELETE FROM rooms 
-          WHERE id = ${id} AND user_id = ${userId}
+          WHERE id = ${id}
           RETURNING id
         `;
         
         if (result.length === 0) {
-          throw new Error('Sala não encontrada ou não pertence ao usuário');
+          throw new Error('Sala não encontrada');
         }
         
-        console.log('✅ Sala deletada do banco');
+        console.log('✅ Sala COMPARTILHADA deletada');
         return { success: true };
       } catch (error) {
         return handleDatabaseError('rooms.delete', error);
@@ -212,19 +213,23 @@ export const dataService = {
     }
   },
 
-  // ===== LAPTOPS =====
+  // ===== LAPTOPS (COMPARTILHADOS) =====
   laptops: {
-    async getAll(userId) {
-      console.log('🔄 Buscando laptops no banco para usuário:', userId);
+    async getAll() {
+      console.log('🔄 Buscando TODOS os laptops compartilhados...');
       
       try {
         const laptops = await sql`
-          SELECT * FROM laptops 
-          WHERE user_id = ${userId}
-          ORDER BY created_at DESC
+          SELECT l.*, 
+                 u.name as created_by_name,
+                 uu.name as last_updated_by_name
+          FROM laptops l
+          LEFT JOIN users u ON l.created_by = u.id
+          LEFT JOIN users uu ON l.last_updated_by = uu.id
+          ORDER BY l.created_at DESC
         `;
         
-        console.log(`✅ ${laptops.length} laptops encontrados no banco`);
+        console.log(`✅ ${laptops.length} laptops COMPARTILHADOS encontrados`);
         return { success: true, data: laptops };
       } catch (error) {
         return handleDatabaseError('laptops.getAll', error);
@@ -232,7 +237,7 @@ export const dataService = {
     },
 
     async create(laptopData, userId) {
-      console.log('🔄 Criando laptop no banco:', laptopData.model);
+      console.log('🔄 Criando laptop COMPARTILHADO:', laptopData.model);
       
       try {
         const {
@@ -247,7 +252,7 @@ export const dataService = {
             model, serial_number, service_tag, processor, ram, storage, graphics,
             screen_size, color, warranty_end, condition, condition_score, status,
             floor_id, room_id, photo, damage_analysis, purchase_date, purchase_price,
-            assigned_user, notes, user_id
+            assigned_user, notes, created_by, last_updated_by
           )
           VALUES (
             ${model}, ${serial_number}, ${service_tag || null}, ${processor || null},
@@ -256,12 +261,13 @@ export const dataService = {
             ${status}, ${floor_id || null}, ${room_id || null}, ${photo || null},
             ${damage_analysis ? JSON.stringify(damage_analysis) : null},
             ${purchase_date || null}, ${purchase_price || null}, ${assigned_user || null},
-            ${notes || null}, ${userId}
+            ${notes || null}, ${userId}, ${userId}
           )
           RETURNING *
         `;
         
-        console.log('✅ Laptop criado no banco com ID:', result[0].id);
+        console.log('✅ Laptop COMPARTILHADO criado com ID:', result[0].id);
+        console.log('🌍 Visível para TODOS os usuários!');
         return { success: true, data: result[0] };
       } catch (error) {
         if (error.message.includes('duplicate key') || error.message.includes('unique')) {
@@ -272,7 +278,7 @@ export const dataService = {
     },
 
     async update(id, updates, userId) {
-      console.log('🔄 Atualizando laptop no banco. ID:', id);
+      console.log('🔄 Atualizando laptop COMPARTILHADO. ID:', id);
       
       try {
         const {
@@ -293,16 +299,16 @@ export const dataService = {
               damage_analysis = ${damage_analysis ? JSON.stringify(damage_analysis) : null},
               purchase_date = ${purchase_date || null}, purchase_price = ${purchase_price || null},
               assigned_user = ${assigned_user || null}, notes = ${notes || null},
-              updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${id} AND user_id = ${userId}
+              last_updated_by = ${userId}, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${id}
           RETURNING *
         `;
         
         if (result.length === 0) {
-          throw new Error('Laptop não encontrado ou não pertence ao usuário');
+          throw new Error('Laptop não encontrado');
         }
         
-        console.log('✅ Laptop atualizado no banco');
+        console.log('✅ Laptop COMPARTILHADO atualizado');
         return { success: true, data: result[0] };
       } catch (error) {
         if (error.message.includes('duplicate key') || error.message.includes('unique')) {
@@ -313,40 +319,40 @@ export const dataService = {
     },
 
     async delete(id, userId) {
-      console.log('🔄 Deletando laptop do banco. ID:', id);
+      console.log('🔄 Deletando laptop COMPARTILHADO. ID:', id);
       
       try {
         const result = await sql`
           DELETE FROM laptops 
-          WHERE id = ${id} AND user_id = ${userId}
+          WHERE id = ${id}
           RETURNING id
         `;
         
         if (result.length === 0) {
-          throw new Error('Laptop não encontrado ou não pertence ao usuário');
+          throw new Error('Laptop não encontrado');
         }
         
-        console.log('✅ Laptop deletado do banco');
+        console.log('✅ Laptop COMPARTILHADO deletado');
         return { success: true };
       } catch (error) {
         return handleDatabaseError('laptops.delete', error);
       }
     },
 
-    async checkSerialExists(serial, userId, excludeId = null) {
-      console.log('🔄 Verificando serial no banco:', serial);
+    async checkSerialExists(serial, excludeId = null) {
+      console.log('🔄 Verificando serial no banco COMPARTILHADO:', serial);
       
       try {
         let query;
         if (excludeId) {
           query = sql`
             SELECT id FROM laptops 
-            WHERE serial_number = ${serial} AND user_id = ${userId} AND id != ${excludeId}
+            WHERE serial_number = ${serial} AND id != ${excludeId}
           `;
         } else {
           query = sql`
             SELECT id FROM laptops 
-            WHERE serial_number = ${serial} AND user_id = ${userId}
+            WHERE serial_number = ${serial}
           `;
         }
         
@@ -360,9 +366,9 @@ export const dataService = {
     }
   },
 
-  // ===== STATISTICS =====
-  async getStatistics(userId) {
-    console.log('🔄 Buscando estatísticas no banco para usuário:', userId);
+  // ===== STATISTICS (COMPARTILHADAS) =====
+  async getStatistics() {
+    console.log('🔄 Buscando estatísticas COMPARTILHADAS...');
     
     try {
       const stats = await sql`
@@ -374,20 +380,17 @@ export const dataService = {
           COUNT(CASE WHEN status = 'Descartado' THEN 1 END) as discarded_laptops,
           COALESCE(SUM(purchase_price), 0) as total_value,
           COALESCE(AVG(condition_score), 0) as avg_condition
-        FROM laptops 
-        WHERE user_id = ${userId}
+        FROM laptops
       `;
       
       const floorStats = await sql`
         SELECT COUNT(*) as total_floors
-        FROM floors 
-        WHERE user_id = ${userId}
+        FROM floors
       `;
       
       const roomStats = await sql`
         SELECT COUNT(*) as total_rooms
-        FROM rooms 
-        WHERE user_id = ${userId}
+        FROM rooms
       `;
       
       const finalStats = {
@@ -396,19 +399,83 @@ export const dataService = {
         total_rooms: parseInt(roomStats[0].total_rooms)
       };
       
-      console.log('✅ Estatísticas obtidas do banco:', finalStats);
+      console.log('✅ Estatísticas COMPARTILHADAS obtidas:', finalStats);
       return { success: true, data: finalStats };
     } catch (error) {
       return handleDatabaseError('getStatistics', error);
+    }
+  },
+
+  // ===== AUDITORIA (NOVOS MÉTODOS) =====
+  async getRecentActivity(limit = 20) {
+    console.log('🔄 Buscando atividade recente...');
+    
+    try {
+      const activities = await sql`
+        SELECT 
+          'laptop' as type,
+          l.id,
+          l.model as title,
+          l.serial_number as subtitle,
+          u.name as user_name,
+          l.created_at as timestamp,
+          'created' as action
+        FROM laptops l
+        LEFT JOIN users u ON l.created_by = u.id
+        
+        UNION ALL
+        
+        SELECT 
+          'room' as type,
+          r.id,
+          r.name as title,
+          f.name as subtitle,
+          'Sistema' as user_name,
+          r.created_at as timestamp,
+          'created' as action
+        FROM rooms r
+        LEFT JOIN floors f ON r.floor_id = f.id
+        
+        ORDER BY timestamp DESC
+        LIMIT ${limit}
+      `;
+      
+      console.log(`✅ ${activities.length} atividades recentes encontradas`);
+      return { success: true, data: activities };
+    } catch (error) {
+      return handleDatabaseError('getRecentActivity', error);
+    }
+  },
+
+  async getUserContributions(userId) {
+    console.log('🔄 Buscando contribuições do usuário:', userId);
+    
+    try {
+      const contributions = await sql`
+        SELECT 
+          COUNT(*) as total_laptops_created,
+          COUNT(CASE WHEN l.created_at >= NOW() - INTERVAL '30 days' THEN 1 END) as laptops_last_30_days,
+          COUNT(CASE WHEN l.last_updated_by = ${userId} AND l.created_by != ${userId} THEN 1 END) as laptops_updated
+        FROM laptops l
+        WHERE l.created_by = ${userId}
+      `;
+      
+      console.log('✅ Contribuições do usuário obtidas');
+      return { success: true, data: contributions[0] };
+    } catch (error) {
+      return handleDatabaseError('getUserContributions', error);
     }
   }
 };
 
 // Log final
-console.log('✅ === dataService CONFIGURADO PARA SOMENTE NEON ===');
-console.log('✅ Todas as operações são realizadas no banco');
+console.log('✅ === dataService CONFIGURADO PARA DADOS COMPARTILHADOS ===');
+console.log('✅ Todas as operações são compartilhadas entre usuários');
+console.log('🌍 Floors, Rooms e Laptops visíveis para TODOS');
+console.log('📊 Estatísticas globais para toda a organização');
+console.log('👥 Apenas autenticação é separada por usuário');
 console.log('❌ localStorage: DESABILITADO');
 console.log('❌ Modo offline: DESABILITADO');
-console.log('================================================');
+console.log('====================================================');
 
 export default dataService;
