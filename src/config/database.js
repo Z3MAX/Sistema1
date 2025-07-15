@@ -1,4 +1,4 @@
-// src/config/database.js - VERSÃO CORRIGIDA COM COLUNAS CREATED_BY
+// src/config/database.js - VERSÃO ATUALIZADA SEM FLOORS/ROOMS
 import { neon } from '@neondatabase/serverless';
 
 console.log('🔍 === INICIALIZANDO CONEXÃO EXCLUSIVA COM NEON ===');
@@ -128,7 +128,7 @@ const testConnection = async () => {
   }
 };
 
-// Função para criar tabelas (OBRIGATÓRIA) - VERSÃO CORRIGIDA
+// Função para criar tabelas (OBRIGATÓRIA) - VERSÃO SEM FLOORS/ROOMS
 const createTables = async () => {
   console.log('🔄 Criando estrutura OBRIGATÓRIA do banco...');
   
@@ -138,7 +138,7 @@ const createTables = async () => {
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public'
-      AND table_name IN ('users', 'floors', 'rooms', 'laptops')
+      AND table_name IN ('users', 'laptops')
     `;
     
     console.log('📋 Tabelas existentes:', existingTables.map(t => t.table_name));
@@ -158,34 +158,7 @@ const createTables = async () => {
       )
     `;
     
-    // Criar tabela floors
-    console.log('📝 Criando tabela floors...');
-    await sql`
-      CREATE TABLE IF NOT EXISTS floors (
-        id BIGSERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        description TEXT,
-        user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    
-    // Criar tabela rooms
-    console.log('📝 Criando tabela rooms...');
-    await sql`
-      CREATE TABLE IF NOT EXISTS rooms (
-        id BIGSERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        description TEXT,
-        floor_id BIGINT REFERENCES floors(id) ON DELETE CASCADE,
-        user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    
-    // Criar tabela laptops - VERSÃO CORRIGIDA COM SERVICE_TAG COMO CAMPO PRINCIPAL
+    // Criar tabela laptops - VERSÃO SEM FLOORS/ROOMS
     console.log('📝 Criando tabela laptops...');
     await sql`
       CREATE TABLE IF NOT EXISTS laptops (
@@ -202,8 +175,6 @@ const createTables = async () => {
         condition VARCHAR(50) DEFAULT 'Excelente',
         condition_score INTEGER DEFAULT 100,
         status VARCHAR(50) DEFAULT 'Disponível',
-        floor_id BIGINT REFERENCES floors(id) ON DELETE SET NULL,
-        room_id BIGINT REFERENCES rooms(id) ON DELETE SET NULL,
         photo TEXT,
         damage_analysis JSONB,
         purchase_date DATE,
@@ -286,6 +257,20 @@ const createTables = async () => {
       }
     }
     
+    // Remover colunas de floors/rooms se existirem
+    console.log('📝 Removendo colunas de floors/rooms se existirem...');
+    
+    try {
+      await sql`
+        ALTER TABLE laptops 
+        DROP COLUMN IF EXISTS floor_id,
+        DROP COLUMN IF EXISTS room_id
+      `;
+      console.log('✅ Colunas floor_id e room_id removidas');
+    } catch (error) {
+      console.log('ℹ️ Colunas floor_id/room_id não existiam');
+    }
+    
     // Remover constraint de serial_number se existir
     console.log('📝 Removendo constraint de serial_number se existir...');
     try {
@@ -298,20 +283,28 @@ const createTables = async () => {
       console.log('ℹ️ Constraint de serial_number não existia');
     }
     
+    // Remover tabelas de floors e rooms se existirem
+    console.log('📝 Removendo tabelas floors e rooms se existirem...');
+    try {
+      await sql`DROP TABLE IF EXISTS rooms CASCADE`;
+      await sql`DROP TABLE IF EXISTS floors CASCADE`;
+      console.log('✅ Tabelas floors e rooms removidas');
+    } catch (error) {
+      console.log('ℹ️ Tabelas floors/rooms não existiam');
+    }
+    
     // Criar índices para performance
     console.log('📝 Criando índices...');
     const indexes = [
       'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
-      'CREATE INDEX IF NOT EXISTS idx_floors_user_id ON floors(user_id)',
-      'CREATE INDEX IF NOT EXISTS idx_rooms_user_id ON rooms(user_id)',
-      'CREATE INDEX IF NOT EXISTS idx_rooms_floor_id ON rooms(floor_id)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_user_id ON laptops(user_id)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_service_tag ON laptops(service_tag)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_status ON laptops(status)',
-      'CREATE INDEX IF NOT EXISTS idx_laptops_floor_id ON laptops(floor_id)',
-      'CREATE INDEX IF NOT EXISTS idx_laptops_room_id ON laptops(room_id)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_created_by ON laptops(created_by)',
-      'CREATE INDEX IF NOT EXISTS idx_laptops_last_updated_by ON laptops(last_updated_by)'
+      'CREATE INDEX IF NOT EXISTS idx_laptops_last_updated_by ON laptops(last_updated_by)',
+      'CREATE INDEX IF NOT EXISTS idx_laptops_warranty_end ON laptops(warranty_end)',
+      'CREATE INDEX IF NOT EXISTS idx_laptops_condition ON laptops(condition)',
+      'CREATE INDEX IF NOT EXISTS idx_laptops_assigned_user ON laptops(assigned_user)'
     ];
     
     for (const indexSql of indexes) {
@@ -352,77 +345,31 @@ const createTables = async () => {
   }
 };
 
-// Função para inserir dados iniciais (OBRIGATÓRIA) - VERSÃO CORRIGIDA
+// Função para inserir dados iniciais (OPCIONAL) - SEM FLOORS/ROOMS
 const insertInitialData = async (userId) => {
-  console.log('🔄 Inserindo dados iniciais OBRIGATÓRIOS para usuário:', userId);
+  console.log('🔄 Verificando dados iniciais para usuário:', userId);
   
   try {
     // Verificar se já existem dados para este usuário
-    const existingFloors = await sql`
-      SELECT id FROM floors WHERE user_id = ${userId} LIMIT 1
+    const existingLaptops = await sql`
+      SELECT id FROM laptops WHERE user_id = ${userId} LIMIT 1
     `;
     
-    if (existingFloors.length > 0) {
+    if (existingLaptops.length > 0) {
       console.log('ℹ️ Dados iniciais já existem para este usuário');
       return true;
     }
     
-    console.log('📝 Inserindo dados iniciais no banco...');
+    console.log('ℹ️ Nenhum dado inicial necessário (sem floors/rooms)');
+    console.log('✅ Sistema pronto para uso!');
     
-    // Inserir andares
-    const floors = await sql`
-      INSERT INTO floors (name, description, user_id) VALUES
-        ('Térreo', 'Recepção e atendimento', ${userId}),
-        ('1º Andar', 'Área administrativa', ${userId}),
-        ('2º Andar', 'Setor de TI', ${userId})
-      RETURNING id, name
-    `;
-    
-    console.log('🏢 Andares criados:', floors.map(f => f.name));
-    
-    // Inserir salas para cada andar
-    const roomsData = [
-      // Térreo
-      { name: 'Recepção', description: 'Área de atendimento ao cliente', floor_id: floors[0].id },
-      { name: 'Sala de Espera', description: 'Área de espera para clientes', floor_id: floors[0].id },
-      { name: 'Almoxarifado', description: 'Estoque de equipamentos', floor_id: floors[0].id },
-      // 1º Andar
-      { name: 'Escritório Admin', description: 'Administração geral', floor_id: floors[1].id },
-      { name: 'Sala de Reuniões', description: 'Reuniões e apresentações', floor_id: floors[1].id },
-      { name: 'RH', description: 'Recursos Humanos', floor_id: floors[1].id },
-      // 2º Andar
-      { name: 'Sala de TI', description: 'Departamento de Tecnologia', floor_id: floors[2].id },
-      { name: 'Lab de Testes', description: 'Testes de equipamentos', floor_id: floors[2].id },
-      { name: 'Suporte Técnico', description: 'Atendimento técnico', floor_id: floors[2].id }
-    ];
-    
-    let roomsCreated = 0;
-    for (const room of roomsData) {
-      await sql`
-        INSERT INTO rooms (name, description, floor_id, user_id)
-        VALUES (${room.name}, ${room.description}, ${room.floor_id}, ${userId})
-      `;
-      roomsCreated++;
-    }
-    
-    console.log(`✅ DADOS INICIAIS INSERIDOS: ${floors.length} andares, ${roomsCreated} salas`);
     return true;
   } catch (error) {
-    console.error('❌ ERRO CRÍTICO ao inserir dados iniciais:', error);
+    console.error('❌ ERRO ao verificar dados iniciais:', error);
     
-    // Diagnóstico específico
-    if (error.message.includes('duplicate key')) {
-      console.error('🔧 DIAGNÓSTICO: Chave duplicada');
-      console.error('   ❌ Dados já existem para este usuário');
-      console.error('   ❌ Verificar constraint UNIQUE');
-    } else if (error.message.includes('foreign key')) {
-      console.error('🔧 DIAGNÓSTICO: Violação de foreign key');
-      console.error('   ❌ Referência para tabela inexistente');
-      console.error('   ❌ Verificar se as tabelas foram criadas');
-    }
-    
-    // ❌ FALHA CRÍTICA - NÃO CONTINUA SEM DADOS INICIAIS
-    throw new Error(`FALHA CRÍTICA: Não é possível inserir dados iniciais. ${error.message}`);
+    // Não é crítico, sistema pode funcionar sem dados iniciais
+    console.log('ℹ️ Continuando sem dados iniciais...');
+    return true;
   }
 };
 
@@ -443,12 +390,13 @@ const getConnectionStatus = () => {
 };
 
 // Log de status final
-console.log('🔄 === STATUS FINAL - SOMENTE NEON ===');
+console.log('🔄 === STATUS FINAL - SOMENTE NEON SEM FLOORS/ROOMS ===');
 console.log('✅ Connection string configurada');
 console.log('✅ Cliente Neon inicializado');
 console.log('✅ Modo: SOMENTE BANCO NEON');
+console.log('✅ Estrutura: SEM FLOORS/ROOMS');
 console.log('❌ Modo offline: DESABILITADO');
-console.log('=====================================');
+console.log('==================================================');
 
 // Exportações
 export { 
