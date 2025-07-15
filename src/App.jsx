@@ -78,7 +78,7 @@ const AuthProvider = ({ children }) => {
             console.error('❌ Erro na inicialização do banco:', error);
             console.log('📱 Continuando em modo offline');
           }
-        }, 500); // Executar após 500ms para não bloquear a UI
+        }, 500);
       } else {
         console.log('📱 Banco não disponível, funcionando em modo offline');
       }
@@ -86,7 +86,6 @@ const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('❌ Erro na inicialização:', error);
     } finally {
-      // Sempre finalizar o loading
       setLoading(false);
       setIsInitialized(true);
       console.log('✅ Aplicação Dell Laptop Manager pronta para uso!');
@@ -155,7 +154,6 @@ const AIAnalysisService = {
     // Simular processamento de IA
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Análise simulada baseada em diferentes cenários
     const scenarios = [
       {
         overall_condition: 'Excelente',
@@ -216,7 +214,6 @@ const AIAnalysisService = {
       }
     ];
     
-    // Selecionar cenário aleatório para demonstração
     const randomScenario = scenarios[Math.floor(Math.random() * scenarios.length)];
     
     console.log('✅ Análise de IA concluída:', randomScenario.overall_condition);
@@ -333,20 +330,6 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
-  Cpu: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-      <rect x="9" y="9" width="6" height="6"></rect>
-      <line x1="9" y1="1" x2="9" y2="4"></line>
-      <line x1="15" y1="1" x2="15" y2="4"></line>
-      <line x1="9" y1="20" x2="9" y2="23"></line>
-      <line x1="15" y1="20" x2="15" y2="23"></line>
-      <line x1="20" y1="9" x2="23" y2="9"></line>
-      <line x1="20" y1="14" x2="23" y2="14"></line>
-      <line x1="1" y1="9" x2="4" y2="9"></line>
-      <line x1="1" y1="14" x2="4" y2="14"></line>
-    </svg>
-  ),
   User: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -357,21 +340,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
     </svg>
   ),
-  Sparkles: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l1.5 1.5L5 6L3.5 4.5L5 3zm0 18l1.5-1.5L5 18l-1.5 1.5L5 21zM19 3l-1.5 1.5L19 6l1.5-1.5L19 3zm0 18l-1.5-1.5L19 18l1.5 1.5L19 21zM9 12l3-3 3 3-3 3-3-3z" />
-    </svg>
-  ),
   Database: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
       <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
       <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
-    </svg>
-  ),
-  Wifi: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
     </svg>
   ),
   WifiOff: () => (
@@ -498,7 +471,6 @@ const DellLaptopControlSystem = () => {
       }
 
       if (statsResult.success) {
-        // Garantir que todos os valores sejam números
         const safeStats = {
           total_laptops: parseInt(statsResult.data.total_laptops) || 0,
           available_laptops: parseInt(statsResult.data.available_laptops) || 0,
@@ -1237,10 +1209,1058 @@ const DellLaptopControlSystem = () => {
           </div>
         )}
 
-        {/* Resto do componente continua... */}
-        {/* As outras abas (laptops, locations, reports) permanecem iguais */}
-        {/* Incluindo todos os modais e formulários */}
+        {/* Laptops */}
+        {activeTab === 'laptops' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-900 via-pink-800 to-indigo-900 bg-clip-text text-transparent">
+                  Gestão de Laptops
+                </h2>
+                <p className="text-gray-600 mt-2">Controle completo dos equipamentos Dell</p>
+              </div>
+              <button
+                onClick={() => {
+                  resetLaptopForm();
+                  setShowLaptopForm(true);
+                }}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <Icons.Plus />
+                <span>Novo Laptop</span>
+              </button>
+            </div>
+
+            {/* Barra de pesquisa */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+              <div className="relative">
+                <Icons.Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Pesquisar por modelo, número de série ou usuário..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-white/80 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Lista de laptops */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredLaptops.map((laptop) => (
+                <div key={laptop.id} className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40 hover:shadow-lg transition-all group">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Icons.Laptop />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900">{laptop.model}</h3>
+                        <p className="text-sm text-gray-600">{laptop.serial_number}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setShowLaptopDetail(laptop)}
+                        className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all"
+                        title="Ver detalhes"
+                      >
+                        <Icons.Eye />
+                      </button>
+                      <button
+                        onClick={() => handleEditLaptop(laptop)}
+                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                        title="Editar"
+                      >
+                        <Icons.Edit />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteLaptop(laptop.id)}
+                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                        title="Excluir"
+                      >
+                        <Icons.Trash2 />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Status:</span>
+                      <StatusBadge status={laptop.status} />
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Condição:</span>
+                      <ConditionBadge condition={laptop.condition} score={laptop.condition_score} />
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Localização:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {getFloorName(laptop.floor_id)} - {getRoomName(laptop.room_id)}
+                      </span>
+                    </div>
+                    {laptop.assigned_user && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Usuário:</span>
+                        <span className="text-sm font-medium text-gray-900">{laptop.assigned_user}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {laptop.photo && (
+                    <div className="mt-4">
+                      <img
+                        src={laptop.photo}
+                        alt="Foto do laptop"
+                        className="w-full h-32 object-cover rounded-xl border border-gray-200"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {filteredLaptops.length === 0 && (
+              <div className="text-center py-12">
+                <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-pink-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                  <Icons.Laptop className="w-12 h-12 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhum laptop encontrado</h3>
+                <p className="text-gray-600 mb-6">
+                  {searchTerm ? 'Tente ajustar os filtros de pesquisa' : 'Comece adicionando seu primeiro laptop'}
+                </p>
+                <button
+                  onClick={() => {
+                    resetLaptopForm();
+                    setShowLaptopForm(true);
+                  }}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  Adicionar Primeiro Laptop
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Localizações */}
+        {activeTab === 'locations' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-green-900 via-emerald-800 to-teal-900 bg-clip-text text-transparent">
+                  Localizações
+                </h2>
+                <p className="text-gray-600 mt-2">Gestão de andares e salas</p>
+              </div>
+              <button
+                onClick={() => {
+                  setRoomForm({ name: '', description: '', floor_id: '' });
+                  setShowRoomForm(true);
+                }}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <Icons.Plus />
+                <span>Nova Sala</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {floors.map((floor) => (
+                <div key={floor.id} className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40 hover:shadow-lg transition-all">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                        <Icons.Building />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900">{floor.name}</h3>
+                        <p className="text-sm text-gray-600">{floor.description}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm font-medium text-gray-600">Salas:</span>
+                      <span className="text-sm font-bold text-gray-900">{floor.rooms?.length || 0}</span>
+                    </div>
+                    
+                    {floor.rooms && floor.rooms.length > 0 ? (
+                      <div className="space-y-2">
+                        {floor.rooms.map((room) => (
+                          <div key={room.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                            <div>
+                              <p className="font-medium text-gray-900">{room.name}</p>
+                              <p className="text-xs text-gray-600">{room.description}</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => handleEditRoom(room)}
+                                className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                title="Editar sala"
+                              >
+                                <Icons.Edit />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRoom(room.id)}
+                                className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                title="Excluir sala"
+                              >
+                                <Icons.Trash2 />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-gray-500 py-4">Nenhuma sala cadastrada</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {floors.length === 0 && (
+              <div className="text-center py-12">
+                <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                  <Icons.Building className="w-12 h-12 text-green-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhuma localização encontrada</h3>
+                <p className="text-gray-600 mb-6">Os andares e salas serão criados automaticamente quando você fizer login</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Relatórios */}
+        {activeTab === 'reports' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-900 via-red-800 to-pink-900 bg-clip-text text-transparent">
+                Relatórios
+              </h2>
+              <p className="text-gray-600 mt-2">Análises e estatísticas dos equipamentos</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-gray-900">Distribuição por Status</h3>
+                  <Icons.BarChart3 className="text-orange-600" />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Disponível:</span>
+                    <span className="font-bold text-green-600">{statistics.available_laptops || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Em Uso:</span>
+                    <span className="font-bold text-blue-600">{statistics.in_use_laptops || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Manutenção:</span>
+                    <span className="font-bold text-orange-600">{statistics.maintenance_laptops || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Descartado:</span>
+                    <span className="font-bold text-red-600">{statistics.discarded_laptops || 0}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-gray-900">Valor Total</h3>
+                  <Icons.DollarSign className="text-purple-600" />
+                </div>
+                <div className="space-y-3">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-purple-600">
+                      R$ {(statistics.total_value || 0).toLocaleString('pt-BR')}
+                    </p>
+                    <p className="text-sm text-gray-600">Investimento total</p>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Valor médio:</span>
+                    <span className="font-bold text-purple-600">
+                      R$ {statistics.total_laptops > 0 ? 
+                        ((statistics.total_value || 0) / statistics.total_laptops).toLocaleString('pt-BR') : 
+                        '0'
+                      }
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-gray-900">Localizações</h3>
+                  <Icons.MapPin className="text-green-600" />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total de Andares:</span>
+                    <span className="font-bold text-green-600">{statistics.total_floors || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total de Salas:</span>
+                    <span className="font-bold text-green-600">{statistics.total_rooms || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Ocupação Média:</span>
+                    <span className="font-bold text-green-600">
+                      {statistics.total_rooms > 0 ? 
+                        ((statistics.total_laptops || 0) / statistics.total_rooms).toFixed(1) : 
+                        '0'
+                      } laptops/sala
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+              <h3 className="font-bold text-gray-900 mb-4">Laptops por Localização</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-2 text-gray-600">Andar</th>
+                      <th className="text-left py-2 text-gray-600">Sala</th>
+                      <th className="text-center py-2 text-gray-600">Laptops</th>
+                      <th className="text-center py-2 text-gray-600">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {floors.map((floor) => 
+                      floor.rooms?.map((room) => {
+                        const roomLaptops = laptops.filter(l => l.room_id === room.id);
+                        const availableCount = roomLaptops.filter(l => l.status === 'Disponível').length;
+                        return (
+                          <tr key={room.id} className="border-b border-gray-100">
+                            <td className="py-2 font-medium text-gray-900">{floor.name}</td>
+                            <td className="py-2 text-gray-700">{room.name}</td>
+                            <td className="py-2 text-center font-bold">{roomLaptops.length}</td>
+                            <td className="py-2 text-center">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                availableCount > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {availableCount} disponível(is)
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      }) || []
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Modal de Formulário de Laptop */}
+      {showLaptopForm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {editingLaptop ? 'Editar Laptop' : 'Novo Laptop'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowLaptopForm(false);
+                  setEditingLaptop(null);
+                  resetLaptopForm();
+                }}
+                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all"
+              >
+                <Icons.X />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveLaptop(); }} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Modelo Dell *
+                  </label>
+                  <select
+                    value={laptopForm.model}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, model: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    required
+                  >
+                    <option value="">Selecione o modelo</option>
+                    {dellModels.map(model => (
+                      <option key={model} value={model}>{model}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Número de Série *
+                  </label>
+                  <input
+                    type="text"
+                    value={laptopForm.serial_number}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, serial_number: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    placeholder="Digite o número de série"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Service Tag
+                  </label>
+                  <input
+                    type="text"
+                    value={laptopForm.service_tag}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, service_tag: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    placeholder="Digite o service tag"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Processador
+                  </label>
+                  <input
+                    type="text"
+                    value={laptopForm.processor}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, processor: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    placeholder="Ex: Intel Core i7-11800H"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Memória RAM
+                  </label>
+                  <input
+                    type="text"
+                    value={laptopForm.ram}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, ram: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    placeholder="Ex: 16GB DDR4"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Armazenamento
+                  </label>
+                  <input
+                    type="text"
+                    value={laptopForm.storage}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, storage: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    placeholder="Ex: 512GB SSD"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Andar *
+                  </label>
+                  <select
+                    value={laptopForm.floor_id}
+                    onChange={(e) => {
+                      setLaptopForm(prev => ({ ...prev, floor_id: e.target.value, room_id: '' }));
+                    }}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    required
+                  >
+                    <option value="">Selecione o andar</option>
+                    {floors.map(floor => (
+                      <option key={floor.id} value={floor.id}>{floor.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Sala *
+                  </label>
+                  <select
+                    value={laptopForm.room_id}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, room_id: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    required
+                    disabled={!laptopForm.floor_id}
+                  >
+                    <option value="">Selecione a sala</option>
+                    {getRoomsForFloor(laptopForm.floor_id).map(room => (
+                      <option key={room.id} value={room.id}>{room.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={laptopForm.status}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  >
+                    {statuses.map(status => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Condição
+                  </label>
+                  <select
+                    value={laptopForm.condition}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, condition: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  >
+                    {conditions.map(condition => (
+                      <option key={condition} value={condition}>{condition}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Usuário Responsável
+                  </label>
+                  <input
+                    type="text"
+                    value={laptopForm.assigned_user}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, assigned_user: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    placeholder="Nome do usuário responsável"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Data de Compra
+                  </label>
+                  <input
+                    type="date"
+                    value={laptopForm.purchase_date}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, purchase_date: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Preço de Compra (R$)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={laptopForm.purchase_price}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, purchase_price: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    placeholder="0,00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Fim da Garantia
+                  </label>
+                  <input
+                    type="date"
+                    value={laptopForm.warranty_end}
+                    onChange={(e) => setLaptopForm(prev => ({ ...prev, warranty_end: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Observações
+                </label>
+                <textarea
+                  value={laptopForm.notes}
+                  onChange={(e) => setLaptopForm(prev => ({ ...prev, notes: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  rows="3"
+                  placeholder="Observações adicionais..."
+                ></textarea>
+              </div>
+
+              {/* Foto do laptop */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Foto do Laptop
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6">
+                  {laptopForm.photo ? (
+                    <div className="relative">
+                      <img
+                        src={laptopForm.photo}
+                        alt="Foto do laptop"
+                        className="w-full h-64 object-cover rounded-xl"
+                      />
+                      <button
+                        type="button"
+                        onClick={removePhotoFromForm}
+                        className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-all"
+                      >
+                        <Icons.X />
+                      </button>
+                      {laptopForm.damage_analysis && (
+                        <div className="mt-4 p-4 bg-blue-50 rounded-xl">
+                          <h4 className="font-bold text-blue-900 mb-2">Análise de IA</h4>
+                          <p className="text-sm text-blue-800">
+                            Condição: {laptopForm.damage_analysis.overall_condition} 
+                            ({laptopForm.damage_analysis.confidence}% confiança)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Icons.Camera className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 mb-4">Adicione uma foto do laptop</p>
+                      <button
+                        type="button"
+                        onClick={openPhotoOptions}
+                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all"
+                      >
+                        Adicionar Foto
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLaptopForm(false);
+                    setEditingLaptop(null);
+                    resetLaptopForm();
+                  }}
+                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-2xl hover:bg-gray-200 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Salvando...' : editingLaptop ? 'Atualizar' : 'Salvar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Formulário de Sala */}
+      {showRoomForm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {editingRoom ? 'Editar Sala' : 'Nova Sala'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowRoomForm(false);
+                  setEditingRoom(null);
+                  setRoomForm({ name: '', description: '', floor_id: '' });
+                }}
+                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all"
+              >
+                <Icons.X />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveRoom(); }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Nome da Sala *
+                </label>
+                <input
+                  type="text"
+                  value={roomForm.name}
+                  onChange={(e) => setRoomForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  placeholder="Digite o nome da sala"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Andar *
+                </label>
+                <select
+                  value={roomForm.floor_id}
+                  onChange={(e) => setRoomForm(prev => ({ ...prev, floor_id: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  required
+                >
+                  <option value="">Selecione o andar</option>
+                  {floors.map(floor => (
+                    <option key={floor.id} value={floor.id}>{floor.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Descrição
+                </label>
+                <textarea
+                  value={roomForm.description}
+                  onChange={(e) => setRoomForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  rows="3"
+                  placeholder="Descrição da sala..."
+                ></textarea>
+              </div>
+
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRoomForm(false);
+                    setEditingRoom(null);
+                    setRoomForm({ name: '', description: '', floor_id: '' });
+                  }}
+                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-2xl hover:bg-gray-200 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Salvando...' : editingRoom ? 'Atualizar' : 'Salvar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Opções de Foto */}
+      {photoState.showOptions && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Adicionar Foto</h2>
+              <button
+                onClick={closeAllPhotoModals}
+                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all"
+              >
+                <Icons.X />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <button
+                onClick={handleTakePhoto}
+                className="w-full flex items-center justify-center space-x-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl hover:from-blue-100 hover:to-indigo-100 transition-all"
+              >
+                <Icons.Camera className="text-blue-600" />
+                <span className="font-medium text-blue-800">Tirar Foto</span>
+              </button>
+
+              <button
+                onClick={handleSelectFromGallery}
+                className="w-full flex items-center justify-center space-x-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl hover:from-green-100 hover:to-emerald-100 transition-all"
+              >
+                <Icons.Plus className="text-green-600" />
+                <span className="font-medium text-green-800">Selecionar da Galeria</span>
+              </button>
+            </div>
+
+            {photoState.error && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-2xl">
+                <p className="text-red-700 text-sm">{photoState.error}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Preview da Foto */}
+      {photoState.showPreview && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-2xl w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Confirmar Foto</h2>
+              <button
+                onClick={closeAllPhotoModals}
+                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all"
+              >
+                <Icons.X />
+              </button>
+            </div>
+
+            {photoState.capturedPhoto && (
+              <div className="space-y-6">
+                <div className="relative">
+                  <img
+                    src={photoState.capturedPhoto}
+                    alt="Preview da foto"
+                    className="w-full h-64 object-cover rounded-xl"
+                  />
+                  {photoState.isAnalyzing && (
+                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                      <div className="text-center text-white">
+                        <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-2"></div>
+                        <p className="text-sm font-medium">Analisando com IA...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-center space-x-4">
+                  <button
+                    onClick={retakePhoto}
+                    disabled={photoState.isAnalyzing}
+                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-2xl hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Tirar Novamente
+                  </button>
+                  <button
+                    onClick={confirmPhotoWithAI}
+                    disabled={photoState.isAnalyzing}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {photoState.isAnalyzing ? 'Analisando...' : 'Confirmar e Analisar'}
+                  </button>
+                </div>
+
+                {photoState.error && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-2xl">
+                    <p className="text-red-700 text-sm">{photoState.error}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalhes do Laptop */}
+      {showLaptopDetail && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Detalhes do Laptop</h2>
+              <button
+                onClick={() => setShowLaptopDetail(null)}
+                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all"
+              >
+                <Icons.X />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-4">Informações Básicas</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Modelo:</span>
+                      <span className="font-medium">{showLaptopDetail.model}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Número de Série:</span>
+                      <span className="font-medium">{showLaptopDetail.serial_number}</span>
+                    </div>
+                    {showLaptopDetail.service_tag && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Service Tag:</span>
+                        <span className="font-medium">{showLaptopDetail.service_tag}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Status:</span>
+                      <StatusBadge status={showLaptopDetail.status} />
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Condição:</span>
+                      <ConditionBadge condition={showLaptopDetail.condition} score={showLaptopDetail.condition_score} />
+                    </div>
+                  </div>
+                </div>
+
+                {(showLaptopDetail.processor || showLaptopDetail.ram || showLaptopDetail.storage) && (
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-4">Especificações Técnicas</h3>
+                    <div className="space-y-3">
+                      {showLaptopDetail.processor && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Processador:</span>
+                          <span className="font-medium">{showLaptopDetail.processor}</span>
+                        </div>
+                      )}
+                      {showLaptopDetail.ram && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">RAM:</span>
+                          <span className="font-medium">{showLaptopDetail.ram}</span>
+                        </div>
+                      )}
+                      {showLaptopDetail.storage && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Armazenamento:</span>
+                          <span className="font-medium">{showLaptopDetail.storage}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-4">Localização</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Andar:</span>
+                      <span className="font-medium">{getFloorName(showLaptopDetail.floor_id)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Sala:</span>
+                      <span className="font-medium">{getRoomName(showLaptopDetail.room_id)}</span>
+                    </div>
+                    {showLaptopDetail.assigned_user && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Usuário:</span>
+                        <span className="font-medium">{showLaptopDetail.assigned_user}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {showLaptopDetail.photo && (
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-4">Foto</h3>
+                    <img
+                      src={showLaptopDetail.photo}
+                      alt="Foto do laptop"
+                      className="w-full h-64 object-cover rounded-xl border border-gray-200"
+                    />
+                  </div>
+                )}
+
+                {showLaptopDetail.damage_analysis && (
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-4">Análise de IA</h3>
+                    <div className="bg-blue-50 rounded-2xl p-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-blue-600">Condição:</span>
+                          <span className="font-medium text-blue-800">{showLaptopDetail.damage_analysis.overall_condition}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-blue-600">Confiança:</span>
+                          <span className="font-medium text-blue-800">{showLaptopDetail.damage_analysis.confidence}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-blue-600">Score de Dano:</span>
+                          <span className="font-medium text-blue-800">{showLaptopDetail.damage_analysis.damage_score}</span>
+                        </div>
+                      </div>
+                      
+                      {showLaptopDetail.damage_analysis.damages && showLaptopDetail.damage_analysis.damages.length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="font-medium text-blue-900 mb-2">Danos Identificados:</h4>
+                          <div className="space-y-2">
+                            {showLaptopDetail.damage_analysis.damages.map((damage, index) => (
+                              <div key={index} className="bg-blue-100 rounded-xl p-3">
+                                <div className="flex justify-between items-start">
+                                  <span className="font-medium text-blue-900">{damage.type}</span>
+                                  <span className={`text-xs px-2 py-1 rounded-full ${
+                                    damage.severity === 'Grave' ? 'bg-red-100 text-red-700' :
+                                    damage.severity === 'Moderado' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-green-100 text-green-700'
+                                  }`}>
+                                    {damage.severity}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-blue-700 mt-1">{damage.location}</p>
+                                <p className="text-xs text-blue-600 mt-1">{damage.description}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {showLaptopDetail.damage_analysis.recommendations && showLaptopDetail.damage_analysis.recommendations.length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="font-medium text-blue-900 mb-2">Recomendações:</h4>
+                          <ul className="space-y-1">
+                            {showLaptopDetail.damage_analysis.recommendations.map((rec, index) => (
+                              <li key={index} className="text-sm text-blue-700">• {rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {showLaptopDetail.notes && (
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-4">Observações</h3>
+                    <div className="bg-gray-50 rounded-2xl p-4">
+                      <p className="text-gray-700">{showLaptopDetail.notes}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={() => setShowLaptopDetail(null)}
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-2xl hover:bg-gray-200 transition-all"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={() => {
+                  handleEditLaptop(showLaptopDetail);
+                  setShowLaptopDetail(null);
+                }}
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all"
+              >
+                Editar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-6 flex items-center space-x-4">
+            <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+            <span className="text-gray-700 font-medium">Carregando...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1257,7 +2277,6 @@ const App = () => {
 const AppContent = () => {
   const { user, loading, isInitialized, connectionStatus, login } = useAuth();
 
-  // Se ainda está carregando e não inicializou, mostrar loading
   if (loading && !isInitialized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
@@ -1290,7 +2309,6 @@ const AppContent = () => {
     );
   }
 
-  // Se inicializou mas ainda está carregando algo específico
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
@@ -1302,12 +2320,10 @@ const AppContent = () => {
     );
   }
 
-  // Se há usuário logado, mostrar sistema principal
   if (user) {
     return <DellLaptopControlSystem />;
   }
 
-  // Se não há usuário, mostrar tela de login
   return (
     <AuthComponent onLogin={(userData) => {
       console.log('🔐 Fazendo login com:', userData);
