@@ -1,4 +1,4 @@
-// src/services/dataService.js - ATUALIZADO COM SERVICE_TAG
+// src/services/dataService.js - VERSÃO ATUALIZADA SEM FLOORS/ROOMS
 import database from '../config/database';
 
 const { sql } = database;
@@ -38,181 +38,6 @@ const handleDatabaseError = (operation, error) => {
 
 // Serviço de dados COMPARTILHADOS entre todos os usuários
 export const dataService = {
-  // ===== FLOORS (COMPARTILHADOS) =====
-  floors: {
-    async getAll() {
-      console.log('🔄 Buscando TODOS os andares compartilhados...');
-      
-      try {
-        const floors = await sql`
-          SELECT f.*, 
-                 COALESCE(
-                   JSON_AGG(
-                     CASE 
-                       WHEN r.id IS NOT NULL 
-                       THEN JSON_BUILD_OBJECT(
-                         'id', r.id,
-                         'name', r.name,
-                         'description', r.description,
-                         'floor_id', r.floor_id,
-                         'created_at', r.created_at,
-                         'updated_at', r.updated_at
-                       )
-                       ELSE NULL 
-                     END
-                   ) FILTER (WHERE r.id IS NOT NULL), 
-                   '[]'
-                 ) as rooms
-          FROM floors f
-          LEFT JOIN rooms r ON f.id = r.floor_id
-          GROUP BY f.id
-          ORDER BY f.name
-        `;
-        
-        console.log(`✅ ${floors.length} andares COMPARTILHADOS encontrados`);
-        return { success: true, data: floors };
-      } catch (error) {
-        return handleDatabaseError('floors.getAll', error);
-      }
-    },
-
-    async create(floorData, userId) {
-      console.log('🔄 Criando andar COMPARTILHADO:', floorData.name);
-      
-      try {
-        const { name, description } = floorData;
-        
-        const result = await sql`
-          INSERT INTO floors (name, description)
-          VALUES (${name}, ${description || ''})
-          RETURNING *
-        `;
-        
-        // Adicionar array vazio de rooms para compatibilidade
-        const floor = { ...result[0], rooms: [] };
-        
-        console.log('✅ Andar COMPARTILHADO criado com ID:', floor.id);
-        console.log('🌍 Visível para TODOS os usuários!');
-        return { success: true, data: floor };
-      } catch (error) {
-        return handleDatabaseError('floors.create', error);
-      }
-    },
-
-    async update(id, updates, userId) {
-      console.log('🔄 Atualizando andar COMPARTILHADO. ID:', id);
-      
-      try {
-        const { name, description } = updates;
-        
-        const result = await sql`
-          UPDATE floors 
-          SET name = ${name}, description = ${description || ''}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${id}
-          RETURNING *
-        `;
-        
-        if (result.length === 0) {
-          throw new Error('Andar não encontrado');
-        }
-        
-        console.log('✅ Andar COMPARTILHADO atualizado');
-        return { success: true, data: result[0] };
-      } catch (error) {
-        return handleDatabaseError('floors.update', error);
-      }
-    },
-
-    async delete(id, userId) {
-      console.log('🔄 Deletando andar COMPARTILHADO. ID:', id);
-      
-      try {
-        const result = await sql`
-          DELETE FROM floors 
-          WHERE id = ${id}
-          RETURNING id
-        `;
-        
-        if (result.length === 0) {
-          throw new Error('Andar não encontrado');
-        }
-        
-        console.log('✅ Andar COMPARTILHADO deletado');
-        return { success: true };
-      } catch (error) {
-        return handleDatabaseError('floors.delete', error);
-      }
-    }
-  },
-
-  // ===== ROOMS (COMPARTILHADAS) =====
-  rooms: {
-    async create(roomData, userId) {
-      console.log('🔄 Criando sala COMPARTILHADA:', roomData.name);
-      
-      try {
-        const { name, description, floor_id } = roomData;
-        
-        const result = await sql`
-          INSERT INTO rooms (name, description, floor_id)
-          VALUES (${name}, ${description || ''}, ${floor_id})
-          RETURNING *
-        `;
-        
-        console.log('✅ Sala COMPARTILHADA criada com ID:', result[0].id);
-        console.log('🌍 Visível para TODOS os usuários!');
-        return { success: true, data: result[0] };
-      } catch (error) {
-        return handleDatabaseError('rooms.create', error);
-      }
-    },
-
-    async update(id, updates, userId) {
-      console.log('🔄 Atualizando sala COMPARTILHADA. ID:', id);
-      
-      try {
-        const { name, description, floor_id } = updates;
-        
-        const result = await sql`
-          UPDATE rooms 
-          SET name = ${name}, description = ${description || ''}, floor_id = ${floor_id}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${id}
-          RETURNING *
-        `;
-        
-        if (result.length === 0) {
-          throw new Error('Sala não encontrada');
-        }
-        
-        console.log('✅ Sala COMPARTILHADA atualizada');
-        return { success: true, data: result[0] };
-      } catch (error) {
-        return handleDatabaseError('rooms.update', error);
-      }
-    },
-
-    async delete(id, userId) {
-      console.log('🔄 Deletando sala COMPARTILHADA. ID:', id);
-      
-      try {
-        const result = await sql`
-          DELETE FROM rooms 
-          WHERE id = ${id}
-          RETURNING id
-        `;
-        
-        if (result.length === 0) {
-          throw new Error('Sala não encontrada');
-        }
-        
-        console.log('✅ Sala COMPARTILHADA deletada');
-        return { success: true };
-      } catch (error) {
-        return handleDatabaseError('rooms.delete', error);
-      }
-    }
-  },
-
   // ===== LAPTOPS (COMPARTILHADOS COM SERVICE_TAG) =====
   laptops: {
     async getAll() {
@@ -243,7 +68,7 @@ export const dataService = {
         const {
           model, service_tag, processor, ram, storage, graphics,
           screen_size, color, warranty_end, condition, condition_score, status,
-          floor_id, room_id, photo, damage_analysis, purchase_date, purchase_price,
+          photo, damage_analysis, purchase_date, purchase_price,
           assigned_user, notes
         } = laptopData;
         
@@ -251,14 +76,14 @@ export const dataService = {
           INSERT INTO laptops (
             model, service_tag, processor, ram, storage, graphics,
             screen_size, color, warranty_end, condition, condition_score, status,
-            floor_id, room_id, photo, damage_analysis, purchase_date, purchase_price,
+            photo, damage_analysis, purchase_date, purchase_price,
             assigned_user, notes, created_by, last_updated_by
           )
           VALUES (
             ${model}, ${service_tag}, ${processor || null},
             ${ram || null}, ${storage || null}, ${graphics || null}, ${screen_size || null},
             ${color || null}, ${warranty_end || null}, ${condition}, ${condition_score},
-            ${status}, ${floor_id || null}, ${room_id || null}, ${photo || null},
+            ${status}, ${photo || null},
             ${damage_analysis ? JSON.stringify(damage_analysis) : null},
             ${purchase_date || null}, ${purchase_price || null}, ${assigned_user || null},
             ${notes || null}, ${userId}, ${userId}
@@ -284,7 +109,7 @@ export const dataService = {
         const {
           model, service_tag, processor, ram, storage, graphics,
           screen_size, color, warranty_end, condition, condition_score, status,
-          floor_id, room_id, photo, damage_analysis, purchase_date, purchase_price,
+          photo, damage_analysis, purchase_date, purchase_price,
           assigned_user, notes
         } = updates;
         
@@ -295,7 +120,7 @@ export const dataService = {
               graphics = ${graphics || null}, screen_size = ${screen_size || null},
               color = ${color || null}, warranty_end = ${warranty_end || null},
               condition = ${condition}, condition_score = ${condition_score}, status = ${status},
-              floor_id = ${floor_id || null}, room_id = ${room_id || null}, photo = ${photo || null},
+              photo = ${photo || null},
               damage_analysis = ${damage_analysis ? JSON.stringify(damage_analysis) : null},
               purchase_date = ${purchase_date || null}, purchase_price = ${purchase_price || null},
               assigned_user = ${assigned_user || null}, notes = ${notes || null},
@@ -389,20 +214,8 @@ export const dataService = {
         FROM laptops
       `;
       
-      const floorStats = await sql`
-        SELECT COUNT(*) as total_floors
-        FROM floors
-      `;
-      
-      const roomStats = await sql`
-        SELECT COUNT(*) as total_rooms
-        FROM rooms
-      `;
-      
       const finalStats = {
-        ...stats[0],
-        total_floors: parseInt(floorStats[0].total_floors),
-        total_rooms: parseInt(roomStats[0].total_rooms)
+        ...stats[0]
       };
       
       console.log('✅ Estatísticas COMPARTILHADAS obtidas:', finalStats);
@@ -428,20 +241,6 @@ export const dataService = {
           'created' as action
         FROM laptops l
         LEFT JOIN users u ON l.created_by = u.id
-        
-        UNION ALL
-        
-        SELECT 
-          'room' as type,
-          r.id,
-          r.name as title,
-          f.name as subtitle,
-          'Sistema' as user_name,
-          r.created_at as timestamp,
-          'created' as action
-        FROM rooms r
-        LEFT JOIN floors f ON r.floor_id = f.id
-        
         ORDER BY timestamp DESC
         LIMIT ${limit}
       `;
@@ -475,9 +274,9 @@ export const dataService = {
 };
 
 // Log final
-console.log('✅ === dataService CONFIGURADO PARA SERVICE_TAG ===');
+console.log('✅ === dataService CONFIGURADO SEM FLOORS/ROOMS ===');
 console.log('✅ Todas as operações usam service_tag como campo principal');
-console.log('✅ Compatibilidade mantida com checkSerialExists');
+console.log('✅ Floors e rooms removidos completamente');
 console.log('✅ Dados compartilhados entre todos os usuários');
 console.log('❌ localStorage: DESABILITADO');
 console.log('❌ Modo offline: DESABILITADO');
