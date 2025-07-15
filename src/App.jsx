@@ -37,15 +37,24 @@ const AuthProvider = ({ children }) => {
       setConnectionStatus(status);
       console.log('📊 Connection status:', status);
 
-      // Verificar usuário salvo primeiro (funciona offline)
+      // Verificar usuário salvo no localStorage (apenas para sessão)
       const savedUser = localStorage.getItem('dellLaptopUser');
       if (savedUser) {
         try {
           const userData = JSON.parse(savedUser);
           console.log('👤 Usuário encontrado no localStorage:', userData.email);
-          setUser(userData);
+          
+          // Verificar se o usuário ainda existe no banco
+          const userExists = await authService.getUserById(userData.id);
+          if (userExists) {
+            setUser(userData);
+            console.log('✅ Usuário validado no banco');
+          } else {
+            console.log('⚠️ Usuário não existe mais no banco, removendo do localStorage');
+            localStorage.removeItem('dellLaptopUser');
+          }
         } catch (error) {
-          console.error('❌ Erro ao ler usuário do localStorage:', error);
+          console.error('❌ Erro ao verificar usuário:', error);
           localStorage.removeItem('dellLaptopUser');
         }
       }
@@ -99,12 +108,12 @@ const AuthProvider = ({ children }) => {
       setUser(userData);
       localStorage.setItem('dellLaptopUser', JSON.stringify(userData));
       
-      // Se banco está disponível, criar dados iniciais
+      // Criar dados iniciais se necessário
       if (isDatabaseAvailable()) {
         setTimeout(async () => {
           try {
             await insertInitialData(userData.id);
-            console.log('✅ Dados iniciais criados para usuário:', userData.email);
+            console.log('✅ Dados iniciais verificados para usuário:', userData.email);
           } catch (error) {
             console.error('❌ Erro ao criar dados iniciais:', error);
           }
