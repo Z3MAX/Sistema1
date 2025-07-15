@@ -392,7 +392,6 @@ const DellLaptopControlSystem = () => {
   // Estados dos formulários
   const [laptopForm, setLaptopForm] = useState({
     model: '',
-    serial_number: '',
     service_tag: '',
     processor: '',
     ram: '',
@@ -421,22 +420,12 @@ const DellLaptopControlSystem = () => {
   });
 
   // Modelos Dell disponíveis
-  const dellModels = [
-    'Dell Inspiron 15 3000',
-    'Dell Inspiron 15 5000',
-    'Dell Inspiron 15 7000',
-    'Dell XPS 13 9310',
-    'Dell XPS 13 9320',
-    'Dell XPS 15 9520',
-    'Dell Latitude 3420',
-    'Dell Latitude 5420',
-    'Dell Latitude 7420',
-    'Dell Vostro 3500',
-    'Dell Vostro 5402',
-    'Dell Alienware m15 R6',
-    'Dell Precision 3560',
-    'Dell Precision 5560'
-  ];
+  const [dellModels, setDellModels] = useState([
+    'Dell Latitude 5330'
+  ]);
+  
+  const [showAddModel, setShowAddModel] = useState(false);
+  const [newModel, setNewModel] = useState('');
 
   const statuses = ['Disponível', 'Em Uso', 'Manutenção', 'Descartado'];
   const conditions = ['Excelente', 'Bom', 'Regular', 'Ruim'];
@@ -686,8 +675,8 @@ const DellLaptopControlSystem = () => {
 
   // =================== FUNÇÕES DE LAPTOPS ===================
   const handleSaveLaptop = async () => {
-    if (!laptopForm.model?.trim() || !laptopForm.serial_number?.trim()) {
-      alert('Por favor, preencha o modelo e número de série.');
+    if (!laptopForm.model?.trim() || !laptopForm.service_tag?.trim()) {
+      alert('Por favor, preencha o modelo e service tag.');
       return;
     }
     
@@ -699,21 +688,20 @@ const DellLaptopControlSystem = () => {
     try {
       setIsLoading(true);
 
-      // Verificar se número de série já existe
+      // Verificar se service tag já existe
       if (!editingLaptop) {
-        const serialCheck = await dataService.laptops.checkSerialExists(
-          laptopForm.serial_number
+        const tagCheck = await dataService.laptops.checkServiceTagExists(
+          laptopForm.service_tag
         );
-        if (serialCheck.success && serialCheck.exists) {
-          alert('Já existe um laptop com este número de série.');
+        if (tagCheck.success && tagCheck.exists) {
+          alert('Já existe um laptop com este service tag.');
           return;
         }
       }
 
       const laptopData = {
         model: laptopForm.model.trim(),
-        serial_number: laptopForm.serial_number.trim(),
-        service_tag: laptopForm.service_tag?.trim() || '',
+        service_tag: laptopForm.service_tag.trim(),
         processor: laptopForm.processor?.trim() || '',
         ram: laptopForm.ram?.trim() || '',
         storage: laptopForm.storage?.trim() || '',
@@ -761,7 +749,6 @@ const DellLaptopControlSystem = () => {
     setEditingLaptop(laptop);
     setLaptopForm({
       model: laptop.model || '',
-      serial_number: laptop.serial_number || '',
       service_tag: laptop.service_tag || '',
       processor: laptop.processor || '',
       ram: laptop.ram || '',
@@ -809,7 +796,6 @@ const DellLaptopControlSystem = () => {
   const resetLaptopForm = () => {
     setLaptopForm({
       model: '',
-      serial_number: '',
       service_tag: '',
       processor: '',
       ram: '',
@@ -927,7 +913,7 @@ const DellLaptopControlSystem = () => {
 
   const filteredLaptops = laptops.filter(laptop => {
     const matchesSearch = laptop.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         laptop.serial_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         laptop.service_tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (laptop.assigned_user || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
@@ -1243,7 +1229,7 @@ const DellLaptopControlSystem = () => {
                 <Icons.Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Pesquisar por modelo, número de série ou usuário..."
+                  placeholder="Pesquisar por modelo, service tag ou usuário..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 bg-white/80 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
@@ -1262,7 +1248,7 @@ const DellLaptopControlSystem = () => {
                       </div>
                       <div>
                         <h3 className="font-bold text-gray-900">{laptop.model}</h3>
-                        <p className="text-sm text-gray-600">{laptop.serial_number}</p>
+                        <p className="text-sm text-gray-600">{laptop.service_tag}</p>
                         {laptop.created_by_name && (
                           <p className="text-xs text-gray-500">Por: {laptop.created_by_name}</p>
                         )}
@@ -1552,36 +1538,61 @@ const DellLaptopControlSystem = () => {
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Modelo Dell *
                   </label>
-                  <select
-                    value={laptopForm.model}
-                    onChange={(e) => setLaptopForm(prev => ({ ...prev, model: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                    required
-                  >
-                    <option value="">Selecione o modelo</option>
-                    {dellModels.map(model => (
-                      <option key={model} value={model}>{model}</option>
-                    ))}
-                  </select>
+                  <div className="space-y-2">
+                    <select
+                      value={laptopForm.model}
+                      onChange={(e) => handleModelChange(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                      required
+                    >
+                      <option value="">Selecione o modelo</option>
+                      {dellModels.map(model => (
+                        <option key={model} value={model}>{model}</option>
+                      ))}
+                    </select>
+                    
+                    {!showAddModel ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowAddModel(true)}
+                        className="w-full px-4 py-2 bg-gray-50 text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all text-sm"
+                      >
+                        + Adicionar Novo Modelo
+                      </button>
+                    ) : (
+                      <div className="flex space-x-2">
+                        <input
+                          type="text"
+                          value={newModel}
+                          onChange={(e) => setNewModel(e.target.value)}
+                          placeholder="Digite o novo modelo..."
+                          className="flex-1 px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddNewModel}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all text-sm"
+                        >
+                          Adicionar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAddModel(false);
+                            setNewModel('');
+                          }}
+                          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all text-sm"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
-                    Número de Série *
-                  </label>
-                  <input
-                    type="text"
-                    value={laptopForm.serial_number}
-                    onChange={(e) => setLaptopForm(prev => ({ ...prev, serial_number: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                    placeholder="Digite o número de série"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
-                    Service Tag
+                    Service Tag *
                   </label>
                   <input
                     type="text"
@@ -1589,12 +1600,14 @@ const DellLaptopControlSystem = () => {
                     onChange={(e) => setLaptopForm(prev => ({ ...prev, service_tag: e.target.value }))}
                     className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                     placeholder="Digite o service tag"
+                    required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Processador
+                    {laptopForm.model === 'Dell Latitude 5330' && <span className="text-purple-600 text-xs ml-1">(Auto-preenchido)</span>}
                   </label>
                   <input
                     type="text"
@@ -1602,12 +1615,14 @@ const DellLaptopControlSystem = () => {
                     onChange={(e) => setLaptopForm(prev => ({ ...prev, processor: e.target.value }))}
                     className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                     placeholder="Ex: Intel Core i7-11800H"
+                    readOnly={laptopForm.model === 'Dell Latitude 5330'}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Memória RAM
+                    {laptopForm.model === 'Dell Latitude 5330' && <span className="text-purple-600 text-xs ml-1">(Auto-preenchido)</span>}
                   </label>
                   <input
                     type="text"
@@ -1615,12 +1630,14 @@ const DellLaptopControlSystem = () => {
                     onChange={(e) => setLaptopForm(prev => ({ ...prev, ram: e.target.value }))}
                     className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                     placeholder="Ex: 16GB DDR4"
+                    readOnly={laptopForm.model === 'Dell Latitude 5330'}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Armazenamento
+                    {laptopForm.model === 'Dell Latitude 5330' && <span className="text-purple-600 text-xs ml-1">(Auto-preenchido)</span>}
                   </label>
                   <input
                     type="text"
@@ -1628,6 +1645,7 @@ const DellLaptopControlSystem = () => {
                     onChange={(e) => setLaptopForm(prev => ({ ...prev, storage: e.target.value }))}
                     className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                     placeholder="Ex: 512GB SSD"
+                    readOnly={laptopForm.model === 'Dell Latitude 5330'}
                   />
                 </div>
 
@@ -2060,10 +2078,12 @@ const DellLaptopControlSystem = () => {
                       <span className="text-gray-600">Modelo:</span>
                       <span className="font-medium">{showLaptopDetail.model}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Número de Série:</span>
-                      <span className="font-medium">{showLaptopDetail.serial_number}</span>
-                    </div>
+                    {showLaptopDetail.service_tag && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Service Tag:</span>
+                        <span className="font-medium">{showLaptopDetail.service_tag}</span>
+                      </div>
+                    )}
                     {showLaptopDetail.service_tag && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Service Tag:</span>
