@@ -30,13 +30,22 @@ if (!DATABASE_URL) {
 
 console.log('✅ Connection string encontrada');
 
-// Validar formato da URL
+// Limpar e validar formato da URL
 DATABASE_URL = DATABASE_URL.trim();
 
+// Remover prefixo psql se existir
+if (DATABASE_URL.startsWith('psql ')) {
+  console.log('🔧 Removendo prefixo psql da connection string...');
+  DATABASE_URL = DATABASE_URL.replace(/^psql\s+['"]?/, '').replace(/['"]?$/, '');
+  console.log('✅ Connection string limpa');
+}
+
+// Validar formato após limpeza
 if (!DATABASE_URL.startsWith('postgresql://') && !DATABASE_URL.startsWith('postgres://')) {
-  console.error('❌ ERRO CRÍTICO: Connection string inválida!');
+  console.error('❌ ERRO CRÍTICO: Connection string inválida após limpeza!');
   console.error('❌ Formato atual:', DATABASE_URL.substring(0, 20) + '...');
   console.error('❌ Formato esperado: postgresql://user:pass@host.neon.tech/dbname');
+  console.error('❌ Verifique se a connection string está correta no Neon Dashboard');
   throw new Error('ERRO CRÍTICO: Connection string deve começar com postgresql:// ou postgres://');
 }
 
