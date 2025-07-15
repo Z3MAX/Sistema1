@@ -1,4 +1,4 @@
-// src/services/dataService.js - DADOS COMPARTILHADOS ENTRE TODOS OS USUÁRIOS
+// src/services/dataService.js - ATUALIZADO COM SERVICE_TAG
 import database from '../config/database';
 
 const { sql } = database;
@@ -213,7 +213,7 @@ export const dataService = {
     }
   },
 
-  // ===== LAPTOPS (COMPARTILHADOS) =====
+  // ===== LAPTOPS (COMPARTILHADOS COM SERVICE_TAG) =====
   laptops: {
     async getAll() {
       console.log('🔄 Buscando TODOS os laptops compartilhados...');
@@ -241,7 +241,7 @@ export const dataService = {
       
       try {
         const {
-          model, serial_number, service_tag, processor, ram, storage, graphics,
+          model, service_tag, processor, ram, storage, graphics,
           screen_size, color, warranty_end, condition, condition_score, status,
           floor_id, room_id, photo, damage_analysis, purchase_date, purchase_price,
           assigned_user, notes
@@ -249,13 +249,13 @@ export const dataService = {
         
         const result = await sql`
           INSERT INTO laptops (
-            model, serial_number, service_tag, processor, ram, storage, graphics,
+            model, service_tag, processor, ram, storage, graphics,
             screen_size, color, warranty_end, condition, condition_score, status,
             floor_id, room_id, photo, damage_analysis, purchase_date, purchase_price,
             assigned_user, notes, created_by, last_updated_by
           )
           VALUES (
-            ${model}, ${serial_number}, ${service_tag || null}, ${processor || null},
+            ${model}, ${service_tag}, ${processor || null},
             ${ram || null}, ${storage || null}, ${graphics || null}, ${screen_size || null},
             ${color || null}, ${warranty_end || null}, ${condition}, ${condition_score},
             ${status}, ${floor_id || null}, ${room_id || null}, ${photo || null},
@@ -271,7 +271,7 @@ export const dataService = {
         return { success: true, data: result[0] };
       } catch (error) {
         if (error.message.includes('duplicate key') || error.message.includes('unique')) {
-          return { success: false, error: 'Número de série já existe' };
+          return { success: false, error: 'Service tag já existe' };
         }
         return handleDatabaseError('laptops.create', error);
       }
@@ -282,7 +282,7 @@ export const dataService = {
       
       try {
         const {
-          model, serial_number, service_tag, processor, ram, storage, graphics,
+          model, service_tag, processor, ram, storage, graphics,
           screen_size, color, warranty_end, condition, condition_score, status,
           floor_id, room_id, photo, damage_analysis, purchase_date, purchase_price,
           assigned_user, notes
@@ -290,7 +290,7 @@ export const dataService = {
         
         const result = await sql`
           UPDATE laptops 
-          SET model = ${model}, serial_number = ${serial_number}, service_tag = ${service_tag || null},
+          SET model = ${model}, service_tag = ${service_tag},
               processor = ${processor || null}, ram = ${ram || null}, storage = ${storage || null},
               graphics = ${graphics || null}, screen_size = ${screen_size || null},
               color = ${color || null}, warranty_end = ${warranty_end || null},
@@ -312,7 +312,7 @@ export const dataService = {
         return { success: true, data: result[0] };
       } catch (error) {
         if (error.message.includes('duplicate key') || error.message.includes('unique')) {
-          return { success: false, error: 'Número de série já existe' };
+          return { success: false, error: 'Service tag já existe' };
         }
         return handleDatabaseError('laptops.update', error);
       }
@@ -339,30 +339,36 @@ export const dataService = {
       }
     },
 
-    async checkSerialExists(serial, excludeId = null) {
-      console.log('🔄 Verificando serial no banco COMPARTILHADO:', serial);
+    async checkServiceTagExists(serviceTag, excludeId = null) {
+      console.log('🔄 Verificando service tag no banco COMPARTILHADO:', serviceTag);
       
       try {
         let query;
         if (excludeId) {
           query = sql`
             SELECT id FROM laptops 
-            WHERE serial_number = ${serial} AND id != ${excludeId}
+            WHERE service_tag = ${serviceTag} AND id != ${excludeId}
           `;
         } else {
           query = sql`
             SELECT id FROM laptops 
-            WHERE serial_number = ${serial}
+            WHERE service_tag = ${serviceTag}
           `;
         }
         
         const result = await query;
         
-        console.log(`✅ Verificação de serial: ${result.length > 0 ? 'EXISTS' : 'NOT_EXISTS'}`);
+        console.log(`✅ Verificação de service tag: ${result.length > 0 ? 'EXISTS' : 'NOT_EXISTS'}`);
         return { success: true, exists: result.length > 0 };
       } catch (error) {
-        return handleDatabaseError('laptops.checkSerialExists', error);
+        return handleDatabaseError('laptops.checkServiceTagExists', error);
       }
+    },
+
+    // Manter função de serial_number para compatibilidade (mas usar service_tag)
+    async checkSerialExists(serial, excludeId = null) {
+      console.log('🔄 Verificando service tag (compatibilidade):', serial);
+      return this.checkServiceTagExists(serial, excludeId);
     }
   },
 
@@ -416,7 +422,7 @@ export const dataService = {
           'laptop' as type,
           l.id,
           l.model as title,
-          l.serial_number as subtitle,
+          l.service_tag as subtitle,
           u.name as user_name,
           l.created_at as timestamp,
           'created' as action
@@ -469,11 +475,10 @@ export const dataService = {
 };
 
 // Log final
-console.log('✅ === dataService CONFIGURADO PARA DADOS COMPARTILHADOS ===');
-console.log('✅ Todas as operações são compartilhadas entre usuários');
-console.log('🌍 Floors, Rooms e Laptops visíveis para TODOS');
-console.log('📊 Estatísticas globais para toda a organização');
-console.log('👥 Apenas autenticação é separada por usuário');
+console.log('✅ === dataService CONFIGURADO PARA SERVICE_TAG ===');
+console.log('✅ Todas as operações usam service_tag como campo principal');
+console.log('✅ Compatibilidade mantida com checkSerialExists');
+console.log('✅ Dados compartilhados entre todos os usuários');
 console.log('❌ localStorage: DESABILITADO');
 console.log('❌ Modo offline: DESABILITADO');
 console.log('====================================================');
