@@ -101,12 +101,6 @@ const AuthProvider = ({ children }) => {
       setUser(userData);
       localStorage.setItem('dellLaptopUser', JSON.stringify(userData));
       
-      // Verificar se dados iniciais existem para este usuário
-      const floorsResult = await dataService.floors.getAll();
-      if (floorsResult.success && floorsResult.data.length === 0) {
-        console.log('📝 Dados iniciais verificados para usuário:', userData.email);
-      }
-      
       console.log('✅ Login realizado com sucesso!');
       return { success: true };
     } catch (error) {
@@ -262,11 +256,6 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
   ),
-  Building: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-    </svg>
-  ),
   Search: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -321,12 +310,6 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
     </svg>
   ),
-  MapPin: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  ),
   User: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -355,9 +338,12 @@ const Icons = {
       <line x1="12" y1="20" x2="12.01" y2="20"></line>
     </svg>
   ),
-  Users: () => (
+  Calendar: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a4 4 0 11-8 0 4 4 0 018 0z" />
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+      <line x1="16" y1="2" x2="16" y2="6"></line>
+      <line x1="8" y1="2" x2="8" y2="6"></line>
+      <line x1="3" y1="10" x2="21" y2="10"></line>
     </svg>
   )
 };
@@ -368,13 +354,10 @@ const DellLaptopControlSystem = () => {
   
   // Estados principais
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [floors, setFloors] = useState([]);
   const [laptops, setLaptops] = useState([]);
   const [statistics, setStatistics] = useState({});
   const [showLaptopForm, setShowLaptopForm] = useState(false);
-  const [showRoomForm, setShowRoomForm] = useState(false);
   const [editingLaptop, setEditingLaptop] = useState(null);
-  const [editingRoom, setEditingRoom] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showLaptopDetail, setShowLaptopDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -403,20 +386,12 @@ const DellLaptopControlSystem = () => {
     condition: 'Excelente',
     condition_score: 100,
     status: 'Disponível',
-    floor_id: '',
-    room_id: '',
     photo: null,
     damage_analysis: null,
     purchase_date: '',
     purchase_price: '',
     assigned_user: '',
     notes: ''
-  });
-
-  const [roomForm, setRoomForm] = useState({
-    name: '',
-    description: '',
-    floor_id: ''
   });
 
   // Modelos Dell disponíveis
@@ -438,6 +413,25 @@ const DellLaptopControlSystem = () => {
   }, [user]);
 
   // =================== FUNÇÕES AUXILIARES ===================
+  // Função para calcular status da garantia
+  const getWarrantyStatus = (warrantyEnd) => {
+    if (!warrantyEnd) return { status: 'Não informado', color: 'text-gray-600' };
+    
+    const endDate = new Date(warrantyEnd);
+    const today = new Date();
+    const daysDiff = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff < 0) {
+      return { status: 'Vencida', color: 'text-red-600' };
+    } else if (daysDiff <= 30) {
+      return { status: `Vence em ${daysDiff} dia(s)`, color: 'text-orange-600' };
+    } else if (daysDiff <= 90) {
+      return { status: `Vence em ${Math.ceil(daysDiff / 30)} mês(es)`, color: 'text-yellow-600' };
+    } else {
+      return { status: `Vence em ${endDate.toLocaleDateString('pt-BR')}`, color: 'text-green-600' };
+    }
+  };
+
   // Função para auto-preencher specs do Dell Latitude 5330
   const handleModelChange = (selectedModel) => {
     setLaptopForm(prev => ({
@@ -471,16 +465,10 @@ const DellLaptopControlSystem = () => {
     try {
       console.log('🔄 Carregando dados para usuário:', user.email);
       
-      const [floorsResult, laptopsResult, statsResult] = await Promise.all([
-        dataService.floors.getAll(),
+      const [laptopsResult, statsResult] = await Promise.all([
         dataService.laptops.getAll(),
         dataService.getStatistics()
       ]);
-
-      if (floorsResult.success) {
-        setFloors(floorsResult.data);
-        console.log('✅ Floors carregados:', floorsResult.data.length);
-      }
 
       if (laptopsResult.success) {
         setLaptops(laptopsResult.data);
@@ -495,9 +483,7 @@ const DellLaptopControlSystem = () => {
           maintenance_laptops: parseInt(statsResult.data.maintenance_laptops) || 0,
           discarded_laptops: parseInt(statsResult.data.discarded_laptops) || 0,
           total_value: parseFloat(statsResult.data.total_value) || 0,
-          avg_condition: parseFloat(statsResult.data.avg_condition) || 0,
-          total_floors: parseInt(statsResult.data.total_floors) || 0,
-          total_rooms: parseInt(statsResult.data.total_rooms) || 0
+          avg_condition: parseFloat(statsResult.data.avg_condition) || 0
         };
         setStatistics(safeStats);
         console.log('✅ Estatísticas carregadas:', safeStats);
@@ -705,11 +691,6 @@ const DellLaptopControlSystem = () => {
       alert('Por favor, preencha o modelo e service tag.');
       return;
     }
-    
-    if (!laptopForm.floor_id || !laptopForm.room_id) {
-      alert('Por favor, selecione o andar e a sala.');
-      return;
-    }
 
     try {
       setIsLoading(true);
@@ -738,8 +719,6 @@ const DellLaptopControlSystem = () => {
         condition: laptopForm.condition || 'Excelente',
         condition_score: laptopForm.condition_score || 100,
         status: laptopForm.status || 'Disponível',
-        floor_id: parseInt(laptopForm.floor_id),
-        room_id: parseInt(laptopForm.room_id),
         photo: laptopForm.photo || null,
         damage_analysis: laptopForm.damage_analysis || null,
         purchase_date: laptopForm.purchase_date || null,
@@ -786,8 +765,6 @@ const DellLaptopControlSystem = () => {
       condition: laptop.condition || 'Excelente',
       condition_score: laptop.condition_score || 100,
       status: laptop.status || 'Disponível',
-      floor_id: laptop.floor_id?.toString() || '',
-      room_id: laptop.room_id?.toString() || '',
       photo: laptop.photo || null,
       damage_analysis: laptop.damage_analysis || null,
       purchase_date: laptop.purchase_date || '',
@@ -833,8 +810,6 @@ const DellLaptopControlSystem = () => {
       condition: 'Excelente',
       condition_score: 100,
       status: 'Disponível',
-      floor_id: '',
-      room_id: '',
       photo: null,
       damage_analysis: null,
       purchase_date: '',
@@ -845,98 +820,6 @@ const DellLaptopControlSystem = () => {
     setShowAddModel(false);
     setNewModel('');
     closeAllPhotoModals();
-  };
-
-  // =================== FUNÇÕES DE SALAS ===================
-  const handleSaveRoom = async () => {
-    if (!roomForm.name?.trim() || !roomForm.floor_id) {
-      alert('Por favor, preencha todos os campos obrigatórios.');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      
-      const roomData = {
-        name: roomForm.name.trim(),
-        description: roomForm.description?.trim() || '',
-        floor_id: parseInt(roomForm.floor_id)
-      };
-
-      let result;
-      if (editingRoom) {
-        result = await dataService.rooms.update(editingRoom.id, roomData, user.id);
-      } else {
-        result = await dataService.rooms.create(roomData, user.id);
-      }
-
-      if (result.success) {
-        await loadData();
-        setRoomForm({ name: '', description: '', floor_id: '' });
-        setShowRoomForm(false);
-        setEditingRoom(null);
-        alert(`Sala ${editingRoom ? 'atualizada' : 'criada'} com sucesso!`);
-      } else {
-        alert(`Erro ao ${editingRoom ? 'atualizar' : 'criar'} sala: ${result.error}`);
-      }
-    } catch (error) {
-      alert(`Erro ao ${editingRoom ? 'atualizar' : 'criar'} sala: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEditRoom = (room) => {
-    setEditingRoom(room);
-    setRoomForm({
-      name: room.name,
-      description: room.description || '',
-      floor_id: room.floor_id.toString()
-    });
-    setShowRoomForm(true);
-  };
-
-  const handleDeleteRoom = async (roomId) => {
-    if (!confirm('Tem certeza que deseja excluir esta sala?')) return;
-
-    try {
-      setIsLoading(true);
-      
-      const laptopsInRoom = laptops.filter(laptop => laptop.room_id === roomId);
-      if (laptopsInRoom.length > 0) {
-        alert(`Não é possível excluir esta sala pois existem ${laptopsInRoom.length} laptop(s) cadastrado(s) nela.`);
-        return;
-      }
-
-      const result = await dataService.rooms.delete(roomId, user.id);
-      
-      if (result.success) {
-        await loadData();
-        alert('Sala excluída com sucesso!');
-      } else {
-        alert(`Erro ao excluir sala: ${result.error}`);
-      }
-    } catch (error) {
-      alert(`Erro ao excluir sala: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // =================== FUNÇÕES AUXILIARES ===================
-  const getFloorName = (floorId) => {
-    const floor = floors.find(f => f.id === floorId);
-    return floor ? floor.name : '';
-  };
-
-  const getRoomName = (roomId) => {
-    const room = floors.flatMap(f => f.rooms || []).find(r => r.id === roomId);
-    return room ? room.name : '';
-  };
-
-  const getRoomsForFloor = (floorId) => {
-    const floor = floors.find(f => f.id === parseInt(floorId));
-    return floor ? (floor.rooms || []) : [];
   };
 
   const filteredLaptops = laptops.filter(laptop => {
@@ -1007,7 +890,6 @@ const DellLaptopControlSystem = () => {
     if (confirm('Tem certeza que deseja sair?')) {
       const result = await logout();
       if (result.success) {
-        setFloors([]);
         setLaptops([]);
         setStatistics({});
         setActiveTab('dashboard');
@@ -1090,7 +972,6 @@ const DellLaptopControlSystem = () => {
             {[
               { id: 'dashboard', label: 'Dashboard', icon: Icons.Home, shortLabel: 'Home', gradient: 'from-blue-500 to-indigo-500' },
               { id: 'laptops', label: 'Laptops', icon: Icons.Laptop, shortLabel: 'Laptops', gradient: 'from-purple-500 to-pink-500' },
-              { id: 'locations', label: 'Localizações', icon: Icons.Building, shortLabel: 'Local', gradient: 'from-green-500 to-emerald-500' },
               { id: 'reports', label: 'Relatórios', icon: Icons.BarChart3, shortLabel: 'Report', gradient: 'from-orange-500 to-red-500' }
             ].map(tab => (
               <button
@@ -1210,18 +1091,15 @@ const DellLaptopControlSystem = () => {
                 </button>
                 
                 <button
-                  onClick={() => {
-                    setActiveTab('locations');
-                    setShowRoomForm(true);
-                  }}
+                  onClick={() => setActiveTab('reports')}
                   className="flex items-center space-x-4 p-6 bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 rounded-2xl transition-all group border border-green-200 hover:shadow-lg"
                 >
                   <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Icons.Building />
+                    <Icons.BarChart3 />
                   </div>
                   <div className="text-left">
-                    <p className="text-green-600 font-bold text-lg">Adicionar Sala</p>
-                    <p className="text-green-500 text-sm">Cadastrar nova localização</p>
+                    <p className="text-green-600 font-bold text-lg">Ver Relatórios</p>
+                    <p className="text-green-500 text-sm">Análises e estatísticas</p>
                   </div>
                 </button>
               </div>
@@ -1317,10 +1195,13 @@ const DellLaptopControlSystem = () => {
                       <ConditionBadge condition={laptop.condition} score={laptop.condition_score} />
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Localização:</span>
-                      <span className="text-sm font-medium text-gray-900">
-                        {getFloorName(laptop.floor_id)} - {getRoomName(laptop.room_id)}
-                      </span>
+                      <span className="text-sm text-gray-600">Garantia:</span>
+                      <div className="flex items-center space-x-1">
+                        <Icons.Calendar className="w-3 h-3" />
+                        <span className={`text-sm font-medium ${getWarrantyStatus(laptop.warranty_end).color}`}>
+                          {getWarrantyStatus(laptop.warranty_end).status}
+                        </span>
+                      </div>
                     </div>
                     {laptop.assigned_user && (
                       <div className="flex justify-between items-center">
@@ -1366,96 +1247,6 @@ const DellLaptopControlSystem = () => {
           </div>
         )}
 
-        {/* Localizações */}
-        {activeTab === 'locations' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-green-900 via-emerald-800 to-teal-900 bg-clip-text text-transparent">
-                  Localizações
-                </h2>
-                <p className="text-gray-600 mt-2">Gerenciar andares e salas</p>
-              </div>
-              <button
-                onClick={() => {
-                  setRoomForm({ name: '', description: '', floor_id: '' });
-                  setShowRoomForm(true);
-                }}
-                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                <Icons.Plus />
-                <span>Nova Sala</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {floors.map((floor) => (
-                <div key={floor.id} className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40 hover:shadow-lg transition-all">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                        <Icons.Building />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900">{floor.name}</h3>
-                        <p className="text-sm text-gray-600">{floor.description}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-sm font-medium text-gray-600">Salas:</span>
-                      <span className="text-sm font-bold text-gray-900">{floor.rooms?.length || 0}</span>
-                    </div>
-                    
-                    {floor.rooms && floor.rooms.length > 0 ? (
-                      <div className="space-y-2">
-                        {floor.rooms.map((room) => (
-                          <div key={room.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                            <div>
-                              <p className="font-medium text-gray-900">{room.name}</p>
-                              <p className="text-xs text-gray-600">{room.description}</p>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => handleEditRoom(room)}
-                                className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                title="Editar sala"
-                              >
-                                <Icons.Edit />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteRoom(room.id)}
-                                className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                title="Excluir sala"
-                              >
-                                <Icons.Trash2 />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-center text-gray-500 py-4">Nenhuma sala cadastrada</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {floors.length === 0 && (
-              <div className="text-center py-12">
-                <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                  <Icons.Building className="w-12 h-12 text-green-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhuma localização encontrada</h3>
-                <p className="text-gray-600 mb-6">Os andares e salas aparecerão aqui</p>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Relatórios */}
         {activeTab === 'reports' && (
           <div className="space-y-6">
@@ -1469,64 +1260,114 @@ const DellLaptopControlSystem = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-900">Localizações</h3>
-                  <Icons.MapPin className="text-green-600" />
+                  <h3 className="font-bold text-gray-900">Estatísticas Gerais</h3>
+                  <Icons.BarChart3 className="text-blue-600" />
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Total de Andares:</span>
-                    <span className="font-bold text-green-600">{statistics.total_floors || 0}</span>
+                    <span className="text-sm text-gray-600">Total de Laptops:</span>
+                    <span className="font-bold text-blue-600">{statistics.total_laptops || 0}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Total de Salas:</span>
-                    <span className="font-bold text-green-600">{statistics.total_rooms || 0}</span>
+                    <span className="text-sm text-gray-600">Disponíveis:</span>
+                    <span className="font-bold text-green-600">{statistics.available_laptops || 0}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Ocupação Média:</span>
-                    <span className="font-bold text-green-600">
-                      {statistics.total_rooms > 0 ? 
-                        ((statistics.total_laptops || 0) / statistics.total_rooms).toFixed(1) : 
-                        '0'
-                      } laptops/sala
-                    </span>
+                    <span className="text-sm text-gray-600">Em Uso:</span>
+                    <span className="font-bold text-blue-600">{statistics.in_use_laptops || 0}</span>
                   </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Em Manutenção:</span>
+                    <span className="font-bold text-orange-600">{statistics.maintenance_laptops || 0}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-gray-900">Garantias</h3>
+                  <Icons.Calendar className="text-orange-600" />
+                </div>
+                <div className="space-y-3">
+                  {(() => {
+                    const warrantyStats = {
+                      vencidas: 0,
+                      vencendo: 0,
+                      ativas: 0,
+                      naoInformado: 0
+                    };
+                    
+                    laptops.forEach(laptop => {
+                      const status = getWarrantyStatus(laptop.warranty_end);
+                      if (status.status === 'Não informado') {
+                        warrantyStats.naoInformado++;
+                      } else if (status.status === 'Vencida') {
+                        warrantyStats.vencidas++;
+                      } else if (status.status.includes('Vence em') && (status.status.includes('dia') || status.status.includes('mês'))) {
+                        warrantyStats.vencendo++;
+                      } else {
+                        warrantyStats.ativas++;
+                      }
+                    });
+                    
+                    return (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Vencidas:</span>
+                          <span className="font-bold text-red-600">{warrantyStats.vencidas}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Vencendo em breve:</span>
+                          <span className="font-bold text-orange-600">{warrantyStats.vencendo}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Ativas:</span>
+                          <span className="font-bold text-green-600">{warrantyStats.ativas}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Não informado:</span>
+                          <span className="font-bold text-gray-600">{warrantyStats.naoInformado}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
 
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
-              <h3 className="font-bold text-gray-900 mb-4">Laptops por Localização</h3>
+              <h3 className="font-bold text-gray-900 mb-4">Laptops por Status</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 text-gray-600">Andar</th>
-                      <th className="text-left py-2 text-gray-600">Sala</th>
-                      <th className="text-center py-2 text-gray-600">Laptops</th>
+                      <th className="text-left py-2 text-gray-600">Modelo</th>
+                      <th className="text-left py-2 text-gray-600">Service Tag</th>
                       <th className="text-center py-2 text-gray-600">Status</th>
+                      <th className="text-center py-2 text-gray-600">Condição</th>
+                      <th className="text-center py-2 text-gray-600">Garantia</th>
+                      <th className="text-left py-2 text-gray-600">Usuário</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {floors.map((floor) => 
-                      floor.rooms?.map((room) => {
-                        const roomLaptops = laptops.filter(l => l.room_id === room.id);
-                        const availableCount = roomLaptops.filter(l => l.status === 'Disponível').length;
-                        return (
-                          <tr key={room.id} className="border-b border-gray-100">
-                            <td className="py-2 font-medium text-gray-900">{floor.name}</td>
-                            <td className="py-2 text-gray-700">{room.name}</td>
-                            <td className="py-2 text-center font-bold">{roomLaptops.length}</td>
-                            <td className="py-2 text-center">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                availableCount > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                              }`}>
-                                {availableCount} disponível(is)
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      }) || []
-                    )}
+                    {laptops.map((laptop) => (
+                      <tr key={laptop.id} className="border-b border-gray-100">
+                        <td className="py-2 font-medium text-gray-900">{laptop.model}</td>
+                        <td className="py-2 text-gray-700">{laptop.service_tag}</td>
+                        <td className="py-2 text-center">
+                          <StatusBadge status={laptop.status} />
+                        </td>
+                        <td className="py-2 text-center">
+                          <ConditionBadge condition={laptop.condition} score={laptop.condition_score} />
+                        </td>
+                        <td className="py-2 text-center">
+                          <span className={`text-xs font-medium ${getWarrantyStatus(laptop.warranty_end).color}`}>
+                            {getWarrantyStatus(laptop.warranty_end).status}
+                          </span>
+                        </td>
+                        <td className="py-2 text-gray-700">{laptop.assigned_user || '-'}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -1675,43 +1516,6 @@ const DellLaptopControlSystem = () => {
                     placeholder="Ex: 512GB SSD"
                     readOnly={laptopForm.model === 'Dell Latitude 5330'}
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
-                    Andar *
-                  </label>
-                  <select
-                    value={laptopForm.floor_id}
-                    onChange={(e) => {
-                      setLaptopForm(prev => ({ ...prev, floor_id: e.target.value, room_id: '' }));
-                    }}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                    required
-                  >
-                    <option value="">Selecione o andar</option>
-                    {floors.map(floor => (
-                      <option key={floor.id} value={floor.id}>{floor.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
-                    Sala *
-                  </label>
-                  <select
-                    value={laptopForm.room_id}
-                    onChange={(e) => setLaptopForm(prev => ({ ...prev, room_id: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                    required
-                    disabled={!laptopForm.floor_id}
-                  >
-                    <option value="">Selecione a sala</option>
-                    {getRoomsForFloor(laptopForm.floor_id).map(room => (
-                      <option key={room.id} value={room.id}>{room.name}</option>
-                    ))}
-                  </select>
                 </div>
 
                 <div>
@@ -1880,101 +1684,6 @@ const DellLaptopControlSystem = () => {
         </div>
       )}
 
-      {/* Modal de Formulário de Sala */}
-      {showRoomForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {editingRoom ? 'Editar Sala' : 'Nova Sala'}
-                </h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  {editingRoom ? 'Atualizar informações' : 'Cadastrar nova sala'}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowRoomForm(false);
-                  setEditingRoom(null);
-                  setRoomForm({ name: '', description: '', floor_id: '' });
-                }}
-                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all"
-              >
-                <Icons.X />
-              </button>
-            </div>
-
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveRoom(); }} className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Nome da Sala *
-                </label>
-                <input
-                  type="text"
-                  value={roomForm.name}
-                  onChange={(e) => setRoomForm(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                  placeholder="Digite o nome da sala"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Andar *
-                </label>
-                <select
-                  value={roomForm.floor_id}
-                  onChange={(e) => setRoomForm(prev => ({ ...prev, floor_id: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                  required
-                >
-                  <option value="">Selecione o andar</option>
-                  {floors.map(floor => (
-                    <option key={floor.id} value={floor.id}>{floor.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Descrição
-                </label>
-                <textarea
-                  value={roomForm.description}
-                  onChange={(e) => setRoomForm(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                  rows="3"
-                  placeholder="Descrição da sala..."
-                ></textarea>
-              </div>
-
-              <div className="flex justify-end space-x-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowRoomForm(false);
-                    setEditingRoom(null);
-                    setRoomForm({ name: '', description: '', floor_id: '' });
-                  }}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-2xl hover:bg-gray-200 transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? 'Salvando...' : editingRoom ? 'Atualizar' : 'Salvar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Modal de Opções de Foto */}
       {photoState.showOptions && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -2112,12 +1821,6 @@ const DellLaptopControlSystem = () => {
                         <span className="font-medium">{showLaptopDetail.service_tag}</span>
                       </div>
                     )}
-                    {showLaptopDetail.service_tag && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Service Tag:</span>
-                        <span className="font-medium">{showLaptopDetail.service_tag}</span>
-                      </div>
-                    )}
                     <div className="flex justify-between">
                       <span className="text-gray-600">Status:</span>
                       <StatusBadge status={showLaptopDetail.status} />
@@ -2125,6 +1828,15 @@ const DellLaptopControlSystem = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Condição:</span>
                       <ConditionBadge condition={showLaptopDetail.condition} score={showLaptopDetail.condition_score} />
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Garantia:</span>
+                      <div className="flex items-center space-x-1">
+                        <Icons.Calendar className="w-4 h-4" />
+                        <span className={`font-medium ${getWarrantyStatus(showLaptopDetail.warranty_end).color}`}>
+                          {getWarrantyStatus(showLaptopDetail.warranty_end).status}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2155,25 +1867,17 @@ const DellLaptopControlSystem = () => {
                   </div>
                 )}
 
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-4">Localização</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Andar:</span>
-                      <span className="font-medium">{getFloorName(showLaptopDetail.floor_id)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Sala:</span>
-                      <span className="font-medium">{getRoomName(showLaptopDetail.room_id)}</span>
-                    </div>
-                    {showLaptopDetail.assigned_user && (
+                {showLaptopDetail.assigned_user && (
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-4">Usuário Responsável</h3>
+                    <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Usuário:</span>
                         <span className="font-medium">{showLaptopDetail.assigned_user}</span>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="space-y-4">
