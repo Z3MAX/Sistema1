@@ -1,4 +1,4 @@
-// src/config/database.js - VERSÃO ATUALIZADA SEM FLOORS/ROOMS
+// src/config/database.js - VERSÃO COM RECRIAÇÃO FORÇADA DA TABELA
 import { neon } from '@neondatabase/serverless';
 
 console.log('🔍 === INICIALIZANDO CONEXÃO EXCLUSIVA COM NEON ===');
@@ -91,58 +91,15 @@ const testConnection = async () => {
     return true;
   } catch (error) {
     console.error('❌ ERRO CRÍTICO DE CONEXÃO:', error.message);
-    
-    // Diagnóstico específico para falha crítica
-    if (error.message.includes('authentication failed') || error.message.includes('password')) {
-      console.error('🔧 DIAGNÓSTICO: Falha de autenticação');
-      console.error('   ❌ Usuário ou senha incorretos na connection string');
-      console.error('   ❌ Verificar credenciais no dashboard do Neon');
-      console.error('   ❌ Verificar se o projeto Neon não foi deletado');
-    } else if (error.message.includes('timeout') || error.message.includes('TIMEOUT')) {
-      console.error('🔧 DIAGNÓSTICO: Timeout de conexão');
-      console.error('   ❌ Neon pode estar sobrecarregado');
-      console.error('   ❌ Verificar status do Neon: https://neon.tech/status');
-      console.error('   ❌ Verificar conectividade com a internet');
-    } else if (error.message.includes('ENOTFOUND') || error.message.includes('host')) {
-      console.error('🔧 DIAGNÓSTICO: Host não encontrado');
-      console.error('   ❌ Hostname incorreto na connection string');
-      console.error('   ❌ Verificar se o endpoint Neon está correto');
-      console.error('   ❌ Verificar se o projeto Neon ainda existe');
-    } else if (error.message.includes('database') && error.message.includes('does not exist')) {
-      console.error('🔧 DIAGNÓSTICO: Database não encontrada');
-      console.error('   ❌ Nome da database incorreto na connection string');
-      console.error('   ❌ Verificar se a database foi criada no Neon');
-    } else if (error.message.includes('too many connections')) {
-      console.error('🔧 DIAGNÓSTICO: Muitas conexões simultâneas');
-      console.error('   ❌ Limite de conexões atingido');
-      console.error('   ❌ Aguardar alguns minutos ou usar connection pooling');
-    } else {
-      console.error('🔧 DIAGNÓSTICO: Erro desconhecido');
-      console.error('   ❌ Verificar se o projeto Neon está ativo');
-      console.error('   ❌ Verificar se não há limitações de rede');
-      console.error('   ❌ Verificar status do Neon');
-    }
-    
-    // ❌ FALHA CRÍTICA - NÃO CONTINUA SEM BANCO
     throw new Error(`FALHA CRÍTICA: Não é possível conectar ao banco Neon. ${error.message}`);
   }
 };
 
-// Função para criar tabelas (OBRIGATÓRIA) - VERSÃO SEM FLOORS/ROOMS
+// Função para criar tabelas (OBRIGATÓRIA) - VERSÃO COM RECRIAÇÃO FORÇADA
 const createTables = async () => {
   console.log('🔄 Criando estrutura OBRIGATÓRIA do banco...');
   
   try {
-    // Verificar tabelas existentes
-    const existingTables = await sql`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public'
-      AND table_name IN ('users', 'laptops')
-    `;
-    
-    console.log('📋 Tabelas existentes:', existingTables.map(t => t.table_name));
-    
     // Criar tabela users
     console.log('📝 Criando tabela users...');
     await sql`
@@ -158,10 +115,26 @@ const createTables = async () => {
       )
     `;
     
-    // Criar tabela laptops - VERSÃO SEM FLOORS/ROOMS
-    console.log('📝 Criando tabela laptops...');
+    // RECRIAR tabela laptops do zero para garantir estrutura correta
+    console.log('🔄 Recriando tabela laptops...');
+    
+    // Primeiro, fazer backup dos dados existentes se houver
+    let backupData = [];
+    try {
+      backupData = await sql`SELECT * FROM laptops`;
+      console.log(`📋 Backup de ${backupData.length} laptops realizado`);
+    } catch (error) {
+      console.log('ℹ️ Nenhum dado existente para backup');
+    }
+    
+    // Dropar tabela existente
+    await sql`DROP TABLE IF EXISTS laptops CASCADE`;
+    console.log('🗑️ Tabela laptops removida');
+    
+    // Criar tabela laptops com estrutura correta
+    console.log('📝 Criando nova tabela laptops...');
     await sql`
-      CREATE TABLE IF NOT EXISTS laptops (
+      CREATE TABLE laptops (
         id BIGSERIAL PRIMARY KEY,
         model VARCHAR(255) NOT NULL,
         service_tag VARCHAR(255) NOT NULL UNIQUE,
@@ -189,106 +162,50 @@ const createTables = async () => {
       )
     `;
     
-    // Verificar se as colunas created_by, last_updated_by e user_id existem
-    console.log('📝 Verificando colunas created_by, last_updated_by e user_id...');
-    
-    const existingColumns = await sql`
-      SELECT column_name
+    // Verificar a estrutura criada
+    console.log('🔍 Verificando estrutura da nova tabela...');
+    const structure = await sql`
+      SELECT column_name, data_type, is_nullable, column_default
       FROM information_schema.columns
       WHERE table_name = 'laptops'
-      AND column_name IN ('created_by', 'last_updated_by', 'service_tag', 'user_id')
+      ORDER BY ordinal_position
     `;
     
-    const existingColumnNames = existingColumns.map(col => col.column_name);
+    console.log('📋 Estrutura da tabela laptops:');
+    structure.forEach(col => {
+      console.log(`   - ${col.column_name}: ${col.data_type} (nullable: ${col.is_nullable})`);
+    });
     
-    // Adicionar colunas se não existirem
-    if (!existingColumnNames.includes('created_by')) {
-      console.log('📝 Adicionando coluna created_by...');
-      await sql`
-        ALTER TABLE laptops 
-        ADD COLUMN created_by BIGINT REFERENCES users(id) ON DELETE SET NULL
-      `;
-    }
-    
-    if (!existingColumnNames.includes('last_updated_by')) {
-      console.log('📝 Adicionando coluna last_updated_by...');
-      await sql`
-        ALTER TABLE laptops 
-        ADD COLUMN last_updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL
-      `;
-    }
-    
-    if (!existingColumnNames.includes('user_id')) {
-      console.log('📝 Adicionando coluna user_id...');
-      await sql`
-        ALTER TABLE laptops 
-        ADD COLUMN user_id BIGINT REFERENCES users(id) ON DELETE CASCADE
-      `;
-    }
-    
-    // Verificar e ajustar service_tag se necessário
-    if (existingColumnNames.includes('service_tag')) {
-      console.log('📝 Verificando constraint de service_tag...');
+    // Restaurar dados se houver backup
+    if (backupData.length > 0) {
+      console.log('🔄 Restaurando dados do backup...');
+      let restoredCount = 0;
       
-      // Verificar se service_tag já tem constraint unique
-      const constraints = await sql`
-        SELECT constraint_name
-        FROM information_schema.table_constraints 
-        WHERE table_name = 'laptops' 
-        AND constraint_type = 'UNIQUE'
-        AND constraint_name LIKE '%service_tag%'
-      `;
-      
-      // Se não houver constraint unique no service_tag, adicionar
-      if (constraints.length === 0) {
-        console.log('📝 Adicionando constraint unique para service_tag...');
+      for (const laptop of backupData) {
         try {
           await sql`
-            ALTER TABLE laptops 
-            ADD CONSTRAINT unique_service_tag UNIQUE (service_tag)
+            INSERT INTO laptops (
+              model, service_tag, processor, ram, storage, graphics,
+              screen_size, color, warranty_end, condition, condition_score, status,
+              photo, damage_analysis, purchase_date, purchase_price,
+              assigned_user, notes, user_id, created_by, last_updated_by
+            ) VALUES (
+              ${laptop.model}, ${laptop.service_tag}, ${laptop.processor},
+              ${laptop.ram}, ${laptop.storage}, ${laptop.graphics},
+              ${laptop.screen_size}, ${laptop.color}, ${laptop.warranty_end},
+              ${laptop.condition}, ${laptop.condition_score}, ${laptop.status},
+              ${laptop.photo}, ${laptop.damage_analysis}, ${laptop.purchase_date},
+              ${laptop.purchase_price}, ${laptop.assigned_user}, ${laptop.notes},
+              ${laptop.user_id}, ${laptop.created_by}, ${laptop.last_updated_by}
+            )
           `;
-          console.log('✅ Constraint unique adicionada ao service_tag');
-        } catch (error) {
-          console.log('ℹ️ Constraint unique já existe ou erro:', error.message);
+          restoredCount++;
+        } catch (restoreError) {
+          console.log(`⚠️ Erro ao restaurar laptop ${laptop.id}:`, restoreError.message);
         }
       }
       
-      // Tornar service_tag NOT NULL se ainda não for
-      try {
-        await sql`
-          ALTER TABLE laptops 
-          ALTER COLUMN service_tag SET NOT NULL
-        `;
-        console.log('✅ service_tag configurado como NOT NULL');
-      } catch (error) {
-        console.log('ℹ️ service_tag já é NOT NULL ou erro:', error.message);
-      }
-    }
-    
-    // Remover colunas de floors/rooms se existirem
-    console.log('📝 Removendo colunas de floors/rooms se existirem...');
-    
-    try {
-      await sql`
-        ALTER TABLE laptops 
-        DROP COLUMN IF EXISTS floor_id,
-        DROP COLUMN IF EXISTS room_id
-      `;
-      console.log('✅ Colunas floor_id e room_id removidas');
-    } catch (error) {
-      console.log('ℹ️ Colunas floor_id/room_id não existiam');
-    }
-    
-    // Remover constraint de serial_number se existir
-    console.log('📝 Removendo constraint de serial_number se existir...');
-    try {
-      await sql`
-        ALTER TABLE laptops 
-        DROP CONSTRAINT IF EXISTS laptops_serial_number_user_id_key
-      `;
-      console.log('✅ Constraint de serial_number removida');
-    } catch (error) {
-      console.log('ℹ️ Constraint de serial_number não existia');
+      console.log(`✅ ${restoredCount}/${backupData.length} laptops restaurados`);
     }
     
     // Remover tabelas de floors e rooms se existirem
@@ -327,33 +244,16 @@ const createTables = async () => {
       }
     }
     
-    console.log('✅ ESTRUTURA DO BANCO CRIADA COM SUCESSO!');
+    console.log('✅ ESTRUTURA DO BANCO RECRIADA COM SUCESSO!');
     return true;
+    
   } catch (error) {
     console.error('❌ ERRO CRÍTICO ao criar estrutura do banco:', error);
-    
-    // Diagnóstico específico para falha crítica
-    if (error.message.includes('permission denied')) {
-      console.error('🔧 DIAGNÓSTICO: Permissão negada');
-      console.error('   ❌ Usuário não tem permissão para CREATE TABLE');
-      console.error('   ❌ Verificar role do usuário no Neon');
-      console.error('   ❌ Verificar se está usando a role correta');
-    } else if (error.message.includes('relation') && error.message.includes('does not exist')) {
-      console.error('🔧 DIAGNÓSTICO: Tabela de referência não existe');
-      console.error('   ❌ Problema com foreign keys');
-      console.error('   ❌ Verificar ordem de criação das tabelas');
-    } else if (error.message.includes('already exists') && !error.message.includes('IF NOT EXISTS')) {
-      console.error('🔧 DIAGNÓSTICO: Tabela já existe');
-      console.error('   ❌ Conflito na criação de tabelas');
-      console.error('   ❌ Verificar se IF NOT EXISTS está funcionando');
-    }
-    
-    // ❌ FALHA CRÍTICA - NÃO CONTINUA SEM ESTRUTURA
     throw new Error(`FALHA CRÍTICA: Não é possível criar estrutura do banco. ${error.message}`);
   }
 };
 
-// Função para inserir dados iniciais (OPCIONAL) - SEM FLOORS/ROOMS
+// Função para inserir dados iniciais (OPCIONAL)
 const insertInitialData = async (userId) => {
   console.log('🔄 Verificando dados iniciais para usuário:', userId);
   
@@ -368,22 +268,20 @@ const insertInitialData = async (userId) => {
       return true;
     }
     
-    console.log('ℹ️ Nenhum dado inicial necessário (sem floors/rooms)');
+    console.log('ℹ️ Nenhum dado inicial necessário');
     console.log('✅ Sistema pronto para uso!');
     
     return true;
   } catch (error) {
-    console.error('❌ ERRO ao verificar dados iniciais:', error);
-    
-    // Não é crítico, sistema pode funcionar sem dados iniciais
+    console.error('❌ Erro ao verificar dados iniciais:', error);
     console.log('ℹ️ Continuando sem dados iniciais...');
     return true;
   }
 };
 
-// Funções utilitárias (sempre retornam true pois banco é obrigatório)
+// Funções utilitárias
 const isDatabaseAvailable = () => {
-  return true; // Sempre true, pois sem banco o sistema falha
+  return true;
 };
 
 const getConnectionStatus = () => {
@@ -393,18 +291,18 @@ const getConnectionStatus = () => {
     mode: 'database-only',
     urlSource: 'neon',
     environment: import.meta.env.MODE,
-    offline: false // Nunca offline
+    offline: false
   };
 };
 
 // Log de status final
-console.log('🔄 === STATUS FINAL - SOMENTE NEON SEM FLOORS/ROOMS ===');
+console.log('🔄 === STATUS FINAL - NEON COM RECRIAÇÃO FORÇADA ===');
 console.log('✅ Connection string configurada');
 console.log('✅ Cliente Neon inicializado');
 console.log('✅ Modo: SOMENTE BANCO NEON');
-console.log('✅ Estrutura: SEM FLOORS/ROOMS');
+console.log('✅ Estrutura: RECRIAÇÃO FORÇADA');
 console.log('❌ Modo offline: DESABILITADO');
-console.log('==================================================');
+console.log('=====================================================');
 
 // Exportações
 export { 
