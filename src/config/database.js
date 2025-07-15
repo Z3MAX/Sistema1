@@ -185,14 +185,13 @@ const createTables = async () => {
       )
     `;
     
-    // Criar tabela laptops - VERSÃO CORRIGIDA COM TODAS AS COLUNAS
+    // Criar tabela laptops - VERSÃO CORRIGIDA COM SERVICE_TAG COMO CAMPO PRINCIPAL
     console.log('📝 Criando tabela laptops...');
     await sql`
       CREATE TABLE IF NOT EXISTS laptops (
         id BIGSERIAL PRIMARY KEY,
         model VARCHAR(255) NOT NULL,
-        serial_number VARCHAR(255) NOT NULL,
-        service_tag VARCHAR(255),
+        service_tag VARCHAR(255) NOT NULL UNIQUE,
         processor VARCHAR(255),
         ram VARCHAR(255),
         storage VARCHAR(255),
@@ -215,8 +214,7 @@ const createTables = async () => {
         created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
         last_updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(serial_number, user_id)
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
     
@@ -227,11 +225,12 @@ const createTables = async () => {
       SELECT column_name
       FROM information_schema.columns
       WHERE table_name = 'laptops'
-      AND column_name IN ('created_by', 'last_updated_by')
+      AND column_name IN ('created_by', 'last_updated_by', 'service_tag')
     `;
     
     const existingColumnNames = existingColumns.map(col => col.column_name);
     
+    // Adicionar colunas se não existirem
     if (!existingColumnNames.includes('created_by')) {
       console.log('📝 Adicionando coluna created_by...');
       await sql`
@@ -248,6 +247,57 @@ const createTables = async () => {
       `;
     }
     
+    // Verificar e ajustar service_tag se necessário
+    if (existingColumnNames.includes('service_tag')) {
+      console.log('📝 Verificando constraint de service_tag...');
+      
+      // Verificar se service_tag já tem constraint unique
+      const constraints = await sql`
+        SELECT constraint_name
+        FROM information_schema.table_constraints 
+        WHERE table_name = 'laptops' 
+        AND constraint_type = 'UNIQUE'
+        AND constraint_name LIKE '%service_tag%'
+      `;
+      
+      // Se não houver constraint unique no service_tag, adicionar
+      if (constraints.length === 0) {
+        console.log('📝 Adicionando constraint unique para service_tag...');
+        try {
+          await sql`
+            ALTER TABLE laptops 
+            ADD CONSTRAINT unique_service_tag UNIQUE (service_tag)
+          `;
+          console.log('✅ Constraint unique adicionada ao service_tag');
+        } catch (error) {
+          console.log('ℹ️ Constraint unique já existe ou erro:', error.message);
+        }
+      }
+      
+      // Tornar service_tag NOT NULL se ainda não for
+      try {
+        await sql`
+          ALTER TABLE laptops 
+          ALTER COLUMN service_tag SET NOT NULL
+        `;
+        console.log('✅ service_tag configurado como NOT NULL');
+      } catch (error) {
+        console.log('ℹ️ service_tag já é NOT NULL ou erro:', error.message);
+      }
+    }
+    
+    // Remover constraint de serial_number se existir
+    console.log('📝 Removendo constraint de serial_number se existir...');
+    try {
+      await sql`
+        ALTER TABLE laptops 
+        DROP CONSTRAINT IF EXISTS laptops_serial_number_user_id_key
+      `;
+      console.log('✅ Constraint de serial_number removida');
+    } catch (error) {
+      console.log('ℹ️ Constraint de serial_number não existia');
+    }
+    
     // Criar índices para performance
     console.log('📝 Criando índices...');
     const indexes = [
@@ -256,7 +306,7 @@ const createTables = async () => {
       'CREATE INDEX IF NOT EXISTS idx_rooms_user_id ON rooms(user_id)',
       'CREATE INDEX IF NOT EXISTS idx_rooms_floor_id ON rooms(floor_id)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_user_id ON laptops(user_id)',
-      'CREATE INDEX IF NOT EXISTS idx_laptops_serial ON laptops(serial_number)',
+      'CREATE INDEX IF NOT EXISTS idx_laptops_service_tag ON laptops(service_tag)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_status ON laptops(status)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_floor_id ON laptops(floor_id)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_room_id ON laptops(room_id)',
