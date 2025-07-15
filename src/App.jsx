@@ -437,6 +437,32 @@ const DellLaptopControlSystem = () => {
     }
   }, [user]);
 
+  // =================== FUNÇÕES AUXILIARES ===================
+  // Função para auto-preencher specs do Dell Latitude 5330
+  const handleModelChange = (selectedModel) => {
+    setLaptopForm(prev => ({
+      ...prev,
+      model: selectedModel,
+      // Auto-preencher specs para Dell Latitude 5330
+      processor: selectedModel === 'Dell Latitude 5330' ? 'Intel Core i7 vPro 12ª Geração' : prev.processor,
+      ram: selectedModel === 'Dell Latitude 5330' ? '16GB DDR4' : prev.ram,
+      storage: selectedModel === 'Dell Latitude 5330' ? '256GB SSD' : prev.storage
+    }));
+  };
+
+  // Função para adicionar novo modelo
+  const handleAddNewModel = () => {
+    if (newModel.trim()) {
+      const trimmedModel = newModel.trim();
+      if (!dellModels.includes(trimmedModel)) {
+        setDellModels(prev => [...prev, trimmedModel]);
+        setLaptopForm(prev => ({ ...prev, model: trimmedModel }));
+      }
+      setNewModel('');
+      setShowAddModel(false);
+    }
+  };
+
   // =================== FUNÇÕES DE DADOS ===================
   const loadData = async () => {
     if (!user) return;
@@ -816,6 +842,8 @@ const DellLaptopControlSystem = () => {
       assigned_user: '',
       notes: ''
     });
+    setShowAddModel(false);
+    setNewModel('');
     closeAllPhotoModals();
   };
 
