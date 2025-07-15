@@ -1,39 +1,49 @@
+// src/services/dataService.js - SOMENTE NEON DATABASE (SEM LOCALSTORAGE)
 import database from '../config/database';
 
 const { sql } = database;
 
-// Funções auxiliares para localStorage
-const getFromLocalStorage = (key) => {
-  try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : null;
-  } catch (error) {
-    console.error('Erro ao ler localStorage:', error);
-    return null;
+// ❌ FALHA IMEDIATA SE NÃO TIVER CONEXÃO COM BANCO
+if (!sql) {
+  console.error('❌ ERRO CRÍTICO: Conexão com banco não disponível!');
+  console.error('❌ dataService.js requer conexão obrigatória com Neon');
+  throw new Error('ERRO CRÍTICO: dataService não pode funcionar sem conexão com o banco Neon');
+}
+
+console.log('✅ dataService inicializado com conexão Neon obrigatória');
+
+// Função para tratar erros de banco
+const handleDatabaseError = (operation, error) => {
+  console.error(`❌ ERRO de banco na operação: ${operation}`, error);
+  
+  // Diagnóstico específico
+  if (error.message.includes('connection')) {
+    console.error('🔧 DIAGNÓSTICO: Problema de conexão com banco');
+    console.error('   ❌ Verificar se o banco Neon está ativo');
+    console.error('   ❌ Verificar connection string');
+  } else if (error.message.includes('duplicate key')) {
+    console.error('🔧 DIAGNÓSTICO: Tentativa de inserir dados duplicados');
+  } else if (error.message.includes('foreign key')) {
+    console.error('🔧 DIAGNÓSTICO: Violação de foreign key');
+  } else if (error.message.includes('not found') || error.message.includes('does not exist')) {
+    console.error('🔧 DIAGNÓSTICO: Registro não encontrado');
   }
+  
+  return {
+    success: false,
+    error: `Erro no banco de dados: ${error.message}`,
+    operation: operation
+  };
 };
 
-const saveToLocalStorage = (key, data) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (error) {
-    console.error('Erro ao salvar no localStorage:', error);
-  }
-};
-
-// Serviço de dados para gerenciar laptops, andares e salas
+// Serviço de dados que funciona APENAS com banco Neon
 export const dataService = {
   // ===== FLOORS =====
   floors: {
     async getAll(userId) {
+      console.log('🔄 Buscando andares no banco para usuário:', userId);
+      
       try {
-        if (!sql) {
-          // Modo offline - usar localStorage
-          const floorsKey = `floors_${userId}`;
-          const floors = getFromLocalStorage(floorsKey) || [];
-          return { success: true, data: floors };
-        }
-        
         const floors = await sql`
           SELECT f.*, 
                  COALESCE(
@@ -60,41 +70,18 @@ export const dataService = {
           ORDER BY f.name
         `;
         
+        console.log(`✅ ${floors.length} andares encontrados no banco`);
         return { success: true, data: floors };
       } catch (error) {
-        console.error('Erro ao buscar andares:', error);
-        
-        // Fallback para localStorage
-        const floorsKey = `floors_${userId}`;
-        const floors = getFromLocalStorage(floorsKey) || [];
-        return { success: true, data: floors };
+        return handleDatabaseError('floors.getAll', error);
       }
     },
 
     async create(floorData, userId) {
+      console.log('🔄 Criando andar no banco:', floorData.name);
+      
       try {
         const { name, description } = floorData;
-        
-        if (!sql) {
-          // Modo offline - usar localStorage
-          const floorsKey = `floors_${userId}`;
-          const floors = getFromLocalStorage(floorsKey) || [];
-          
-          const newFloor = {
-            id: Date.now(),
-            name,
-            description: description || '',
-            user_id: userId,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            rooms: []
-          };
-          
-          floors.push(newFloor);
-          saveToLocalStorage(floorsKey, floors);
-          
-          return { success: true, data: newFloor };
-        }
         
         const result = await sql`
           INSERT INTO floors (name, description, user_id)
@@ -102,41 +89,21 @@ export const dataService = {
           RETURNING *
         `;
         
-        // Adicionar array vazio de rooms
+        // Adicionar array vazio de rooms para compatibilidade
         const floor = { ...result[0], rooms: [] };
         
+        console.log('✅ Andar criado no banco com ID:', floor.id);
         return { success: true, data: floor };
       } catch (error) {
-        console.error('Erro ao criar andar:', error);
-        return { success: false, error: error.message };
+        return handleDatabaseError('floors.create', error);
       }
     },
 
     async update(id, updates, userId) {
+      console.log('🔄 Atualizando andar no banco. ID:', id);
+      
       try {
         const { name, description } = updates;
-        
-        if (!sql) {
-          // Modo offline - usar localStorage
-          const floorsKey = `floors_${userId}`;
-          const floors = getFromLocalStorage(floorsKey) || [];
-          
-          const floorIndex = floors.findIndex(f => f.id === id);
-          if (floorIndex === -1) {
-            throw new Error('Andar não encontrado');
-          }
-          
-          floors[floorIndex] = {
-            ...floors[floorIndex],
-            name,
-            description: description || '',
-            updated_at: new Date().toISOString()
-          };
-          
-          saveToLocalStorage(floorsKey, floors);
-          
-          return { success: true, data: floors[floorIndex] };
-        }
         
         const result = await sql`
           UPDATE floors 
@@ -146,34 +113,20 @@ export const dataService = {
         `;
         
         if (result.length === 0) {
-          throw new Error('Andar não encontrado');
+          throw new Error('Andar não encontrado ou não pertence ao usuário');
         }
         
+        console.log('✅ Andar atualizado no banco');
         return { success: true, data: result[0] };
       } catch (error) {
-        console.error('Erro ao atualizar andar:', error);
-        return { success: false, error: error.message };
+        return handleDatabaseError('floors.update', error);
       }
     },
 
     async delete(id, userId) {
+      console.log('🔄 Deletando andar do banco. ID:', id);
+      
       try {
-        if (!sql) {
-          // Modo offline - usar localStorage
-          const floorsKey = `floors_${userId}`;
-          const floors = getFromLocalStorage(floorsKey) || [];
-          
-          const floorIndex = floors.findIndex(f => f.id === id);
-          if (floorIndex === -1) {
-            throw new Error('Andar não encontrado');
-          }
-          
-          floors.splice(floorIndex, 1);
-          saveToLocalStorage(floorsKey, floors);
-          
-          return { success: true };
-        }
-        
         const result = await sql`
           DELETE FROM floors 
           WHERE id = ${id} AND user_id = ${userId}
@@ -181,13 +134,13 @@ export const dataService = {
         `;
         
         if (result.length === 0) {
-          throw new Error('Andar não encontrado');
+          throw new Error('Andar não encontrado ou não pertence ao usuário');
         }
         
+        console.log('✅ Andar deletado do banco');
         return { success: true };
       } catch (error) {
-        console.error('Erro ao excluir andar:', error);
-        return { success: false, error: error.message };
+        return handleDatabaseError('floors.delete', error);
       }
     }
   },
@@ -195,38 +148,10 @@ export const dataService = {
   // ===== ROOMS =====
   rooms: {
     async create(roomData, userId) {
+      console.log('🔄 Criando sala no banco:', roomData.name);
+      
       try {
         const { name, description, floor_id } = roomData;
-        
-        if (!sql) {
-          // Modo offline - usar localStorage
-          const floorsKey = `floors_${userId}`;
-          const floors = getFromLocalStorage(floorsKey) || [];
-          
-          const floorIndex = floors.findIndex(f => f.id === floor_id);
-          if (floorIndex === -1) {
-            throw new Error('Andar não encontrado');
-          }
-          
-          const newRoom = {
-            id: Date.now(),
-            name,
-            description: description || '',
-            floor_id,
-            user_id: userId,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          
-          if (!floors[floorIndex].rooms) {
-            floors[floorIndex].rooms = [];
-          }
-          
-          floors[floorIndex].rooms.push(newRoom);
-          saveToLocalStorage(floorsKey, floors);
-          
-          return { success: true, data: newRoom };
-        }
         
         const result = await sql`
           INSERT INTO rooms (name, description, floor_id, user_id)
@@ -234,49 +159,18 @@ export const dataService = {
           RETURNING *
         `;
         
+        console.log('✅ Sala criada no banco com ID:', result[0].id);
         return { success: true, data: result[0] };
       } catch (error) {
-        console.error('Erro ao criar sala:', error);
-        return { success: false, error: error.message };
+        return handleDatabaseError('rooms.create', error);
       }
     },
 
     async update(id, updates, userId) {
+      console.log('🔄 Atualizando sala no banco. ID:', id);
+      
       try {
         const { name, description, floor_id } = updates;
-        
-        if (!sql) {
-          // Modo offline - usar localStorage
-          const floorsKey = `floors_${userId}`;
-          const floors = getFromLocalStorage(floorsKey) || [];
-          
-          let roomFound = false;
-          
-          for (const floor of floors) {
-            if (floor.rooms) {
-              const roomIndex = floor.rooms.findIndex(r => r.id === id);
-              if (roomIndex !== -1) {
-                floor.rooms[roomIndex] = {
-                  ...floor.rooms[roomIndex],
-                  name,
-                  description: description || '',
-                  floor_id,
-                  updated_at: new Date().toISOString()
-                };
-                roomFound = true;
-                break;
-              }
-            }
-          }
-          
-          if (!roomFound) {
-            throw new Error('Sala não encontrada');
-          }
-          
-          saveToLocalStorage(floorsKey, floors);
-          
-          return { success: true, data: { id, name, description, floor_id } };
-        }
         
         const result = await sql`
           UPDATE rooms 
@@ -286,45 +180,20 @@ export const dataService = {
         `;
         
         if (result.length === 0) {
-          throw new Error('Sala não encontrada');
+          throw new Error('Sala não encontrada ou não pertence ao usuário');
         }
         
+        console.log('✅ Sala atualizada no banco');
         return { success: true, data: result[0] };
       } catch (error) {
-        console.error('Erro ao atualizar sala:', error);
-        return { success: false, error: error.message };
+        return handleDatabaseError('rooms.update', error);
       }
     },
 
     async delete(id, userId) {
+      console.log('🔄 Deletando sala do banco. ID:', id);
+      
       try {
-        if (!sql) {
-          // Modo offline - usar localStorage
-          const floorsKey = `floors_${userId}`;
-          const floors = getFromLocalStorage(floorsKey) || [];
-          
-          let roomFound = false;
-          
-          for (const floor of floors) {
-            if (floor.rooms) {
-              const roomIndex = floor.rooms.findIndex(r => r.id === id);
-              if (roomIndex !== -1) {
-                floor.rooms.splice(roomIndex, 1);
-                roomFound = true;
-                break;
-              }
-            }
-          }
-          
-          if (!roomFound) {
-            throw new Error('Sala não encontrada');
-          }
-          
-          saveToLocalStorage(floorsKey, floors);
-          
-          return { success: true };
-        }
-        
         const result = await sql`
           DELETE FROM rooms 
           WHERE id = ${id} AND user_id = ${userId}
@@ -332,13 +201,13 @@ export const dataService = {
         `;
         
         if (result.length === 0) {
-          throw new Error('Sala não encontrada');
+          throw new Error('Sala não encontrada ou não pertence ao usuário');
         }
         
+        console.log('✅ Sala deletada do banco');
         return { success: true };
       } catch (error) {
-        console.error('Erro ao excluir sala:', error);
-        return { success: false, error: error.message };
+        return handleDatabaseError('rooms.delete', error);
       }
     }
   },
@@ -346,32 +215,25 @@ export const dataService = {
   // ===== LAPTOPS =====
   laptops: {
     async getAll(userId) {
+      console.log('🔄 Buscando laptops no banco para usuário:', userId);
+      
       try {
-        if (!sql) {
-          // Modo offline - usar localStorage
-          const laptopsKey = `laptops_${userId}`;
-          const laptops = getFromLocalStorage(laptopsKey) || [];
-          return { success: true, data: laptops };
-        }
-        
         const laptops = await sql`
           SELECT * FROM laptops 
           WHERE user_id = ${userId}
           ORDER BY created_at DESC
         `;
         
+        console.log(`✅ ${laptops.length} laptops encontrados no banco`);
         return { success: true, data: laptops };
       } catch (error) {
-        console.error('Erro ao buscar laptops:', error);
-        
-        // Fallback para localStorage
-        const laptopsKey = `laptops_${userId}`;
-        const laptops = getFromLocalStorage(laptopsKey) || [];
-        return { success: true, data: laptops };
+        return handleDatabaseError('laptops.getAll', error);
       }
     },
 
     async create(laptopData, userId) {
+      console.log('🔄 Criando laptop no banco:', laptopData.model);
+      
       try {
         const {
           model, serial_number, service_tag, processor, ram, storage, graphics,
@@ -379,36 +241,6 @@ export const dataService = {
           floor_id, room_id, photo, damage_analysis, purchase_date, purchase_price,
           assigned_user, notes
         } = laptopData;
-        
-        if (!sql) {
-          // Modo offline - usar localStorage
-          const laptopsKey = `laptops_${userId}`;
-          const laptops = getFromLocalStorage(laptopsKey) || [];
-          
-          // Verificar se serial já existe
-          const existingLaptop = laptops.find(l => l.serial_number === serial_number);
-          if (existingLaptop) {
-            throw new Error('Número de série já existe');
-          }
-          
-          const newLaptop = {
-            id: Date.now(),
-            model, serial_number, service_tag: service_tag || null, processor: processor || null,
-            ram: ram || null, storage: storage || null, graphics: graphics || null, 
-            screen_size: screen_size || null, color: color || null, warranty_end: warranty_end || null,
-            condition, condition_score, status, floor_id: floor_id || null, room_id: room_id || null,
-            photo: photo || null, damage_analysis, purchase_date: purchase_date || null,
-            purchase_price: purchase_price || null, assigned_user: assigned_user || null,
-            notes: notes || null, user_id: userId,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          
-          laptops.push(newLaptop);
-          saveToLocalStorage(laptopsKey, laptops);
-          
-          return { success: true, data: newLaptop };
-        }
         
         const result = await sql`
           INSERT INTO laptops (
@@ -429,17 +261,19 @@ export const dataService = {
           RETURNING *
         `;
         
+        console.log('✅ Laptop criado no banco com ID:', result[0].id);
         return { success: true, data: result[0] };
       } catch (error) {
-        console.error('Erro ao criar laptop:', error);
-        if (error.message.includes('duplicate key') || error.message.includes('já existe')) {
+        if (error.message.includes('duplicate key') || error.message.includes('unique')) {
           return { success: false, error: 'Número de série já existe' };
         }
-        return { success: false, error: error.message };
+        return handleDatabaseError('laptops.create', error);
       }
     },
 
     async update(id, updates, userId) {
+      console.log('🔄 Atualizando laptop no banco. ID:', id);
+      
       try {
         const {
           model, serial_number, service_tag, processor, ram, storage, graphics,
@@ -447,38 +281,6 @@ export const dataService = {
           floor_id, room_id, photo, damage_analysis, purchase_date, purchase_price,
           assigned_user, notes
         } = updates;
-        
-        if (!sql) {
-          // Modo offline - usar localStorage
-          const laptopsKey = `laptops_${userId}`;
-          const laptops = getFromLocalStorage(laptopsKey) || [];
-          
-          const laptopIndex = laptops.findIndex(l => l.id === id);
-          if (laptopIndex === -1) {
-            throw new Error('Laptop não encontrado');
-          }
-          
-          // Verificar se serial já existe em outro laptop
-          const existingLaptop = laptops.find(l => l.serial_number === serial_number && l.id !== id);
-          if (existingLaptop) {
-            throw new Error('Número de série já existe');
-          }
-          
-          laptops[laptopIndex] = {
-            ...laptops[laptopIndex],
-            model, serial_number, service_tag: service_tag || null, processor: processor || null,
-            ram: ram || null, storage: storage || null, graphics: graphics || null,
-            screen_size: screen_size || null, color: color || null, warranty_end: warranty_end || null,
-            condition, condition_score, status, floor_id: floor_id || null, room_id: room_id || null,
-            photo: photo || null, damage_analysis, purchase_date: purchase_date || null,
-            purchase_price: purchase_price || null, assigned_user: assigned_user || null,
-            notes: notes || null, updated_at: new Date().toISOString()
-          };
-          
-          saveToLocalStorage(laptopsKey, laptops);
-          
-          return { success: true, data: laptops[laptopIndex] };
-        }
         
         const result = await sql`
           UPDATE laptops 
@@ -497,37 +299,23 @@ export const dataService = {
         `;
         
         if (result.length === 0) {
-          throw new Error('Laptop não encontrado');
+          throw new Error('Laptop não encontrado ou não pertence ao usuário');
         }
         
+        console.log('✅ Laptop atualizado no banco');
         return { success: true, data: result[0] };
       } catch (error) {
-        console.error('Erro ao atualizar laptop:', error);
-        if (error.message.includes('duplicate key') || error.message.includes('já existe')) {
+        if (error.message.includes('duplicate key') || error.message.includes('unique')) {
           return { success: false, error: 'Número de série já existe' };
         }
-        return { success: false, error: error.message };
+        return handleDatabaseError('laptops.update', error);
       }
     },
 
     async delete(id, userId) {
+      console.log('🔄 Deletando laptop do banco. ID:', id);
+      
       try {
-        if (!sql) {
-          // Modo offline - usar localStorage
-          const laptopsKey = `laptops_${userId}`;
-          const laptops = getFromLocalStorage(laptopsKey) || [];
-          
-          const laptopIndex = laptops.findIndex(l => l.id === id);
-          if (laptopIndex === -1) {
-            throw new Error('Laptop não encontrado');
-          }
-          
-          laptops.splice(laptopIndex, 1);
-          saveToLocalStorage(laptopsKey, laptops);
-          
-          return { success: true };
-        }
-        
         const result = await sql`
           DELETE FROM laptops 
           WHERE id = ${id} AND user_id = ${userId}
@@ -535,78 +323,48 @@ export const dataService = {
         `;
         
         if (result.length === 0) {
-          throw new Error('Laptop não encontrado');
+          throw new Error('Laptop não encontrado ou não pertence ao usuário');
         }
         
+        console.log('✅ Laptop deletado do banco');
         return { success: true };
       } catch (error) {
-        console.error('Erro ao excluir laptop:', error);
-        return { success: false, error: error.message };
+        return handleDatabaseError('laptops.delete', error);
       }
     },
 
     async checkSerialExists(serial, userId, excludeId = null) {
+      console.log('🔄 Verificando serial no banco:', serial);
+      
       try {
-        if (!sql) {
-          // Modo offline - usar localStorage
-          const laptopsKey = `laptops_${userId}`;
-          const laptops = getFromLocalStorage(laptopsKey) || [];
-          
-          const existingLaptop = laptops.find(l => 
-            l.serial_number === serial && l.user_id === userId && l.id !== excludeId
-          );
-          
-          return { success: true, exists: !!existingLaptop };
-        }
-        
-        let query = sql`
-          SELECT id FROM laptops 
-          WHERE serial_number = ${serial} AND user_id = ${userId}
-        `;
-        
+        let query;
         if (excludeId) {
           query = sql`
             SELECT id FROM laptops 
             WHERE serial_number = ${serial} AND user_id = ${userId} AND id != ${excludeId}
           `;
+        } else {
+          query = sql`
+            SELECT id FROM laptops 
+            WHERE serial_number = ${serial} AND user_id = ${userId}
+          `;
         }
         
         const result = await query;
         
+        console.log(`✅ Verificação de serial: ${result.length > 0 ? 'EXISTS' : 'NOT_EXISTS'}`);
         return { success: true, exists: result.length > 0 };
       } catch (error) {
-        console.error('Erro ao verificar serial:', error);
-        return { success: false, error: error.message };
+        return handleDatabaseError('laptops.checkSerialExists', error);
       }
     }
   },
 
   // ===== STATISTICS =====
   async getStatistics(userId) {
+    console.log('🔄 Buscando estatísticas no banco para usuário:', userId);
+    
     try {
-      if (!sql) {
-        // Modo offline - usar localStorage
-        const laptopsKey = `laptops_${userId}`;
-        const floorsKey = `floors_${userId}`;
-        const laptops = getFromLocalStorage(laptopsKey) || [];
-        const floors = getFromLocalStorage(floorsKey) || [];
-        
-        const stats = {
-          total_laptops: laptops.length,
-          available_laptops: laptops.filter(l => l.status === 'Disponível').length,
-          in_use_laptops: laptops.filter(l => l.status === 'Em Uso').length,
-          maintenance_laptops: laptops.filter(l => l.status === 'Manutenção').length,
-          discarded_laptops: laptops.filter(l => l.status === 'Descartado').length,
-          total_value: laptops.reduce((sum, l) => sum + (parseFloat(l.purchase_price) || 0), 0),
-          avg_condition: laptops.length > 0 ? 
-            laptops.reduce((sum, l) => sum + (l.condition_score || 0), 0) / laptops.length : 0,
-          total_floors: floors.length,
-          total_rooms: floors.reduce((sum, f) => sum + (f.rooms ? f.rooms.length : 0), 0)
-        };
-        
-        return { success: true, data: stats };
-      }
-      
       const stats = await sql`
         SELECT 
           COUNT(*) as total_laptops,
@@ -632,39 +390,25 @@ export const dataService = {
         WHERE user_id = ${userId}
       `;
       
-      return {
-        success: true,
-        data: {
-          ...stats[0],
-          total_floors: parseInt(floorStats[0].total_floors),
-          total_rooms: parseInt(roomStats[0].total_rooms)
-        }
+      const finalStats = {
+        ...stats[0],
+        total_floors: parseInt(floorStats[0].total_floors),
+        total_rooms: parseInt(roomStats[0].total_rooms)
       };
+      
+      console.log('✅ Estatísticas obtidas do banco:', finalStats);
+      return { success: true, data: finalStats };
     } catch (error) {
-      console.error('Erro ao buscar estatísticas:', error);
-      
-      // Fallback para localStorage
-      const laptopsKey = `laptops_${userId}`;
-      const floorsKey = `floors_${userId}`;
-      const laptops = getFromLocalStorage(laptopsKey) || [];
-      const floors = getFromLocalStorage(floorsKey) || [];
-      
-      const stats = {
-        total_laptops: laptops.length,
-        available_laptops: laptops.filter(l => l.status === 'Disponível').length,
-        in_use_laptops: laptops.filter(l => l.status === 'Em Uso').length,
-        maintenance_laptops: laptops.filter(l => l.status === 'Manutenção').length,
-        discarded_laptops: laptops.filter(l => l.status === 'Descartado').length,
-        total_value: laptops.reduce((sum, l) => sum + (parseFloat(l.purchase_price) || 0), 0),
-        avg_condition: laptops.length > 0 ? 
-          laptops.reduce((sum, l) => sum + (l.condition_score || 0), 0) / laptops.length : 0,
-        total_floors: floors.length,
-        total_rooms: floors.reduce((sum, f) => sum + (f.rooms ? f.rooms.length : 0), 0)
-      };
-      
-      return { success: true, data: stats };
+      return handleDatabaseError('getStatistics', error);
     }
   }
 };
+
+// Log final
+console.log('✅ === dataService CONFIGURADO PARA SOMENTE NEON ===');
+console.log('✅ Todas as operações são realizadas no banco');
+console.log('❌ localStorage: DESABILITADO');
+console.log('❌ Modo offline: DESABILITADO');
+console.log('================================================');
 
 export default dataService;
