@@ -1,4 +1,4 @@
-// src/services/dataService.js - VERSÃO CORRIGIDA
+// src/services/dataService.js - VERSÃO DEBUG COMPLETA
 import database from '../config/database';
 
 const { sql } = database;
@@ -15,6 +15,12 @@ console.log('✅ dataService inicializado com conexão Neon COMPARTILHADA');
 // Função para tratar erros de banco
 const handleDatabaseError = (operation, error) => {
   console.error(`❌ ERRO de banco na operação: ${operation}`, error);
+  console.error('❌ Detalhes do erro:', {
+    message: error.message,
+    stack: error.stack,
+    name: error.name,
+    cause: error.cause
+  });
   
   // Diagnóstico específico
   if (error.message.includes('connection')) {
@@ -31,6 +37,10 @@ const handleDatabaseError = (operation, error) => {
     console.error('🔧 DIAGNÓSTICO: Coluna não existe na tabela');
   } else if (error.message.includes('syntax error')) {
     console.error('🔧 DIAGNÓSTICO: Erro de sintaxe SQL');
+  } else if (error.message.includes('400')) {
+    console.error('🔧 DIAGNÓSTICO: Erro 400 Bad Request');
+    console.error('   ❌ Possível problema na estrutura da query');
+    console.error('   ❌ Verificar tipos de dados');
   }
   
   return {
@@ -38,6 +48,30 @@ const handleDatabaseError = (operation, error) => {
     error: `Erro no banco de dados: ${error.message}`,
     operation: operation
   };
+};
+
+// Função para verificar estrutura da tabela
+const checkTableStructure = async () => {
+  try {
+    console.log('🔍 Verificando estrutura da tabela laptops...');
+    
+    const columns = await sql`
+      SELECT column_name, data_type, is_nullable, column_default
+      FROM information_schema.columns
+      WHERE table_name = 'laptops'
+      ORDER BY ordinal_position
+    `;
+    
+    console.log('📋 Estrutura atual da tabela laptops:');
+    columns.forEach(col => {
+      console.log(`   - ${col.column_name}: ${col.data_type} (nullable: ${col.is_nullable})`);
+    });
+    
+    return columns;
+  } catch (error) {
+    console.error('❌ Erro ao verificar estrutura da tabela:', error);
+    return [];
+  }
 };
 
 // Serviço de dados COMPARTILHADOS entre todos os usuários
@@ -74,6 +108,9 @@ export const dataService = {
       });
       
       try {
+        // Verificar estrutura da tabela primeiro
+        await checkTableStructure();
+        
         const {
           model, service_tag, processor, ram, storage, graphics,
           screen_size, color, warranty_end, condition, condition_score, status,
@@ -86,9 +123,10 @@ export const dataService = {
           throw new Error('Campos obrigatórios não preenchidos: model, service_tag, userId');
         }
         
-        console.log('📝 Executando INSERT com dados:', {
-          model,
-          service_tag,
+        // Preparar dados para inserção
+        const insertData = {
+          model: model,
+          service_tag: service_tag,
           processor: processor || null,
           ram: ram || null,
           storage: storage || null,
@@ -100,13 +138,20 @@ export const dataService = {
           condition_score: condition_score || 100,
           status: status || 'Disponível',
           photo: photo || null,
-          damage_analysis: damage_analysis ? 'JSON_PROVIDED' : null,
+          damage_analysis: damage_analysis ? JSON.stringify(damage_analysis) : null,
           purchase_date: purchase_date || null,
           purchase_price: purchase_price || null,
           assigned_user: assigned_user || null,
           notes: notes || null,
-          userId: userId
-        });
+          user_id: userId,
+          created_by: userId,
+          last_updated_by: userId
+        };
+        
+        console.log('📝 Dados preparados para inserção:', insertData);
+        
+        // Tentar inserção mais simples primeiro
+        console.log('🔄 Tentando inserção simples...');
         
         const result = await sql`
           INSERT INTO laptops (
@@ -116,37 +161,60 @@ export const dataService = {
             assigned_user, notes, user_id, created_by, last_updated_by
           )
           VALUES (
-            ${model}, 
-            ${service_tag}, 
-            ${processor || null},
-            ${ram || null}, 
-            ${storage || null}, 
-            ${graphics || null}, 
-            ${screen_size || null},
-            ${color || null}, 
-            ${warranty_end || null}, 
-            ${condition || 'Excelente'}, 
-            ${condition_score || 100},
-            ${status || 'Disponível'}, 
-            ${photo || null},
-            ${damage_analysis ? JSON.stringify(damage_analysis) : null},
-            ${purchase_date || null}, 
-            ${purchase_price || null}, 
-            ${assigned_user || null},
-            ${notes || null}, 
-            ${userId}, 
-            ${userId}, 
-            ${userId}
+            ${insertData.model}, 
+            ${insertData.service_tag}, 
+            ${insertData.processor},
+            ${insertData.ram}, 
+            ${insertData.storage}, 
+            ${insertData.graphics}, 
+            ${insertData.screen_size},
+            ${insertData.color}, 
+            ${insertData.warranty_end}, 
+            ${insertData.condition}, 
+            ${insertData.condition_score},
+            ${insertData.status}, 
+            ${insertData.photo},
+            ${insertData.damage_analysis},
+            ${insertData.purchase_date}, 
+            ${insertData.purchase_price}, 
+            ${insertData.assigned_user},
+            ${insertData.notes}, 
+            ${insertData.user_id}, 
+            ${insertData.created_by}, 
+            ${insertData.last_updated_by}
           )
           RETURNING *
         `;
         
-        console.log('✅ Laptop COMPARTILHADO criado com sucesso! ID:', result[0].id);
+        console.log('✅ Laptop COMPARTILHADO criado com sucesso! ID:', result[0]?.id);
         console.log('🌍 Visível para TODOS os usuários!');
         return { success: true, data: result[0] };
         
       } catch (error) {
         console.error('❌ Erro detalhado ao criar laptop:', error);
+        console.error('❌ Stack trace:', error.stack);
+        console.error('❌ Erro name:', error.name);
+        
+        // Tentar inserção com campos mínimos se falhar
+        if (error.message.includes('400') || error.message.includes('Bad Request')) {
+          console.log('🔄 Tentando inserção com campos mínimos...');
+          
+          try {
+            const minimalResult = await sql`
+              INSERT INTO laptops (model, service_tag, user_id, created_by, last_updated_by)
+              VALUES (${laptopData.model}, ${laptopData.service_tag}, ${userId}, ${userId}, ${userId})
+              RETURNING *
+            `;
+            
+            console.log('✅ Laptop criado com campos mínimos! ID:', minimalResult[0]?.id);
+            return { success: true, data: minimalResult[0] };
+            
+          } catch (minimalError) {
+            console.error('❌ Erro na inserção mínima:', minimalError);
+            return handleDatabaseError('laptops.create.minimal', minimalError);
+          }
+        }
+        
         if (error.message.includes('duplicate key') || error.message.includes('unique')) {
           return { success: false, error: 'Service tag já existe' };
         }
@@ -336,13 +404,11 @@ export const dataService = {
 };
 
 // Log final
-console.log('✅ === dataService CONFIGURADO SEM FLOORS/ROOMS - VERSÃO CORRIGIDA ===');
-console.log('✅ Todas as operações usam service_tag como campo principal');
-console.log('✅ Floors e rooms removidos completamente');
-console.log('✅ Logging detalhado para debug');
-console.log('✅ Dados compartilhados entre todos os usuários');
-console.log('❌ localStorage: DESABILITADO');
-console.log('❌ Modo offline: DESABILITADO');
+console.log('✅ === dataService CONFIGURADO - VERSÃO DEBUG COMPLETA ===');
+console.log('✅ Logging detalhado habilitado');
+console.log('✅ Verificação de estrutura da tabela');
+console.log('✅ Fallback para inserção mínima');
+console.log('✅ Tratamento robusto de erros');
 console.log('================================================================');
 
 export default dataService;
