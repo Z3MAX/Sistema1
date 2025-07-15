@@ -189,14 +189,14 @@ const createTables = async () => {
       )
     `;
     
-    // Verificar se as colunas created_by e last_updated_by existem e adicionar se necessário
-    console.log('📝 Verificando colunas created_by e last_updated_by...');
+    // Verificar se as colunas created_by, last_updated_by e user_id existem
+    console.log('📝 Verificando colunas created_by, last_updated_by e user_id...');
     
     const existingColumns = await sql`
       SELECT column_name
       FROM information_schema.columns
       WHERE table_name = 'laptops'
-      AND column_name IN ('created_by', 'last_updated_by', 'service_tag')
+      AND column_name IN ('created_by', 'last_updated_by', 'service_tag', 'user_id')
     `;
     
     const existingColumnNames = existingColumns.map(col => col.column_name);
@@ -215,6 +215,14 @@ const createTables = async () => {
       await sql`
         ALTER TABLE laptops 
         ADD COLUMN last_updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL
+      `;
+    }
+    
+    if (!existingColumnNames.includes('user_id')) {
+      console.log('📝 Adicionando coluna user_id...');
+      await sql`
+        ALTER TABLE laptops 
+        ADD COLUMN user_id BIGINT REFERENCES users(id) ON DELETE CASCADE
       `;
     }
     
