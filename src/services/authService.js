@@ -1,241 +1,144 @@
+// src/services/authService.js - SOMENTE NEON DATABASE (SEM LOCALSTORAGE)
 import database from '../config/database';
 
 const { sql } = database;
 
-// Função para gerar ID compatível com INTEGER do PostgreSQL (máximo 2,147,483,647)
-const generateSafeId = () => {
-  // Gerar um número entre 1 e 2,000,000,000 (menor que o limite do INTEGER)
-  return Math.floor(Math.random() * 2000000000) + 1;
-};
+// ❌ FALHA IMEDIATA SE NÃO TIVER CONEXÃO COM BANCO
+if (!sql) {
+  console.error('❌ ERRO CRÍTICO: Conexão com banco não disponível!');
+  console.error('❌ authService.js requer conexão obrigatória com Neon');
+  throw new Error('ERRO CRÍTICO: authService não pode funcionar sem conexão com o banco Neon');
+}
+
+console.log('✅ authService inicializado com conexão Neon obrigatória');
 
 // Função simples para hash de senha (substitui bcrypt)
 const simpleHash = (password) => {
-  return btoa(password + 'dell_laptop_salt'); // Base64 encoding com salt
+  return btoa(password + 'dell_laptop_salt_2024'); // Base64 encoding com salt
 };
 
 const verifyPassword = (password, hash) => {
   return simpleHash(password) === hash;
 };
 
-// Serviço de autenticação
+// Função para tratar erros de banco
+const handleDatabaseError = (operation, error) => {
+  console.error(`❌ ERRO de banco na operação: ${operation}`, error);
+  
+  // Diagnóstico específico
+  if (error.message.includes('connection')) {
+    console.error('🔧 DIAGNÓSTICO: Problema de conexão com banco');
+    console.error('   ❌ Verificar se o banco Neon está ativo');
+  } else if (error.message.includes('duplicate key') || error.message.includes('unique')) {
+    console.error('🔧 DIAGNÓSTICO: Email já existe');
+  } else if (error.message.includes('not found') || error.message.includes('does not exist')) {
+    console.error('🔧 DIAGNÓSTICO: Usuário não encontrado');
+  }
+  
+  return {
+    success: false,
+    error: `Erro no banco de dados: ${error.message}`,
+    operation: operation
+  };
+};
+
+// Serviço de autenticação que funciona APENAS com banco Neon
 export const authService = {
   // Registrar novo usuário
   async register(userData) {
+    console.log('🔄 Registrando usuário no banco:', userData.email);
+    
     try {
       const { name, email, password, company } = userData;
       
-      console.log('🔄 Tentando registrar usuário:', email);
-      
-      // Gerar ID seguro
-      const userId = generateSafeId();
-      console.log('🆔 ID gerado para usuário:', userId);
-      
       // Verificar se o email já existe
-      try {
-        const existingUser = await sql`
-          SELECT id FROM users WHERE email = ${email}
-        `;
-        
-        if (existingUser.length > 0) {
-          throw new Error('Email já cadastrado');
-        }
-      } catch (dbError) {
-        console.warn('⚠️ Erro ao verificar email existente, continuando...', dbError.message);
+      const existingUser = await sql`
+        SELECT id FROM users WHERE email = ${email}
+      `;
+      
+      if (existingUser.length > 0) {
+        console.log('⚠️ Email já existe no banco');
+        return { success: false, error: 'Email já cadastrado' };
       }
       
       // Criptografar senha
       const passwordHash = simpleHash(password);
       
-      // Tentar inserir usuário no banco
-      try {
-        const result = await sql`
-          INSERT INTO users (id, name, email, password_hash, company)
-          VALUES (${userId}, ${name}, ${email}, ${passwordHash}, ${company || ''})
-          RETURNING id, name, email, company, role, created_at
-        `;
-        
-        console.log('✅ Usuário registrado no banco:', result[0]);
-        return {
-          success: true,
-          user: result[0]
-        };
-      } catch (dbError) {
-        console.warn('⚠️ Erro ao inserir no banco, criando usuário temporário...', dbError.message);
-        
-        // Fallback: usuário temporário
-        const tempUser = {
-          id: userId,
-          name,
-          email,
-          company: company || '',
-          role: 'user',
-          created_at: new Date().toISOString(),
-          password_hash: passwordHash // Salvar para o login funcionar
-        };
-        
-        // Salvar no localStorage como backup
-        localStorage.setItem(`tempUser_${email}`, JSON.stringify(tempUser));
-        
-        return {
-          success: true,
-          user: tempUser
-        };
-      }
+      // Inserir usuário no banco
+      const result = await sql`
+        INSERT INTO users (name, email, password_hash, company)
+        VALUES (${name}, ${email}, ${passwordHash}, ${company || ''})
+        RETURNING id, name, email, company, role, created_at
+      `;
+      
+      console.log('✅ Usuário registrado no banco com ID:', result[0].id);
+      return { success: true, user: result[0] };
+      
     } catch (error) {
-      console.error('❌ Erro ao registrar usuário:', error);
-      return {
-        success: false,
-        error: error.message
-      };
+      return handleDatabaseError('register', error);
     }
   },
 
   // Fazer login
   async login(credentials) {
+    console.log('🔄 Fazendo login no banco:', credentials.email);
+    
     try {
       const { email, password } = credentials;
       
-      console.log('🔄 Tentando fazer login:', email);
+      // Buscar usuário no banco
+      const users = await sql`
+        SELECT id, name, email, password_hash, company, role, created_at
+        FROM users 
+        WHERE email = ${email}
+      `;
       
-      // Tentar buscar usuário no banco primeiro
-      try {
-        const users = await sql`
-          SELECT id, name, email, password_hash, company, role
-          FROM users 
-          WHERE email = ${email}
-        `;
-        
-        if (users.length > 0) {
-          const user = users[0];
-          console.log('👤 Usuário encontrado no banco');
-          
-          // Verificar senha
-          const isPasswordValid = verifyPassword(password, user.password_hash);
-          
-          if (!isPasswordValid) {
-            throw new Error('Email ou senha incorretos');
-          }
-          
-          // Remover hash da senha do retorno
-          const { password_hash, ...userWithoutPassword } = user;
-          
-          console.log('✅ Login realizado com sucesso');
-          return {
-            success: true,
-            user: userWithoutPassword
-          };
-        } else {
-          console.log('❌ Usuário não encontrado no banco');
-          throw new Error('Email ou senha incorretos');
-        }
-      } catch (dbError) {
-        console.warn('⚠️ Erro ao acessar banco, tentando usuário temporário...', dbError.message);
-        
-        // Fallback: buscar usuário temporário no localStorage
-        const tempUserData = localStorage.getItem(`tempUser_${email}`);
-        if (tempUserData) {
-          const tempUser = JSON.parse(tempUserData);
-          console.log('👤 Usuário temporário encontrado');
-          
-          // Verificar senha
-          const isPasswordValid = verifyPassword(password, tempUser.password_hash);
-          
-          if (!isPasswordValid) {
-            throw new Error('Email ou senha incorretos');
-          }
-          
-          // Remover hash da senha do retorno
-          const { password_hash, ...userWithoutPassword } = tempUser;
-          
-          console.log('✅ Login temporário realizado com sucesso');
-          return {
-            success: true,
-            user: userWithoutPassword
-          };
-        }
-        
-        // Se não encontrou nem no banco nem no localStorage, criar usuário demo
-        console.log('🔄 Criando usuário demo para login...');
-        const userId = generateSafeId();
-        const demoUser = {
-          id: userId,
-          name: 'Usuário Demo',
-          email: email,
-          company: 'Dell Technologies',
-          role: 'user',
-          created_at: new Date().toISOString(),
-          password_hash: simpleHash(password)
-        };
-        
-        // Salvar usuário demo no localStorage
-        localStorage.setItem(`tempUser_${email}`, JSON.stringify(demoUser));
-        
-        // Tentar salvar no banco também
-        try {
-          await sql`
-            INSERT INTO users (id, name, email, password_hash, company)
-            VALUES (${userId}, ${demoUser.name}, ${email}, ${demoUser.password_hash}, ${demoUser.company})
-            ON CONFLICT (email) DO NOTHING
-          `;
-          console.log('✅ Usuário demo salvo no banco');
-        } catch (saveError) {
-          console.warn('⚠️ Não foi possível salvar usuário demo no banco:', saveError.message);
-        }
-        
-        const { password_hash, ...userWithoutPassword } = demoUser;
-        return {
-          success: true,
-          user: userWithoutPassword
-        };
+      if (users.length === 0) {
+        console.log('❌ Usuário não encontrado no banco');
+        return { success: false, error: 'Email ou senha incorretos' };
       }
+      
+      const user = users[0];
+      console.log('✅ Usuário encontrado no banco:', user.id);
+      
+      // Verificar senha
+      const isPasswordValid = verifyPassword(password, user.password_hash);
+      
+      if (!isPasswordValid) {
+        console.log('❌ Senha incorreta para usuário:', user.id);
+        return { success: false, error: 'Email ou senha incorretos' };
+      }
+      
+      // Remover hash da senha do retorno
+      const { password_hash, ...userWithoutPassword } = user;
+      
+      console.log('✅ Login realizado com sucesso:', userWithoutPassword.id);
+      return { success: true, user: userWithoutPassword };
+      
     } catch (error) {
-      console.error('❌ Erro ao fazer login:', error);
-      return {
-        success: false,
-        error: error.message
-      };
+      return handleDatabaseError('login', error);
     }
   },
 
-  // Verificar se usuário existe
+  // Buscar usuário por ID
   async getUserById(id) {
+    console.log('🔄 Buscando usuário por ID no banco:', id);
+    
     try {
-      console.log('🔄 Buscando usuário por ID:', id);
+      const users = await sql`
+        SELECT id, name, email, company, role, created_at
+        FROM users 
+        WHERE id = ${id}
+      `;
       
-      // Tentar buscar no banco primeiro
-      try {
-        const users = await sql`
-          SELECT id, name, email, company, role, created_at
-          FROM users 
-          WHERE id = ${id}
-        `;
-        
-        if (users.length > 0) {
-          console.log('👤 Usuário encontrado no banco por ID');
-          return users[0];
-        }
-      } catch (dbError) {
-        console.warn('⚠️ Erro ao buscar usuário por ID no banco:', dbError.message);
+      if (users.length === 0) {
+        console.log('❌ Usuário não encontrado no banco');
+        return null;
       }
       
-      // Fallback: buscar em usuários temporários
-      const keys = Object.keys(localStorage);
-      for (const key of keys) {
-        if (key.startsWith('tempUser_')) {
-          try {
-            const tempUser = JSON.parse(localStorage.getItem(key));
-            if (tempUser.id === id) {
-              console.log('👤 Usuário temporário encontrado por ID');
-              return tempUser;
-            }
-          } catch (e) {
-            // Ignorar erros de parsing
-          }
-        }
-      }
+      console.log('✅ Usuário encontrado no banco');
+      return users[0];
       
-      console.log('❌ Usuário não encontrado por ID');
-      return null;
     } catch (error) {
       console.error('❌ Erro ao buscar usuário por ID:', error);
       return null;
@@ -244,161 +147,139 @@ export const authService = {
 
   // Atualizar perfil do usuário
   async updateProfile(userId, userData) {
+    console.log('🔄 Atualizando perfil no banco. ID:', userId);
+    
     try {
       const { name, company } = userData;
       
-      // Tentar atualizar no banco
-      try {
-        const result = await sql`
-          UPDATE users 
-          SET name = ${name}, company = ${company}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${userId}
-          RETURNING id, name, email, company, role, created_at
-        `;
-        
-        if (result.length > 0) {
-          return {
-            success: true,
-            user: result[0]
-          };
-        }
-      } catch (dbError) {
-        console.warn('⚠️ Erro ao atualizar no banco, tentando localStorage...', dbError.message);
+      const result = await sql`
+        UPDATE users 
+        SET name = ${name}, company = ${company}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${userId}
+        RETURNING id, name, email, company, role, created_at
+      `;
+      
+      if (result.length === 0) {
+        throw new Error('Usuário não encontrado');
       }
       
-      // Fallback: atualizar usuário temporário
-      const keys = Object.keys(localStorage);
-      for (const key of keys) {
-        if (key.startsWith('tempUser_')) {
-          try {
-            const tempUser = JSON.parse(localStorage.getItem(key));
-            if (tempUser.id === userId) {
-              tempUser.name = name;
-              tempUser.company = company;
-              localStorage.setItem(key, JSON.stringify(tempUser));
-              
-              return {
-                success: true,
-                user: tempUser
-              };
-            }
-          } catch (e) {
-            // Ignorar erros de parsing
-          }
-        }
-      }
+      console.log('✅ Perfil atualizado no banco');
+      return { success: true, user: result[0] };
       
-      throw new Error('Usuário não encontrado');
     } catch (error) {
-      console.error('❌ Erro ao atualizar perfil:', error);
-      return {
-        success: false,
-        error: error.message
-      };
+      return handleDatabaseError('updateProfile', error);
     }
   },
 
   // Alterar senha
   async changePassword(userId, oldPassword, newPassword) {
+    console.log('🔄 Alterando senha no banco. ID:', userId);
+    
     try {
-      // Buscar usuário primeiro
-      const user = await this.getUserById(userId);
-      if (!user) {
+      // Buscar senha atual
+      const users = await sql`
+        SELECT password_hash FROM users WHERE id = ${userId}
+      `;
+      
+      if (users.length === 0) {
         throw new Error('Usuário não encontrado');
       }
       
-      // Tentar buscar senha atual do banco ou localStorage
-      let currentPasswordHash = null;
-      
-      // Tentar banco primeiro
-      try {
-        const users = await sql`
-          SELECT password_hash FROM users WHERE id = ${userId}
-        `;
-        
-        if (users.length > 0) {
-          currentPasswordHash = users[0].password_hash;
-        }
-      } catch (dbError) {
-        console.warn('⚠️ Erro ao buscar senha do banco, tentando localStorage...', dbError.message);
-        
-        // Buscar no localStorage
-        const keys = Object.keys(localStorage);
-        for (const key of keys) {
-          if (key.startsWith('tempUser_')) {
-            try {
-              const tempUser = JSON.parse(localStorage.getItem(key));
-              if (tempUser.id === userId) {
-                currentPasswordHash = tempUser.password_hash;
-                break;
-              }
-            } catch (e) {
-              // Ignorar erros de parsing
-            }
-          }
-        }
-      }
-      
-      if (!currentPasswordHash) {
-        throw new Error('Não foi possível verificar a senha atual');
-      }
+      const currentPasswordHash = users[0].password_hash;
       
       // Verificar senha atual
       const isOldPasswordValid = verifyPassword(oldPassword, currentPasswordHash);
       
       if (!isOldPasswordValid) {
-        throw new Error('Senha atual incorreta');
+        console.log('❌ Senha atual incorreta');
+        return { success: false, error: 'Senha atual incorreta' };
       }
       
       // Criptografar nova senha
       const newPasswordHash = simpleHash(newPassword);
       
-      // Tentar atualizar no banco
-      try {
-        await sql`
-          UPDATE users 
-          SET password_hash = ${newPasswordHash}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${userId}
-        `;
-        
-        return {
-          success: true,
-          message: 'Senha alterada com sucesso'
-        };
-      } catch (dbError) {
-        console.warn('⚠️ Erro ao atualizar senha no banco, tentando localStorage...', dbError.message);
-        
-        // Atualizar no localStorage
-        const keys = Object.keys(localStorage);
-        for (const key of keys) {
-          if (key.startsWith('tempUser_')) {
-            try {
-              const tempUser = JSON.parse(localStorage.getItem(key));
-              if (tempUser.id === userId) {
-                tempUser.password_hash = newPasswordHash;
-                localStorage.setItem(key, JSON.stringify(tempUser));
-                
-                return {
-                  success: true,
-                  message: 'Senha alterada com sucesso'
-                };
-              }
-            } catch (e) {
-              // Ignorar erros de parsing
-            }
-          }
-        }
-        
-        throw new Error('Não foi possível atualizar a senha');
-      }
+      // Atualizar senha no banco
+      await sql`
+        UPDATE users 
+        SET password_hash = ${newPasswordHash}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${userId}
+      `;
+      
+      console.log('✅ Senha alterada no banco');
+      return { success: true, message: 'Senha alterada com sucesso' };
+      
     } catch (error) {
-      console.error('❌ Erro ao alterar senha:', error);
-      return {
-        success: false,
-        error: error.message
-      };
+      return handleDatabaseError('changePassword', error);
+    }
+  },
+
+  // Buscar usuários (para admin)
+  async getAllUsers() {
+    console.log('🔄 Buscando todos os usuários no banco');
+    
+    try {
+      const users = await sql`
+        SELECT id, name, email, company, role, created_at
+        FROM users 
+        ORDER BY created_at DESC
+      `;
+      
+      console.log(`✅ ${users.length} usuários encontrados no banco`);
+      return { success: true, users: users };
+      
+    } catch (error) {
+      return handleDatabaseError('getAllUsers', error);
+    }
+  },
+
+  // Deletar usuário
+  async deleteUser(userId) {
+    console.log('🔄 Deletando usuário do banco. ID:', userId);
+    
+    try {
+      const result = await sql`
+        DELETE FROM users 
+        WHERE id = ${userId}
+        RETURNING id
+      `;
+      
+      if (result.length === 0) {
+        throw new Error('Usuário não encontrado');
+      }
+      
+      console.log('✅ Usuário deletado do banco');
+      return { success: true, message: 'Usuário deletado com sucesso' };
+      
+    } catch (error) {
+      return handleDatabaseError('deleteUser', error);
+    }
+  },
+
+  // Verificar se email existe
+  async checkEmailExists(email) {
+    console.log('🔄 Verificando se email existe no banco:', email);
+    
+    try {
+      const users = await sql`
+        SELECT id FROM users WHERE email = ${email}
+      `;
+      
+      const exists = users.length > 0;
+      console.log(`✅ Email ${exists ? 'EXISTS' : 'NOT_EXISTS'} no banco`);
+      return { success: true, exists: exists };
+      
+    } catch (error) {
+      return handleDatabaseError('checkEmailExists', error);
     }
   }
 };
+
+// Log final
+console.log('✅ === authService CONFIGURADO PARA SOMENTE NEON ===');
+console.log('✅ Todas as operações são realizadas no banco');
+console.log('❌ localStorage: DESABILITADO');
+console.log('❌ Modo offline: DESABILITADO');
+console.log('❌ Usuários temporários: DESABILITADO');
+console.log('===============================================');
 
 export default authService;
