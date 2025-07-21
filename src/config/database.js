@@ -1,6 +1,55 @@
-// ============= ATUALIZAÇÕES PARA src/config/database.js =============
-// Substitua a função createTables() pela versão atualizada abaixo:
+import { neon } from '@neondatabase/serverless';
 
+// Configuração do banco de dados Neon
+const NEON_DATABASE_URL = import.meta.env.VITE_NEON_DATABASE_URL;
+
+// Verificar se a URL do banco está configurada
+const isDatabaseAvailable = () => {
+  return !!(NEON_DATABASE_URL && NEON_DATABASE_URL.length > 10 && NEON_DATABASE_URL !== 'your-neon-url-here');
+};
+
+// Obter status da conexão
+const getConnectionStatus = () => {
+  return {
+    hasUrl: !!(NEON_DATABASE_URL && NEON_DATABASE_URL.length > 10),
+    isValid: isDatabaseAvailable(),
+    message: isDatabaseAvailable() ? 'Conectado ao Neon' : 'URL não configurada'
+  };
+};
+
+// Inicializar conexão SQL apenas se disponível
+let sql = null;
+if (isDatabaseAvailable()) {
+  try {
+    sql = neon(NEON_DATABASE_URL);
+    console.log('✅ Conexão Neon inicializada');
+  } catch (error) {
+    console.error('❌ Erro ao inicializar Neon:', error);
+    sql = null;
+  }
+} else {
+  console.log('⚠️ Banco Neon não configurado - funcionando em modo offline');
+}
+
+// Testar conexão
+const testConnection = async () => {
+  if (!sql) {
+    console.log('❌ SQL não disponível para teste');
+    return false;
+  }
+
+  try {
+    console.log('🔄 Testando conexão com Neon...');
+    const result = await sql`SELECT NOW() as current_time`;
+    console.log('✅ Conexão com Neon bem-sucedida!', result[0]);
+    return true;
+  } catch (error) {
+    console.error('❌ Erro na conexão com Neon:', error);
+    return false;
+  }
+};
+
+// Criar estrutura do banco
 const createTables = async () => {
   console.log('🔄 Criando estrutura OBRIGATÓRIA do banco...');
   
@@ -156,4 +205,44 @@ const createTables = async () => {
     console.error('❌ ERRO CRÍTICO ao criar estrutura do banco:', error);
     throw new Error(`FALHA CRÍTICA: Não é possível criar estrutura do banco. ${error.message}`);
   }
+};
+
+// Inserir dados iniciais (se necessário)
+const insertInitialData = async () => {
+  if (!sql) {
+    console.log('❌ SQL não disponível para inserção de dados iniciais');
+    return;
+  }
+
+  try {
+    // Verificar se já existem dados
+    const userCount = await sql`SELECT COUNT(*) as count FROM users`;
+    if (parseInt(userCount[0].count) > 0) {
+      console.log('ℹ️ Dados iniciais já existem, pulando inserção...');
+      return;
+    }
+
+    console.log('📝 Inserindo dados iniciais...');
+    
+    // Inserir usuário admin padrão
+    const adminUser = await sql`
+      INSERT INTO users (name, email, password_hash, company, role)
+      VALUES ('Admin', 'admin@dell.com', ${btoa('admin123' + 'dell_laptop_salt_2024')}, 'Dell Technologies', 'admin')
+      RETURNING id
+    `;
+
+    console.log('✅ Usuário admin criado:', adminUser[0].id);
+    
+  } catch (error) {
+    console.error('❌ Erro ao inserir dados iniciais:', error);
+  }
+};
+
+export default {
+  sql,
+  testConnection,
+  createTables,
+  insertInitialData,
+  isDatabaseAvailable,
+  getConnectionStatus
 };
