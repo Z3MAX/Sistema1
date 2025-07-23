@@ -1,11 +1,9 @@
-// ============= ARQUIVO COMPLETO CORRIGIDO: App.jsx =============
-
 import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import AuthComponent from './components/AuthComponent';
 import { authService } from './services/authService';
 import { dataService } from './services/dataService';
 import database from './config/database';
-import * as XLSX from 'sheetjs-style'; // Importação para Excel
+import * as XLSX from 'sheetjs-style';
 
 const { testConnection, createTables, insertInitialData, isDatabaseAvailable, getConnectionStatus } = database;
 
@@ -186,7 +184,7 @@ const AIAnalysisService = {
   }
 };
 
-// =================== ÍCONES SVG COMPLETOS ===================
+// =================== ÍCONES SVG ===================
 const Icons = {
   Laptop: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,11 +197,6 @@ const Icons = {
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  ),
-  Zap: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"></polygon>
     </svg>
   ),
   Plus: () => (
@@ -270,11 +263,6 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     </svg>
   ),
-  DollarSign: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-    </svg>
-  ),
   User: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -316,12 +304,6 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
     </svg>
   ),
-  Wrench: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  ),
   Upload: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -331,708 +313,18 @@ const Icons = {
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
+  ),
+  Wrench: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  ),
+  Zap: () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"></polygon>
+    </svg>
   )
-};
-
-// =================== COMPONENTE DE IMPORTAÇÃO EXCEL ===================
-const ExcelImportModal = ({ isOpen, onClose, onImport, isLoading }) => {
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState([]);
-  const [errors, setErrors] = useState([]);
-  const [step, setStep] = useState('upload'); // 'upload', 'preview', 'importing'
-  const [importStats, setImportStats] = useState(null);
-
-  const fileInputRef = useRef(null);
-
-  // Template Excel para download
-  const downloadTemplate = () => {
-    const template = [
-      {
-        modelo: 'Dell Latitude 5330',
-        service_tag: 'ABC123D',
-        processador: 'Intel Core i7 vPro 12ª Geração',
-        memoria_ram: '16GB DDR4',
-        armazenamento: '256GB SSD',
-        placa_video: 'Intel Iris Xe Graphics',
-        tamanho_tela: '13.3"',
-        cor: 'Preto',
-        fim_garantia: '2025-12-31',
-        condicao: 'Excelente',
-        status: 'Disponível',
-        data_compra: '2023-01-15',
-        preco_compra: '4500.00',
-        usuario_responsavel: 'João Silva',
-        observacoes: 'Laptop para desenvolvimento'
-      },
-      {
-        modelo: 'Dell Latitude 7420',
-        service_tag: 'XYZ789E',
-        processador: 'Intel Core i5-1145G7',
-        memoria_ram: '8GB DDR4',
-        armazenamento: '512GB SSD',
-        placa_video: 'Intel Iris Xe Graphics',
-        tamanho_tela: '14"',
-        cor: 'Cinza',
-        fim_garantia: '2026-06-30',
-        condicao: 'Bom',
-        status: 'Em Uso',
-        data_compra: '2023-03-20',
-        preco_compra: '3800.00',
-        usuario_responsavel: 'Maria Santos',
-        observacoes: 'Laptop para vendas'
-      }
-    ];
-
-    const ws = XLSX.utils.json_to_sheet(template);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Template');
-    
-    // Definir larguras das colunas
-    const colWidths = [
-      { wch: 25 }, // modelo
-      { wch: 15 }, // service_tag
-      { wch: 30 }, // processador
-      { wch: 15 }, // memoria_ram
-      { wch: 15 }, // armazenamento
-      { wch: 25 }, // placa_video
-      { wch: 12 }, // tamanho_tela
-      { wch: 10 }, // cor
-      { wch: 15 }, // fim_garantia
-      { wch: 12 }, // condicao
-      { wch: 12 }, // status
-      { wch: 15 }, // data_compra
-      { wch: 12 }, // preco_compra
-      { wch: 20 }, // usuario_responsavel
-      { wch: 30 }  // observacoes
-    ];
-    ws['!cols'] = colWidths;
-    
-    XLSX.writeFile(wb, 'template_laptops_dell.xlsx');
-  };
-
-  // Processar arquivo Excel
-  const processFile = async (selectedFile) => {
-    if (!selectedFile) return;
-
-    try {
-      setErrors([]);
-      const data = await selectedFile.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-      console.log('📊 Dados do Excel processados:', jsonData.length, 'linhas');
-
-      if (jsonData.length === 0) {
-        setErrors(['Arquivo Excel está vazio ou não possui dados válidos']);
-        return;
-      }
-
-      // Validar e normalizar dados
-      const processedData = [];
-      const validationErrors = [];
-
-      jsonData.forEach((row, index) => {
-        const rowNumber = index + 2; // Linha no Excel (header = 1, dados começam em 2)
-        const laptop = normalizeExcelRow(row, rowNumber);
-        
-        const rowErrors = validateLaptopRow(laptop, rowNumber);
-        if (rowErrors.length > 0) {
-          validationErrors.push(...rowErrors);
-        } else {
-          processedData.push(laptop);
-        }
-      });
-
-      if (validationErrors.length > 0) {
-        setErrors(validationErrors);
-        setPreview([]);
-      } else {
-        setPreview(processedData);
-        setErrors([]);
-        setStep('preview');
-      }
-
-    } catch (error) {
-      console.error('❌ Erro ao processar Excel:', error);
-      setErrors(['Erro ao processar arquivo Excel. Verifique se o formato está correto.']);
-    }
-  };
-
-  // Normalizar dados do Excel
-  const normalizeExcelRow = (row, rowNumber) => {
-    const fieldMappings = {
-      model: ['modelo', 'model', 'modelo_dell'],
-      service_tag: ['service_tag', 'servicetag', 'tag', 'service tag'],
-      processor: ['processador', 'processor', 'cpu'],
-      ram: ['memoria_ram', 'ram', 'memoria', 'memory'],
-      storage: ['armazenamento', 'storage', 'hd', 'ssd'],
-      graphics: ['placa_video', 'graphics', 'gpu', 'video'],
-      screen_size: ['tamanho_tela', 'screen_size', 'tela', 'display'],
-      color: ['cor', 'color'],
-      warranty_end: ['fim_garantia', 'warranty_end', 'garantia'],
-      condition: ['condicao', 'condition', 'estado'],
-      status: ['status', 'estado'],
-      purchase_date: ['data_compra', 'purchase_date', 'compra'],
-      purchase_price: ['preco_compra', 'purchase_price', 'preco', 'valor'],
-      assigned_user: ['usuario_responsavel', 'assigned_user', 'usuario', 'responsavel'],
-      notes: ['observacoes', 'notes', 'obs', 'observacao']
-    };
-
-    const normalized = { excel_row: rowNumber };
-
-    const normalizeKey = (key) => {
-      return key.toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]/g, '_')
-        .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '');
-    };
-
-    const rowKeys = Object.keys(row).map(k => normalizeKey(k));
-    const originalKeys = Object.keys(row);
-
-    Object.entries(fieldMappings).forEach(([field, possibleNames]) => {
-      for (const possibleName of possibleNames) {
-        const normalizedPossible = normalizeKey(possibleName);
-        const keyIndex = rowKeys.findIndex(k => k === normalizedPossible);
-        
-        if (keyIndex !== -1) {
-          const originalKey = originalKeys[keyIndex];
-          normalized[field] = row[originalKey];
-          break;
-        }
-      }
-    });
-
-    return normalized;
-  };
-
-  // Validar linha do laptop
-  const validateLaptopRow = (laptop, rowNumber) => {
-    const errors = [];
-
-    if (!laptop.model || !laptop.model.toString().trim()) {
-      errors.push(`Linha ${rowNumber}: Campo 'modelo' é obrigatório`);
-    }
-
-    if (!laptop.service_tag || !laptop.service_tag.toString().trim()) {
-      errors.push(`Linha ${rowNumber}: Campo 'service_tag' é obrigatório`);
-    }
-
-    const validConditions = ['Excelente', 'Bom', 'Regular', 'Ruim'];
-    if (laptop.condition && !validConditions.includes(laptop.condition)) {
-      errors.push(`Linha ${rowNumber}: Condição deve ser: ${validConditions.join(', ')}`);
-    }
-
-    const validStatuses = ['Disponível', 'Em Uso', 'Manutenção', 'Descartado'];
-    if (laptop.status && !validStatuses.includes(laptop.status)) {
-      errors.push(`Linha ${rowNumber}: Status deve ser: ${validStatuses.join(', ')}`);
-    }
-
-    if (laptop.warranty_end && !isValidDate(laptop.warranty_end)) {
-      errors.push(`Linha ${rowNumber}: Data de fim de garantia inválida (use formato AAAA-MM-DD)`);
-    }
-
-    if (laptop.purchase_date && !isValidDate(laptop.purchase_date)) {
-      errors.push(`Linha ${rowNumber}: Data de compra inválida (use formato AAAA-MM-DD)`);
-    }
-
-    if (laptop.purchase_price && isNaN(parseFloat(laptop.purchase_price))) {
-      errors.push(`Linha ${rowNumber}: Preço de compra deve ser um número válido`);
-    }
-
-    return errors;
-  };
-
-  const isValidDate = (dateString) => {
-    if (!dateString) return true;
-    const date = new Date(dateString);
-    return !isNaN(date.getTime()) && dateString.toString().length >= 10;
-  };
-
-  const handleImport = async () => {
-    if (preview.length === 0) return;
-    setStep('importing');
-    
-    try {
-      const result = await onImport(preview);
-      setImportStats(result);
-      
-      setTimeout(() => {
-        handleClose();
-      }, 3000);
-    } catch (error) {
-      console.error('❌ Erro na importação:', error);
-      setErrors(['Erro durante a importação: ' + error.message]);
-      setStep('preview');
-    }
-  };
-
-  const handleClose = () => {
-    setFile(null);
-    setPreview([]);
-    setErrors([]);
-    setStep('upload');
-    setImportStats(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    onClose();
-  };
-
-  const handleFileSelect = (event) => {
-    const selectedFile = event.target.files[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      processFile(selectedFile);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-              <Icons.Upload className="mr-2 text-green-600" />
-              Importar Laptops via Excel
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {step === 'upload' && 'Selecione um arquivo Excel com os dados dos laptops'}
-              {step === 'preview' && `${preview.length} laptops prontos para importação`}
-              {step === 'importing' && 'Importando laptops...'}
-            </p>
-          </div>
-          <button
-            onClick={handleClose}
-            className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all"
-          >
-            <Icons.X />
-          </button>
-        </div>
-
-        {/* Step: Upload */}
-        {step === 'upload' && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 hover:border-green-400 transition-all">
-                <Icons.Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Selecione o arquivo Excel
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Formatos aceitos: .xlsx, .xls
-                </p>
-                
-                <div className="space-y-4">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    id="excel-upload"
-                  />
-                  <label
-                    htmlFor="excel-upload"
-                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all cursor-pointer"
-                  >
-                    <Icons.Plus className="mr-2" />
-                    Selecionar Arquivo
-                  </label>
-                  
-                  <div className="text-sm text-gray-500">ou</div>
-                  
-                  <button
-                    onClick={downloadTemplate}
-                    className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-all"
-                  >
-                    <Icons.Download className="mr-2" />
-                    Baixar Template Excel
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-2">📋 Instruções:</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Baixe o template Excel e preencha com os dados dos laptops</li>
-                <li>• Campos obrigatórios: modelo e service_tag</li>
-                <li>• Use o formato AAAA-MM-DD para datas (ex: 2024-12-31)</li>
-                <li>• Condições válidas: Excelente, Bom, Regular, Ruim</li>
-                <li>• Status válidos: Disponível, Em Uso, Manutenção, Descartado</li>
-              </ul>
-            </div>
-
-            {errors.length > 0 && (
-              <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
-                <h4 className="font-semibold text-red-900 mb-2">❌ Erros encontrados:</h4>
-                <ul className="text-sm text-red-800 space-y-1 max-h-40 overflow-y-auto">
-                  {errors.map((error, index) => (
-                    <li key={index}>• {error}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Step: Preview */}
-        {step === 'preview' && (
-          <div className="space-y-6">
-            <div className="bg-green-50 rounded-2xl p-4 border border-green-200">
-              <h4 className="font-semibold text-green-900 mb-2">✅ Validação concluída!</h4>
-              <p className="text-sm text-green-800">
-                {preview.length} laptops serão importados. Revise os dados abaixo:
-              </p>
-            </div>
-
-            <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-2xl">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 sticky top-0">
-                  <tr>
-                    <th className="text-left py-3 px-4 font-semibold">Modelo</th>
-                    <th className="text-left py-3 px-4 font-semibold">Service Tag</th>
-                    <th className="text-left py-3 px-4 font-semibold">Status</th>
-                    <th className="text-left py-3 px-4 font-semibold">Condição</th>
-                    <th className="text-left py-3 px-4 font-semibold">Usuário</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.map((laptop, index) => (
-                    <tr key={index} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium">{laptop.model}</td>
-                      <td className="py-3 px-4">{laptop.service_tag}</td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                          {laptop.status || 'Disponível'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                          {laptop.condition || 'Excelente'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">{laptop.assigned_user || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setStep('upload')}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-2xl hover:bg-gray-200 transition-all"
-              >
-                Voltar
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={isLoading}
-                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50"
-              >
-                {isLoading ? 'Importando...' : `Importar ${preview.length} Laptops`}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: Importing */}
-        {step === 'importing' && (
-          <div className="space-y-6 text-center py-8">
-            <div className="w-16 h-16 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto"></div>
-            <h3 className="text-xl font-bold text-gray-900">Importando Laptops...</h3>
-            <p className="text-gray-600">
-              Por favor, aguarde enquanto os laptops são cadastrados no sistema.
-            </p>
-            
-            {importStats && (
-              <div className="bg-green-50 rounded-2xl p-6 border border-green-200 text-left max-w-md mx-auto">
-                <h4 className="font-semibold text-green-900 mb-3">📊 Resultado da Importação:</h4>
-                <div className="space-y-2 text-sm text-green-800">
-                  <div>✅ Importados: {importStats.success || 0}</div>
-                  {importStats.errors > 0 && (
-                    <div>❌ Erros: {importStats.errors}</div>
-                  )}
-                  <div>📋 Total processados: {importStats.total || 0}</div>
-                </div>
-                
-                {importStats.errorDetails && importStats.errorDetails.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-green-200">
-                    <h5 className="font-medium text-green-900 mb-2">Detalhes dos erros:</h5>
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                      {importStats.errorDetails.slice(0, 5).map((error, index) => (
-                        <div key={index} className="text-xs text-green-700">
-                          Linha {error.row} ({error.service_tag}): {error.error}
-                        </div>
-                      ))}
-                      {importStats.errorDetails.length > 5 && (
-                        <div className="text-xs text-green-600">
-                          ... e mais {importStats.errorDetails.length - 5} erros
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// =================== COMPONENTES PARA CHAMADOS DELL ===================
-const DellSupportBadge = ({ laptop }) => {
-  if (!laptop.dell_support_ticket) return null;
-  
-  const statusConfig = {
-    'Aberto': { color: 'bg-gradient-to-r from-red-50 to-pink-50 text-red-700 border-red-200', icon: '🔴' },
-    'Em Andamento': { color: 'bg-gradient-to-r from-yellow-50 to-orange-50 text-yellow-700 border-yellow-200', icon: '🟡' },
-    'Aguardando Peças': { color: 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-blue-200', icon: '🔵' },
-    'Resolvido': { color: 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-green-200', icon: '🟢' },
-    'Fechado': { color: 'bg-gradient-to-r from-gray-50 to-slate-50 text-gray-700 border-gray-200', icon: '⚫' }
-  };
-  
-  const config = statusConfig[laptop.dell_support_status] || statusConfig['Aberto'];
-  
-  return (
-    <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border ${config.color} shadow-sm`}>
-      <span className="mr-1">{config.icon}</span>
-      <span>Dell: {laptop.dell_support_status}</span>
-    </div>
-  );
-};
-
-const DellSupportModal = ({ laptop, isOpen, onClose, onSave }) => {
-  const [dellSupportForm, setDellSupportForm] = useState({
-    dell_support_ticket: laptop?.dell_support_ticket || '',
-    dell_support_status: laptop?.dell_support_status || 'Aberto',
-    dell_support_opened_date: laptop?.dell_support_opened_date || new Date().toISOString().split('T')[0],
-    dell_support_description: laptop?.dell_support_description || '',
-    dell_support_priority: laptop?.dell_support_priority || 'Média',
-    dell_support_estimated_resolution: laptop?.dell_support_estimated_resolution || '',
-    dell_support_notes: laptop?.dell_support_notes || ''
-  });
-  
-  const statuses = ['Aberto', 'Em Andamento', 'Aguardando Peças', 'Resolvido', 'Fechado'];
-  const priorities = ['Baixa', 'Média', 'Alta', 'Crítica'];
-  
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave(dellSupportForm);
-  };
-  
-  if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-              <Icons.Phone className="mr-2 text-blue-600" />
-              Chamado Dell
-            </h2>
-            <p className="text-sm text-gray-600">{laptop?.model} - {laptop?.service_tag}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all"
-          >
-            <Icons.X />
-          </button>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                Número do Chamado Dell *
-              </label>
-              <input
-                type="text"
-                value={dellSupportForm.dell_support_ticket}
-                onChange={(e) => setDellSupportForm(prev => ({ ...prev, dell_support_ticket: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="Ex: 12345678"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                Status do Chamado
-              </label>
-              <select
-                value={dellSupportForm.dell_support_status}
-                onChange={(e) => setDellSupportForm(prev => ({ ...prev, dell_support_status: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              >
-                {statuses.map(status => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                Data de Abertura
-              </label>
-              <input
-                type="date"
-                value={dellSupportForm.dell_support_opened_date}
-                onChange={(e) => setDellSupportForm(prev => ({ ...prev, dell_support_opened_date: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                Prioridade
-              </label>
-              <select
-                value={dellSupportForm.dell_support_priority}
-                onChange={(e) => setDellSupportForm(prev => ({ ...prev, dell_support_priority: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              >
-                {priorities.map(priority => (
-                  <option key={priority} value={priority}>{priority}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="md:col-span-2">
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                Previsão de Resolução
-              </label>
-              <input
-                type="date"
-                value={dellSupportForm.dell_support_estimated_resolution}
-                onChange={(e) => setDellSupportForm(prev => ({ ...prev, dell_support_estimated_resolution: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Descrição do Problema
-            </label>
-            <textarea
-              value={dellSupportForm.dell_support_description}
-              onChange={(e) => setDellSupportForm(prev => ({ ...prev, dell_support_description: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              rows="3"
-              placeholder="Descreva o problema reportado..."
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Anotações do Chamado
-            </label>
-            <textarea
-              value={dellSupportForm.dell_support_notes}
-              onChange={(e) => setDellSupportForm(prev => ({ ...prev, dell_support_notes: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              rows="3"
-              placeholder="Atualizações, observações, etc..."
-            />
-          </div>
-          
-          <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-2xl hover:bg-gray-200 transition-all"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all"
-            >
-              Salvar Chamado
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-const MaintenanceFields = ({ laptopForm, setLaptopForm, onOpenDellSupport }) => {
-  if (laptopForm.status !== 'Manutenção') return null;
-  
-  return (
-    <div className="bg-orange-50 rounded-2xl p-6 border border-orange-200">
-      <h3 className="text-lg font-bold text-orange-800 mb-4 flex items-center">
-        <Icons.Wrench className="mr-2" />
-        Informações de Manutenção
-      </h3>
-      
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-bold text-gray-700 mb-2">
-            Tipo de Manutenção
-          </label>
-          <select 
-            value={laptopForm.maintenance_type || 'interna'}
-            onChange={(e) => setLaptopForm(prev => ({ ...prev, maintenance_type: e.target.value }))}
-            className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-          >
-            <option value="interna">Manutenção Interna</option>
-            <option value="garantia">Garantia Dell</option>
-            <option value="terceirizada">Terceirizada</option>
-          </select>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-700">Chamado Dell Aberto?</p>
-            <p className="text-xs text-gray-500">Para manutenção em garantia</p>
-          </div>
-          <button
-            type="button"
-            onClick={onOpenDellSupport}
-            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all text-sm"
-          >
-            {laptopForm.dell_support_ticket ? 'Editar Chamado' : 'Abrir Chamado'}
-          </button>
-        </div>
-        
-        {laptopForm.dell_support_ticket && (
-          <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-800">
-                  Chamado Dell: {laptopForm.dell_support_ticket}
-                </p>
-                <p className="text-xs text-blue-600">
-                  Status: {laptopForm.dell_support_status}
-                </p>
-                {laptopForm.dell_support_opened_date && (
-                  <p className="text-xs text-blue-600">
-                    Aberto em: {new Date(laptopForm.dell_support_opened_date).toLocaleDateString('pt-BR')}
-                  </p>
-                )}
-              </div>
-              <DellSupportBadge laptop={laptopForm} />
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 };
 
 // =================== COMPONENTE PRINCIPAL ===================
@@ -1049,13 +341,6 @@ const DellLaptopControlSystem = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showLaptopDetail, setShowLaptopDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Estados para chamados Dell
-  const [showDellSupportModal, setShowDellSupportModal] = useState(false);
-  const [selectedLaptopForSupport, setSelectedLaptopForSupport] = useState(null);
-  
-  // Estado para importação Excel
-  const [showExcelImport, setShowExcelImport] = useState(false);
   
   // Estados para foto e análise de IA
   const [photoState, setPhotoState] = useState({
@@ -1086,15 +371,7 @@ const DellLaptopControlSystem = () => {
     purchase_date: '',
     purchase_price: '',
     assigned_user: '',
-    notes: '',
-    // Campos Dell Support
-    dell_support_ticket: '',
-    dell_support_status: 'Aberto',
-    dell_support_opened_date: '',
-    dell_support_description: '',
-    dell_support_priority: 'Média',
-    dell_support_estimated_resolution: '',
-    dell_support_notes: ''
+    notes: ''
   });
 
   // Modelos Dell disponíveis
@@ -1114,78 +391,6 @@ const DellLaptopControlSystem = () => {
       loadData();
     }
   }, [user]);
-
-  // =================== FUNÇÃO DE IMPORTAÇÃO EXCEL ===================
-  const handleExcelImport = async (laptopsData) => {
-    console.log('🔄 Iniciando importação em lote de', laptopsData.length, 'laptops');
-    
-    const results = {
-      success: 0,
-      errors: 0,
-      total: laptopsData.length,
-      errorDetails: []
-    };
-
-    for (let i = 0; i < laptopsData.length; i++) {
-      const laptop = laptopsData[i];
-      
-      try {
-        // Preparar dados do laptop
-        const laptopData = {
-          model: laptop.model?.toString().trim(),
-          service_tag: laptop.service_tag?.toString().trim(),
-          processor: laptop.processor?.toString().trim() || null,
-          ram: laptop.ram?.toString().trim() || null,
-          storage: laptop.storage?.toString().trim() || null,
-          graphics: laptop.graphics?.toString().trim() || null,
-          screen_size: laptop.screen_size?.toString().trim() || null,
-          color: laptop.color?.toString().trim() || null,
-          warranty_end: laptop.warranty_end ? new Date(laptop.warranty_end).toISOString().split('T')[0] : null,
-          condition: laptop.condition || 'Excelente',
-          status: laptop.status || 'Disponível',
-          purchase_date: laptop.purchase_date ? new Date(laptop.purchase_date).toISOString().split('T')[0] : null,
-          purchase_price: laptop.purchase_price ? parseFloat(laptop.purchase_price) : null,
-          assigned_user: laptop.assigned_user?.toString().trim() || null,
-          notes: laptop.notes?.toString().trim() || null,
-          condition_score: laptop.condition === 'Excelente' ? 100 : laptop.condition === 'Bom' ? 85 : laptop.condition === 'Regular' ? 65 : 45
-        };
-
-        // Criar laptop no banco
-        const result = await dataService.laptops.create(laptopData, user.id);
-        
-        if (result.success) {
-          results.success++;
-          console.log(`✅ Laptop ${i + 1}/${laptopsData.length} importado:`, laptop.service_tag);
-        } else {
-          results.errors++;
-          results.errorDetails.push({
-            row: laptop.excel_row || i + 1,
-            service_tag: laptop.service_tag,
-            error: result.error
-          });
-          console.log(`❌ Erro no laptop ${i + 1}:`, result.error);
-        }
-        
-      } catch (error) {
-        results.errors++;
-        results.errorDetails.push({
-          row: laptop.excel_row || i + 1,
-          service_tag: laptop.service_tag,
-          error: error.message
-        });
-        console.error(`❌ Erro no laptop ${i + 1}:`, error);
-      }
-      
-      // Pequena pausa para não sobrecarregar o banco
-      if (i > 0 && i % 10 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
-    
-    console.log('✅ Importação concluída:', results);
-    await loadData(); // Recarregar dados após importação
-    return results;
-  };
 
   // =================== FUNÇÕES AUXILIARES ===================
   const getWarrantyStatus = (warrantyEnd) => {
@@ -1276,49 +481,6 @@ const DellLaptopControlSystem = () => {
       }
     } catch (error) {
       console.error('❌ Erro ao carregar dados:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // =================== FUNÇÕES DE CHAMADOS DELL ===================
-  const handleOpenDellSupport = (laptop = null) => {
-    const targetLaptop = laptop || (editingLaptop ? { ...editingLaptop, ...laptopForm } : laptopForm);
-    setSelectedLaptopForSupport(targetLaptop);
-    setShowDellSupportModal(true);
-  };
-
-  const handleSaveDellSupport = async (dellSupportData) => {
-    try {
-      setIsLoading(true);
-      
-      // Se estamos editando um laptop existente
-      if (selectedLaptopForSupport.id) {
-        const result = await dataService.laptops.updateDellSupport(
-          selectedLaptopForSupport.id,
-          dellSupportData,
-          user.id
-        );
-        
-        if (result.success) {
-          await loadData();
-          alert('Chamado Dell atualizado com sucesso!');
-        } else {
-          alert(`Erro ao atualizar chamado: ${result.error}`);
-        }
-      } else {
-        // Se estamos criando um novo laptop, apenas atualizar o formulário
-        setLaptopForm(prev => ({
-          ...prev,
-          ...dellSupportData
-        }));
-        alert('Informações do chamado Dell adicionadas ao formulário!');
-      }
-      
-      setShowDellSupportModal(false);
-      setSelectedLaptopForSupport(null);
-    } catch (error) {
-      alert(`Erro ao salvar chamado: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -1552,15 +714,7 @@ const DellLaptopControlSystem = () => {
         purchase_date: laptopForm.purchase_date || null,
         purchase_price: laptopForm.purchase_price ? parseFloat(laptopForm.purchase_price) : null,
         assigned_user: laptopForm.assigned_user?.trim() || null,
-        notes: laptopForm.notes?.trim() || null,
-        // Campos Dell Support
-        dell_support_ticket: laptopForm.dell_support_ticket?.trim() || null,
-        dell_support_status: laptopForm.dell_support_status || null,
-        dell_support_opened_date: laptopForm.dell_support_opened_date || null,
-        dell_support_description: laptopForm.dell_support_description?.trim() || null,
-        dell_support_priority: laptopForm.dell_support_priority || null,
-        dell_support_estimated_resolution: laptopForm.dell_support_estimated_resolution || null,
-        dell_support_notes: laptopForm.dell_support_notes?.trim() || null
+        notes: laptopForm.notes?.trim() || null
       };
 
       let result;
@@ -1606,15 +760,7 @@ const DellLaptopControlSystem = () => {
       purchase_date: laptop.purchase_date || '',
       purchase_price: laptop.purchase_price || '',
       assigned_user: laptop.assigned_user || '',
-      notes: laptop.notes || '',
-      // Campos Dell Support
-      dell_support_ticket: laptop.dell_support_ticket || '',
-      dell_support_status: laptop.dell_support_status || 'Aberto',
-      dell_support_opened_date: laptop.dell_support_opened_date || '',
-      dell_support_description: laptop.dell_support_description || '',
-      dell_support_priority: laptop.dell_support_priority || 'Média',
-      dell_support_estimated_resolution: laptop.dell_support_estimated_resolution || '',
-      dell_support_notes: laptop.dell_support_notes || ''
+      notes: laptop.notes || ''
     });
     setShowLaptopForm(true);
   };
@@ -1659,14 +805,7 @@ const DellLaptopControlSystem = () => {
       purchase_date: '',
       purchase_price: '',
       assigned_user: '',
-      notes: '',
-      dell_support_ticket: '',
-      dell_support_status: 'Aberto',
-      dell_support_opened_date: '',
-      dell_support_description: '',
-      dell_support_priority: 'Média',
-      dell_support_estimated_resolution: '',
-      dell_support_notes: ''
+      notes: ''
     });
     setShowAddModel(false);
     setNewModel('');
@@ -1719,7 +858,6 @@ const DellLaptopControlSystem = () => {
 
   const ConnectionStatusIndicator = () => {
     const isConnected = isDatabaseAvailable();
-    const status = getConnectionStatus();
     
     return (
       <div className={`flex items-center space-x-2 px-3 py-2 rounded-xl border ${
@@ -1785,11 +923,6 @@ const DellLaptopControlSystem = () => {
                   <Icons.CheckCircle />
                   <span className="font-semibold text-green-700">{parseInt(statistics.available_laptops) || 0}</span>
                   <span className="text-green-600">disponíveis</span>
-                </div>
-                <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border border-red-100">
-                  <Icons.Phone />
-                  <span className="font-semibold text-red-700">{parseInt(dellSupportStats.open_tickets) || 0}</span>
-                  <span className="text-red-600">chamados</span>
                 </div>
                 <ConnectionStatusIndicator />
               </div>
@@ -1919,61 +1052,6 @@ const DellLaptopControlSystem = () => {
               </div>
             </div>
             
-            {/* Estatísticas Dell Support */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              <div className="bg-gradient-to-br from-red-50 to-pink-50 p-6 md:p-8 rounded-3xl shadow-lg border border-red-100 hover:shadow-xl transition-all group">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-red-600 mb-2">Chamados Abertos</p>
-                    <p className="text-3xl md:text-4xl font-bold text-red-700">{parseInt(dellSupportStats.open_tickets) || 0}</p>
-                    <p className="text-xs text-red-500 mt-1">suporte Dell</p>
-                  </div>
-                  <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-red-500 to-pink-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="text-2xl">🔴</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-6 md:p-8 rounded-3xl shadow-lg border border-yellow-100 hover:shadow-xl transition-all group">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-yellow-600 mb-2">Em Andamento</p>
-                    <p className="text-3xl md:text-4xl font-bold text-yellow-700">{parseInt(dellSupportStats.in_progress_tickets) || 0}</p>
-                    <p className="text-xs text-yellow-500 mt-1">sendo resolvidos</p>
-                  </div>
-                  <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="text-2xl">🟡</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 md:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all group">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-blue-600 mb-2">Aguardando Peças</p>
-                    <p className="text-3xl md:text-4xl font-bold text-blue-700">{parseInt(dellSupportStats.waiting_parts_tickets) || 0}</p>
-                    <p className="text-xs text-blue-500 mt-1">componentes</p>
-                  </div>
-                  <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="text-2xl">🔵</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 md:p-8 rounded-3xl shadow-lg border border-purple-100 hover:shadow-xl transition-all group">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-purple-600 mb-2">Alta Prioridade</p>
-                    <p className="text-3xl md:text-4xl font-bold text-purple-700">{parseInt(dellSupportStats.high_priority_tickets) || 0}</p>
-                    <p className="text-xs text-purple-500 mt-1">críticos</p>
-                  </div>
-                  <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="text-2xl">⚡</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
             <div className="bg-white/70 backdrop-blur-sm p-6 md:p-8 rounded-3xl shadow-lg border border-white/40">
               <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
                 <Icons.Zap />
@@ -2033,13 +1111,6 @@ const DellLaptopControlSystem = () => {
                 >
                   <Icons.Plus />
                   <span>Novo Laptop</span>
-                </button>
-                <button
-                  onClick={() => setShowExcelImport(true)}
-                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  <Icons.Upload />
-                  <span>Importar Excel</span>
                 </button>
               </div>
             </div>
@@ -2122,12 +1193,6 @@ const DellLaptopControlSystem = () => {
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-600">Usuário:</span>
                         <span className="text-sm font-medium text-gray-900">{laptop.assigned_user}</span>
-                      </div>
-                    )}
-                    {laptop.dell_support_ticket && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Chamado Dell:</span>
-                        <DellSupportBadge laptop={laptop} />
                       </div>
                     )}
                   </div>
@@ -2242,7 +1307,6 @@ const DellLaptopControlSystem = () => {
                       <th className="text-center py-2 text-gray-600">Status</th>
                       <th className="text-center py-2 text-gray-600">Condição</th>
                       <th className="text-center py-2 text-gray-600">Garantia</th>
-                      <th className="text-center py-2 text-gray-600">Chamado Dell</th>
                       <th className="text-left py-2 text-gray-600">Usuário</th>
                     </tr>
                   </thead>
@@ -2261,13 +1325,6 @@ const DellLaptopControlSystem = () => {
                           <span className={`text-xs font-medium ${getWarrantyStatus(laptop.warranty_end).color}`}>
                             {getWarrantyStatus(laptop.warranty_end).status}
                           </span>
-                        </td>
-                        <td className="py-2 text-center">
-                          {laptop.dell_support_ticket ? (
-                            <DellSupportBadge laptop={laptop} />
-                          ) : (
-                            <span className="text-xs text-gray-400">-</span>
-                          )}
                         </td>
                         <td className="py-2 text-gray-700">{laptop.assigned_user || '-'}</td>
                       </tr>
@@ -2556,13 +1613,6 @@ const DellLaptopControlSystem = () => {
                 ></textarea>
               </div>
 
-              {/* Campos de Manutenção */}
-              <MaintenanceFields 
-                laptopForm={laptopForm}
-                setLaptopForm={setLaptopForm}
-                onOpenDellSupport={() => handleOpenDellSupport()}
-              />
-
               {/* Foto do laptop */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -2633,25 +1683,6 @@ const DellLaptopControlSystem = () => {
           </div>
         </div>
       )}
-
-      {/* Modal de Chamado Dell */}
-      <DellSupportModal
-        laptop={selectedLaptopForSupport}
-        isOpen={showDellSupportModal}
-        onClose={() => {
-          setShowDellSupportModal(false);
-          setSelectedLaptopForSupport(null);
-        }}
-        onSave={handleSaveDellSupport}
-      />
-
-      {/* Modal de Importação Excel */}
-      <ExcelImportModal
-        isOpen={showExcelImport}
-        onClose={() => setShowExcelImport(false)}
-        onImport={handleExcelImport}
-        isLoading={isLoading}
-      />
 
       {/* Modal de Opções de Foto */}
       {photoState.showOptions && (
@@ -2847,44 +1878,6 @@ const DellLaptopControlSystem = () => {
                     </div>
                   </div>
                 )}
-
-                {showLaptopDetail.dell_support_ticket && (
-                  <div>
-                    <h3 className="font-bold text-gray-900 mb-4">Chamado Dell</h3>
-                    <div className="bg-blue-50 rounded-xl p-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-blue-600">Número:</span>
-                          <span className="font-medium text-blue-800">{showLaptopDetail.dell_support_ticket}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-blue-600">Status:</span>
-                          <DellSupportBadge laptop={showLaptopDetail} />
-                        </div>
-                        {showLaptopDetail.dell_support_priority && (
-                          <div className="flex justify-between">
-                            <span className="text-blue-600">Prioridade:</span>
-                            <span className="font-medium text-blue-800">{showLaptopDetail.dell_support_priority}</span>
-                          </div>
-                        )}
-                        {showLaptopDetail.dell_support_opened_date && (
-                          <div className="flex justify-between">
-                            <span className="text-blue-600">Aberto em:</span>
-                            <span className="font-medium text-blue-800">
-                              {new Date(showLaptopDetail.dell_support_opened_date).toLocaleDateString('pt-BR')}
-                            </span>
-                          </div>
-                        )}
-                        {showLaptopDetail.dell_support_description && (
-                          <div className="mt-3">
-                            <p className="text-blue-600 text-sm font-medium mb-1">Descrição:</p>
-                            <p className="text-blue-800 text-sm">{showLaptopDetail.dell_support_description}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="space-y-4">
@@ -2983,17 +1976,6 @@ const DellLaptopControlSystem = () => {
               >
                 Editar
               </button>
-              {showLaptopDetail.status === 'Manutenção' && (
-                <button
-                  onClick={() => {
-                    handleOpenDellSupport(showLaptopDetail);
-                    setShowLaptopDetail(null);
-                  }}
-                  className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-2xl hover:from-red-700 hover:to-pink-700 transition-all"
-                >
-                  Gerenciar Chamado Dell
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -3040,3 +2022,7 @@ const AppContent = () => {
                   {connectionStatus.hasUrl ? 'Conectando ao Neon...' : 'Modo Offline'}
                 </span>
               </div>
+            </div>
+          )}
+        </div>
+      </div>
