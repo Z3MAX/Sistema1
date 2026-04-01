@@ -1,9 +1,8 @@
-import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import AuthComponent from './components/AuthComponent';
 import { authService } from './services/authService';
 import { dataService } from './services/dataService';
 import database from './config/database';
-import * as XLSX from 'sheetjs-style';
 
 const { testConnection, createTables, insertInitialData, isDatabaseAvailable, getConnectionStatus } = database;
 
@@ -1773,11 +1772,39 @@ const ITInventorySystem = () => {
   );
 };
 
+// =================== ERROR BOUNDARY ===================
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '40px', fontFamily: 'monospace', background: '#fff1f0', minHeight: '100vh' }}>
+          <h2 style={{ color: '#c0392b' }}>Erro ao carregar o sistema</h2>
+          <pre style={{ background: '#fff', padding: '20px', borderRadius: '8px', overflow: 'auto', fontSize: '13px', border: '1px solid #fca5a5' }}>
+            {this.state.error?.message}
+            {'\n\n'}
+            {this.state.error?.stack}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // =================== COMPONENTE PRINCIPAL COM PROVIDER ===================
 const App = () => (
-  <AuthProvider>
-    <AppContent />
-  </AuthProvider>
+  <ErrorBoundary>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  </ErrorBoundary>
 );
 
 const AppContent = () => {
