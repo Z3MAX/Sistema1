@@ -162,7 +162,7 @@ const AuthComponent = ({ onLogin }) => {
               <Icons.Laptop />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900 bg-clip-text text-transparent">
-              Dell Laptop Manager
+              Inventário de TI
             </h1>
             <p className="text-gray-600 mt-2 font-medium">
               {isLogin ? 'Faça login para continuar' : 'Crie sua conta'}

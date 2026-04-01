@@ -1,14 +1,12 @@
 import { neon } from '@neondatabase/serverless';
+import { INITIAL_ASSETS } from '../data/initialAssets';
 
-// Configuração do banco de dados Neon
 const NEON_DATABASE_URL = import.meta.env.VITE_NEON_DATABASE_URL;
 
-// Verificar se a URL do banco está configurada
 const isDatabaseAvailable = () => {
   return !!(NEON_DATABASE_URL && NEON_DATABASE_URL.length > 10 && NEON_DATABASE_URL !== 'your-neon-url-here');
 };
 
-// Obter status da conexão
 const getConnectionStatus = () => {
   return {
     hasUrl: !!(NEON_DATABASE_URL && NEON_DATABASE_URL.length > 10),
@@ -17,7 +15,6 @@ const getConnectionStatus = () => {
   };
 };
 
-// Inicializar conexão SQL apenas se disponível
 let sql = null;
 if (isDatabaseAvailable()) {
   try {
@@ -31,17 +28,10 @@ if (isDatabaseAvailable()) {
   console.log('⚠️ Banco Neon não configurado - funcionando em modo offline');
 }
 
-// Testar conexão
 const testConnection = async () => {
-  if (!sql) {
-    console.log('❌ SQL não disponível para teste');
-    return false;
-  }
-
+  if (!sql) return false;
   try {
-    console.log('🔄 Testando conexão com Neon...');
-    const result = await sql`SELECT NOW() as current_time`;
-    console.log('✅ Conexão com Neon bem-sucedida!', result[0]);
+    await sql`SELECT NOW() as current_time`;
     return true;
   } catch (error) {
     console.error('❌ Erro na conexão com Neon:', error);
@@ -49,13 +39,11 @@ const testConnection = async () => {
   }
 };
 
-// Criar estrutura do banco
 const createTables = async () => {
-  console.log('🔄 Criando estrutura OBRIGATÓRIA do banco...');
-  
+  console.log('🔄 Criando/atualizando estrutura do banco...');
+
   try {
-    // Criar tabela users
-    console.log('📝 Criando tabela users...');
+    // Tabela users
     await sql`
       CREATE TABLE IF NOT EXISTS users (
         id BIGSERIAL PRIMARY KEY,
@@ -68,41 +56,49 @@ const createTables = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
-    
-    // RECRIAR tabela laptops com campos de chamado Dell
-    console.log('🔄 Recriando tabela laptops com campos de chamado Dell...');
-    
-    // Backup dos dados existentes
-    let backupData = [];
-    try {
-      backupData = await sql`SELECT * FROM laptops`;
-      console.log(`📋 Backup de ${backupData.length} laptops realizado`);
-    } catch (error) {
-      console.log('ℹ️ Nenhum dado existente para backup');
-    }
-    
-    // Dropar e recriar tabela
-    await sql`DROP TABLE IF EXISTS laptops CASCADE`;
-    console.log('🗑️ Tabela laptops removida');
-    
-    console.log('📝 Criando nova tabela laptops com campos de chamado Dell...');
+
+    // Tabela assets (inventário de TI)
     await sql`
-      CREATE TABLE laptops (
+      CREATE TABLE IF NOT EXISTS laptops (
         id BIGSERIAL PRIMARY KEY,
+        -- Identificação
+        asset_type VARCHAR(50) DEFAULT 'Notebook',
         model VARCHAR(255) NOT NULL,
         service_tag VARCHAR(255) NOT NULL UNIQUE,
+        hostname VARCHAR(255),
+        patrimony_number VARCHAR(100),
+        -- Localização/Projeto
+        location VARCHAR(255),
+        project VARCHAR(255),
+        department VARCHAR(255),
+        -- Usuários
+        assigned_user VARCHAR(255),
+        responsible VARCHAR(255),
+        purchase_company VARCHAR(255),
+        term_signed VARCHAR(20),
+        -- Rede
+        mac_address VARCHAR(50),
+        teamviewer_id VARCHAR(50),
+        -- Hardware
         processor VARCHAR(255),
         ram VARCHAR(255),
         storage VARCHAR(255),
         graphics VARCHAR(255),
         screen_size VARCHAR(255),
         color VARCHAR(255),
+        operating_system VARCHAR(255),
+        software_list TEXT,
+        -- Financeiro
+        purchase_date DATE,
+        delivery_date DATE,
+        purchase_price DECIMAL(10,2),
+        purchase_invoice VARCHAR(100),
         warranty_end DATE,
-        condition VARCHAR(50) DEFAULT 'Excelente',
-        condition_score INTEGER DEFAULT 100,
-        status VARCHAR(50) DEFAULT 'Disponível',
-        
-        -- NOVOS CAMPOS PARA CHAMADO DELL
+        -- Estado
+        condition VARCHAR(50) DEFAULT 'Bom',
+        condition_score INTEGER DEFAULT 70,
+        status VARCHAR(50) DEFAULT 'Em Uso',
+        -- Suporte Dell
         dell_support_ticket VARCHAR(255),
         dell_support_status VARCHAR(50),
         dell_support_opened_date DATE,
@@ -110,13 +106,11 @@ const createTables = async () => {
         dell_support_priority VARCHAR(20),
         dell_support_estimated_resolution DATE,
         dell_support_notes TEXT,
-        
+        -- Mídia
         photo TEXT,
         damage_analysis JSONB,
-        purchase_date DATE,
-        purchase_price DECIMAL(10,2),
-        assigned_user VARCHAR(255),
         notes TEXT,
+        -- Auditoria
         user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
         created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
         last_updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
@@ -124,115 +118,153 @@ const createTables = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
-    
-    // Restaurar dados com campos novos como null
-    if (backupData.length > 0) {
-      console.log('🔄 Restaurando dados do backup...');
-      let restoredCount = 0;
-      
-      for (const laptop of backupData) {
-        try {
-          await sql`
-            INSERT INTO laptops (
-              model, service_tag, processor, ram, storage, graphics,
-              screen_size, color, warranty_end, condition, condition_score, status,
-              photo, damage_analysis, purchase_date, purchase_price,
-              assigned_user, notes, user_id, created_by, last_updated_by,
-              dell_support_ticket, dell_support_status, dell_support_opened_date,
-              dell_support_description, dell_support_priority, dell_support_estimated_resolution,
-              dell_support_notes
-            ) VALUES (
-              ${laptop.model}, ${laptop.service_tag}, ${laptop.processor},
-              ${laptop.ram}, ${laptop.storage}, ${laptop.graphics},
-              ${laptop.screen_size}, ${laptop.color}, ${laptop.warranty_end},
-              ${laptop.condition}, ${laptop.condition_score}, ${laptop.status},
-              ${laptop.photo}, ${laptop.damage_analysis}, ${laptop.purchase_date},
-              ${laptop.purchase_price}, ${laptop.assigned_user}, ${laptop.notes},
-              ${laptop.user_id}, ${laptop.created_by}, ${laptop.last_updated_by},
-              null, null, null, null, null, null, null
-            )
-          `;
-          restoredCount++;
-        } catch (restoreError) {
-          console.log(`⚠️ Erro ao restaurar laptop ${laptop.id}:`, restoreError.message);
-        }
+
+    // Adicionar colunas novas em tabelas existentes (migração segura)
+    const newColumns = [
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS asset_type VARCHAR(50) DEFAULT 'Notebook'",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS hostname VARCHAR(255)",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS patrimony_number VARCHAR(100)",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS location VARCHAR(255)",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS project VARCHAR(255)",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS department VARCHAR(255)",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS responsible VARCHAR(255)",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS purchase_company VARCHAR(255)",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS term_signed VARCHAR(20)",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS mac_address VARCHAR(50)",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS teamviewer_id VARCHAR(50)",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS operating_system VARCHAR(255)",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS software_list TEXT",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS delivery_date DATE",
+      "ALTER TABLE laptops ADD COLUMN IF NOT EXISTS purchase_invoice VARCHAR(100)"
+    ];
+
+    for (const colSql of newColumns) {
+      try {
+        await sql([colSql]);
+      } catch (e) {
+        // Column already exists - ignore
       }
-      
-      console.log(`✅ ${restoredCount}/${backupData.length} laptops restaurados`);
     }
-    
-    // Remover tabelas de floors e rooms se existirem
-    console.log('📝 Removendo tabelas floors e rooms se existirem...');
-    try {
-      await sql`DROP TABLE IF EXISTS rooms CASCADE`;
-      await sql`DROP TABLE IF EXISTS floors CASCADE`;
-      console.log('✅ Tabelas floors e rooms removidas');
-    } catch (error) {
-      console.log('ℹ️ Tabelas floors/rooms não existiam');
-    }
-    
-    // Criar índices incluindo os novos campos
-    console.log('📝 Criando índices...');
+
+    // Índices
     const indexes = [
       'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_user_id ON laptops(user_id)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_service_tag ON laptops(service_tag)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_status ON laptops(status)',
+      'CREATE INDEX IF NOT EXISTS idx_laptops_asset_type ON laptops(asset_type)',
+      'CREATE INDEX IF NOT EXISTS idx_laptops_location ON laptops(location)',
+      'CREATE INDEX IF NOT EXISTS idx_laptops_project ON laptops(project)',
+      'CREATE INDEX IF NOT EXISTS idx_laptops_assigned_user ON laptops(assigned_user)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_dell_support_ticket ON laptops(dell_support_ticket)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_dell_support_status ON laptops(dell_support_status)',
-      'CREATE INDEX IF NOT EXISTS idx_laptops_created_by ON laptops(created_by)',
-      'CREATE INDEX IF NOT EXISTS idx_laptops_last_updated_by ON laptops(last_updated_by)',
       'CREATE INDEX IF NOT EXISTS idx_laptops_warranty_end ON laptops(warranty_end)',
-      'CREATE INDEX IF NOT EXISTS idx_laptops_condition ON laptops(condition)',
-      'CREATE INDEX IF NOT EXISTS idx_laptops_assigned_user ON laptops(assigned_user)'
+      'CREATE INDEX IF NOT EXISTS idx_laptops_condition ON laptops(condition)'
     ];
-    
+
     for (const indexSql of indexes) {
       try {
         await sql([indexSql]);
-        const indexName = indexSql.split(' ')[5];
-        console.log(`✅ Índice criado: ${indexName}`);
-      } catch (error) {
-        const indexName = indexSql.split(' ')[5];
-        console.log(`ℹ️ Índice já existe: ${indexName}`);
+      } catch (e) {
+        // Already exists
       }
     }
-    
-    console.log('✅ ESTRUTURA DO BANCO ATUALIZADA COM CAMPOS DE CHAMADO DELL!');
+
+    console.log('✅ Estrutura do banco atualizada!');
     return true;
-    
+
   } catch (error) {
-    console.error('❌ ERRO CRÍTICO ao criar estrutura do banco:', error);
-    throw new Error(`FALHA CRÍTICA: Não é possível criar estrutura do banco. ${error.message}`);
+    console.error('❌ ERRO ao criar estrutura do banco:', error);
+    throw new Error(`Falha ao criar estrutura: ${error.message}`);
   }
 };
 
-// Inserir dados iniciais (se necessário)
 const insertInitialData = async () => {
-  if (!sql) {
-    console.log('❌ SQL não disponível para inserção de dados iniciais');
-    return;
-  }
+  if (!sql) return;
 
   try {
-    // Verificar se já existem dados
+    // Criar admin se não existir
     const userCount = await sql`SELECT COUNT(*) as count FROM users`;
-    if (parseInt(userCount[0].count) > 0) {
-      console.log('ℹ️ Dados iniciais já existem, pulando inserção...');
-      return;
+    if (parseInt(userCount[0].count) === 0) {
+      const adminUser = await sql`
+        INSERT INTO users (name, email, password_hash, company, role)
+        VALUES ('Admin', 'admin@rtt.com', ${btoa('admin123' + 'dell_laptop_salt_2024')}, 'RTT Soluções', 'admin')
+        RETURNING id
+      `;
+      console.log('✅ Usuário admin criado:', adminUser[0].id);
     }
 
-    console.log('📝 Inserindo dados iniciais...');
-    
-    // Inserir usuário admin padrão
-    const adminUser = await sql`
-      INSERT INTO users (name, email, password_hash, company, role)
-      VALUES ('Admin', 'admin@dell.com', ${btoa('admin123' + 'dell_laptop_salt_2024')}, 'Dell Technologies', 'admin')
-      RETURNING id
-    `;
+    // Importar ativos do Excel se tabela estiver vazia
+    const assetCount = await sql`SELECT COUNT(*) as count FROM laptops`;
+    if (parseInt(assetCount[0].count) === 0) {
+      console.log(`🔄 Importando ${INITIAL_ASSETS.length} ativos do inventário RTT...`);
 
-    console.log('✅ Usuário admin criado:', adminUser[0].id);
-    
+      // Buscar id do admin
+      const admin = await sql`SELECT id FROM users LIMIT 1`;
+      const adminId = admin[0]?.id;
+
+      // Inserir em lotes de 50
+      const batchSize = 50;
+      let inserted = 0;
+
+      for (let i = 0; i < INITIAL_ASSETS.length; i += batchSize) {
+        const batch = INITIAL_ASSETS.slice(i, i + batchSize);
+
+        for (const asset of batch) {
+          try {
+            await sql`
+              INSERT INTO laptops (
+                asset_type, model, service_tag, hostname, patrimony_number,
+                location, project, department, assigned_user, responsible,
+                purchase_company, term_signed, mac_address, teamviewer_id,
+                processor, ram, storage, graphics, operating_system,
+                software_list, purchase_date, delivery_date, purchase_invoice,
+                condition, condition_score, status,
+                user_id, created_by, last_updated_by
+              ) VALUES (
+                ${asset.asset_type || 'Notebook'},
+                ${asset.model},
+                ${asset.service_tag},
+                ${asset.hostname || null},
+                ${asset.patrimony_number || null},
+                ${asset.location || null},
+                ${asset.project || null},
+                ${asset.department || null},
+                ${asset.assigned_user || null},
+                ${asset.responsible || null},
+                ${asset.purchase_company || null},
+                ${asset.term_signed || null},
+                ${asset.mac_address || null},
+                ${asset.teamviewer_id || null},
+                ${asset.processor || null},
+                ${asset.ram || null},
+                ${asset.storage || null},
+                ${asset.graphics || null},
+                ${asset.operating_system || null},
+                ${asset.software_list || null},
+                ${asset.purchase_date || null},
+                ${asset.delivery_date || null},
+                ${asset.purchase_invoice || null},
+                ${asset.condition || 'Bom'},
+                ${asset.condition_score || 70},
+                ${asset.status || 'Em Uso'},
+                ${adminId}, ${adminId}, ${adminId}
+              )
+              ON CONFLICT (service_tag) DO NOTHING
+            `;
+            inserted++;
+          } catch (e) {
+            // Skip duplicate or invalid records
+          }
+        }
+        console.log(`📦 Progresso: ${Math.min(i + batchSize, INITIAL_ASSETS.length)}/${INITIAL_ASSETS.length}`);
+      }
+
+      console.log(`✅ ${inserted} ativos importados com sucesso!`);
+    } else {
+      console.log(`ℹ️ Banco já contém ${assetCount[0].count} ativos, pulando importação inicial.`);
+    }
+
   } catch (error) {
     console.error('❌ Erro ao inserir dados iniciais:', error);
   }
