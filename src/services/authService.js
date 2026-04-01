@@ -1,16 +1,9 @@
-// src/services/authService.js - SOMENTE NEON DATABASE (SEM LOCALSTORAGE)
+// src/services/authService.js
 import database from '../config/database';
 
 const { sql } = database;
 
-// ❌ FALHA IMEDIATA SE NÃO TIVER CONEXÃO COM BANCO
-if (!sql) {
-  console.error('❌ ERRO CRÍTICO: Conexão com banco não disponível!');
-  console.error('❌ authService.js requer conexão obrigatória com Neon');
-  throw new Error('ERRO CRÍTICO: authService não pode funcionar sem conexão com o banco Neon');
-}
-
-console.log('✅ authService inicializado com conexão Neon obrigatória');
+console.log('✅ authService inicializado', sql ? 'com Neon' : '(modo offline)');
 
 // Função simples para hash de senha (substitui bcrypt)
 const simpleHash = (password) => {
@@ -46,11 +39,7 @@ const handleDatabaseError = (operation, error) => {
 export const authService = {
   // Registrar novo usuário
   async register(userData) {
-    console.log('🔄 === INICIANDO REGISTRO DE USUÁRIO ===');
-    console.log('📧 Email:', userData.email);
-    console.log('👤 Nome:', userData.name);
-    console.log('🏢 Empresa:', userData.company);
-    
+    if (!sql) return { success: false, error: 'Banco de dados não configurado. Configure VITE_NEON_DATABASE_URL.' };
     try {
       const { name, email, password, company } = userData;
       
@@ -119,8 +108,7 @@ export const authService = {
 
   // Fazer login
   async login(credentials) {
-    console.log('🔄 Fazendo login no banco:', credentials.email);
-    
+    if (!sql) return { success: false, error: 'Banco de dados não configurado. Configure VITE_NEON_DATABASE_URL.' };
     try {
       const { email, password } = credentials;
       
@@ -160,8 +148,7 @@ export const authService = {
 
   // Buscar usuário por ID
   async getUserById(id) {
-    console.log('🔄 Buscando usuário por ID no banco:', id);
-    
+    if (!sql) return null;
     try {
       const users = await sql`
         SELECT id, name, email, company, role, created_at
@@ -312,12 +299,5 @@ export const authService = {
   }
 };
 
-// Log final
-console.log('✅ === authService CONFIGURADO PARA SOMENTE NEON ===');
-console.log('✅ Todas as operações são realizadas no banco');
-console.log('❌ localStorage: DESABILITADO');
-console.log('❌ Modo offline: DESABILITADO');
-console.log('❌ Usuários temporários: DESABILITADO');
-console.log('===============================================');
 
 export default authService;
