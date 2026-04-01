@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /c/Users/Alexandre Amorim/Documents/GitHub/Sistema1/src)",
+      "Bash(grep -n \"dell_support\\\\|Dell\\\\|DellSupport\\\\|activeTab === ''''dell''''\" App.jsx)",
+      "Read(//c/Users/Alexandre Amorim/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/f45bc0bc-7a67-4822-8316-83dcc5206ae9/c7ceb464-041d-422a-8c7e-9b8324b84e7f/skills/xlsx/**)",
+      "Bash(python -c \":*)",
+      "Bash(python3 -c \":*)",
+      "Bash(py -3 -c \":*)",
+      "Read(//usr/**)",
+      "Read(//usr/local/**)",
+      "Bash(cmd.exe /c \"where python\")",
+      "Bash(cmd /c \"where python 2>nul\")",
+      "Bash(head -20 ls /c/Python* 2)",
+      "Bash(/dev/null ls:*)",
+      "Bash(\"/c/Users/Alexandre Amorim/AppData/Local/Programs/Python/Python310/python.exe\" -c \"import pandas; print\\(''pandas ok''\\)\")",
+      "Bash(\"/c/Users/Alexandre Amorim/AppData/Local/Programs/Python/Python310/python.exe\" -c \":*)",
+      "Bash(xxd)",
+      "Bash(xxd \"/c/Users/Alexandre Amorim/Documents/GitHub/Sistema1/src/App.jsx\")",
+      "Bash(npm run:*)",
+      "Bash(npx vite:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
