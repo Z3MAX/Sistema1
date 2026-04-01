@@ -20,14 +20,6 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     
-# Configurações para melhor performance
+# Vite já faz bundling e minificação — desabilitar pós-processamento do Netlify
 [build.processing]
-  skip_processing = false
-
-[build.processing.css]
-  bundle = true
-  minify = true
-
-[build.processing.js]
-  bundle = true
-  minify = true
+  skip_processing = true
